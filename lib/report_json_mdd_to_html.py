@@ -12,8 +12,7 @@ import report_html_template
 
 
 
-# TODO:
-import pdb
+
 
 
 
@@ -34,23 +33,56 @@ def extract_filename(s):
 
 
 
-def preptext_cellvalue(s,col_type,section_type):
-    if s is None:
+def preptext_cellvalue(str_value,col_type='',section_type='',flags=[]):
+    if not str_value:
         return ''
-    is_syntax = not(not(re.match(r'^\s*?script\w*\s*?$',col_type))) or ( (not(not(re.match(r'^\s*?routing\w*\s*?$',section_type)))) and (not(not(re.match(r'^\s*?label\s*?$',col_type)))) )
-    is_structural = isinstance(s,dict) or isinstance(s,list)
-    result = preptext_html(s)
+    is_syntax = not(not(re.match(r'^\str_value*?script\w*\str_value*?$',col_type))) or ( (not(not(re.match(r'^\str_value*?routing\w*\str_value*?$',section_type)))) and (not(not(re.match(r'^\str_value*?label\str_value*?$',col_type)))) )
+    is_structural = isinstance(str_value,dict) or isinstance(str_value,list)
+    result = preptext_html(str_value)
     if is_structural:
-        result = ''
-        # result = '<p class="mdmreport-prop-row">' + ',</p><p class="mdmreport-prop-row">'.join([ '<span class="mdmreport-prop-fieldname">{field}</span> = "<span class="mdmreport-prop-fieldvalue">{value}</span>"'.format(field=preptext_html(row['name']),value=preptext_html('{s}'.format(s=row['value']).replace('"','""'))) for row in s  ]) + '</p>'
         # removing css classes for property coloring - reduced memory consumption a lot; AP 10/12/2024
-        result = '<p class="mdmreport-prop-row">' + ',</p><p class="mdmreport-prop-row">'.join([ '{field} = "{value}"'.format(field=preptext_html(row['name']),value=preptext_html('{s}'.format(s=row['value']).replace('"','""'))) for row in s  ]) + '</p>'
+        # unsuppress to have properties colored
+        # ins_partbegin = '<span class="mdmreport-prop-fieldname">'
+        # ins_partconjunction =  '</span> = "<span class="mdmreport-prop-fieldvalue">'
+        # ins_partend = '</span>"'
+        ins_partbegin = ''
+        ins_partconjunction =  ' = "'
+        ins_partend = '"'
+        if 'format_semicolon' in flags:
+            ins_partbegin = ''
+            ins_partconjunction =  ': '
+            ins_partend = ''
+        result = '{part_begin}{part_iterate}{part_end}'.format(
+            part_begin = '<p class="mdmreport-prop-row">',
+            part_iterate = ',</p><p class="mdmreport-prop-row">'.join([
+                '{ins_partbegin}{fieldname}{ins_partconjunction}{fieldvalue}{ins_partend}'.format(
+                    fieldname = preptext_html(row['name']),
+                    fieldvalue = preptext_html('{val}'.format(val=row['value']).replace('"','""')),
+                    ins_partbegin = ins_partbegin,
+                    ins_partconjunction = ins_partconjunction,
+                    ins_partend = ins_partend
+                ) for row in str_value
+            ]),
+            part_end = '</p>'
+        )
     if is_syntax:
-        result = preptext_html(re.sub(r'(?:(?:\r)|(?:\n))+',"\n",s))
+        result = preptext_html(re.sub(r'(?:(?:\r)|(?:\n))+',"\n",str_value))
         result = '<pre>{content}</pre>'.format(content=result)
     return result
 
 
+
+def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[]):
+    return '<td class="mdmreport-contentcell{added_css_classes}">{col}</td>'.format(
+        col = col,
+        added_css_classes = ' mdmreport-col-{colclass}'.format( colclass = preptext_cleanidfield( column_specs[col_index] ) ) if preptext_cleanidfield( column_specs[col_index] ) else '' + ' mdmreport-colindex-{col_index}'.format( col_index = col_index )
+    )
+
+def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
+    return '<tr class="mdmreport-record{added_css_classes}">{columns}</tr>'.format(
+        columns = ''.join([ prep_htmlmarkup_col(col,col_index,flags=flags,column_specs=column_specs) for col_index,col in enumerate((row or [''])) ]),
+        added_css_classes = ' mdmreport-record-header' if 'header' in flags else ''
+    )
 
 
 
@@ -59,75 +91,72 @@ def preptext_cellvalue(s,col_type,section_type):
 
 def produce_html(inp):
 
-    result_ins_title = '???'
-    result_ins_heading = '???'
-    result_ins_reporttype = preptext_html(inp['report_type']) if 'report_type' in inp else '???'
-    result_ins_banner = ''
-    if result_ins_reporttype=='MDD':
-        result_ins_title = 'MDD: {filepath}'.format(filepath=preptext_html(extract_filename(inp['source_file'])))
-        result_ins_heading = 'MDD: {filepath}'.format(filepath=preptext_html(extract_filename(inp['source_file'])))
-    elif result_ins_reporttype=='diff':
-        result_ins_title = 'MDD Diff: ... (TBD)'
-        result_ins_heading = 'MDD Diff: ... (TBD)'
+    result_ins_htmlmarkup_title = '???'
+    result_ins_htmlmarkup_heading = '???'
+    result_ins_htmlmarkup_reporttype = preptext_html(inp['report_type']) if 'report_type' in inp else '???'
+    result_ins_htmlmarkup_headertext = '{reporttype} Report'.format(reporttype=result_ins_htmlmarkup_reporttype)
+    result_ins_htmlmarkup_banner = ''
+    if result_ins_htmlmarkup_reporttype=='MDD':
+        result_ins_htmlmarkup_title = 'MDD: {filepath}'.format(filepath=preptext_html(extract_filename(inp['source_file'])))
+        result_ins_htmlmarkup_heading = 'MDD: {filepath}'.format(filepath=preptext_html(extract_filename(inp['source_file'])))
+        result_ins_htmlmarkup_headertext = '' # it's too obvious, we shouldn't print unnecessary line; it says "MDD" with a very big font size in h1
+    elif result_ins_htmlmarkup_reporttype=='diff':
+        result_ins_htmlmarkup_title = 'MDD Diff: ... (TBD)'
+        result_ins_htmlmarkup_heading = 'MDD Diff: ... (TBD)'
     else:
-        result_ins_title = '???'
-        result_ins_heading = '???'
-    result_ins_banner = ''.join( [ '<p>{content}</p>'.format(content=preptext_html('{propname}: {propvalue}'.format(propname=content['name'],propvalue=content['value']))) for content in []+[{'name':'datetime','value':preptext_date(inp['report_datetime_utc'])}]+inp['source_file_metadata'] ] )
+        result_ins_htmlmarkup_title = '???'
+        result_ins_htmlmarkup_heading = '???'
+    result_ins_htmlmarkup_banner = preptext_cellvalue( []+[{'name':'datetime','value':preptext_date(inp['report_datetime_utc'])}]+inp['source_file_metadata'], flags=['format_semicolon'] )
     
 
 
-    report_column_headers = ( ( [ '{col}'.format(col=preptext_html(col)) for col in inp['report_scheme']['columns'] ] if 'columns' in inp['report_scheme'] else [] ) if 'report_scheme' in inp else [] )
+    result_column_headers = ( ( [ '{col}'.format(col=preptext_html(col)) for col in inp['report_scheme']['columns'] ] if 'columns' in inp['report_scheme'] else [] ) if 'report_scheme' in inp else [] )
 
     report_data_sections = []
     for section_obj in ( inp['sections'] if 'sections' in inp else [] ):
         data_add = []
         for row in section_obj['content']:
             row_add = []
-            for col in report_column_headers:
+            for col in result_column_headers:
                 row_add.append( preptext_cellvalue(row[col],col_type=col,section_type=section_obj['name']) if col in row else '' )
             data_add.append(row_add)
         report_data_sections.append({'name':section_obj['name'],'data':data_add})
 
 
 
-    report_contents_headerrow = ''.join( [ '<tr class="mdmreport-record mdmreport-record-header">{columns}</tr>'.format(
-        columns = ''.join(['<td class="mdmreport-contentcell mdmreport-col-{colclass} mdmreport-colindex-{coindex}">{col}</td>'.format(col=col,colclass=preptext_cleanidfield(report_column_headers[col_index]),coindex=col_index) for col_index,col in enumerate((row or ['']))])
-    ) for row in [report_column_headers] ] )
+    report_htmlmarkup_column_headers = ''.join( [ prep_htmlmarkup_row(row,flags=['header'],column_specs=result_column_headers) for row in [result_column_headers] ] )
 
-    report_contents_formatted = ''.join([
+    report_htmlmarkup_mainpart_with_tables = ''.join([
         '{table_begin}{table_header_row}{table_contents}{table_end}'.format(
             table_begin = report_html_template.TEMPLATE_HTML_TABLE_BEGIN.replace('{{TABLE_NAME}}',preptext_html(section_data['name'])).replace('{{TABLE_ID}}',preptext_cleanidfield(section_data['name'])),
-            table_header_row = report_contents_headerrow,
-            table_contents = ''.join( [ '<tr class="mdmreport-record">{columns}</tr>'.format(
-                columns = ''.join(['<td class="mdmreport-contentcell mdmreport-col-{colclass} mdmreport-colindex-{coindex}">{col}</td>'.format(col=col,colclass=preptext_cleanidfield(report_column_headers[col_index]),coindex=col_index) for col_index,col in enumerate((row or ['']))])
-            ) for row in section_data['data'] ] ),
+            table_header_row = report_htmlmarkup_column_headers,
+            table_contents = ''.join( [ prep_htmlmarkup_row(row,column_specs=result_column_headers) for row in section_data['data'] ] ),
             table_end = report_html_template.TEMPLATE_HTML_TABLE_END
         ) for section_data in report_data_sections
     ])
 
     result_template = '{begin}{report_contents}{end}'.format(
         begin = report_html_template.TEMPLATE_HTML_BEGIN,
-        report_contents = report_contents_formatted,
+        report_contents = report_htmlmarkup_mainpart_with_tables,
         end = report_html_template.TEMPLATE_HTML_END
     )
 
 
 
     # result = result_template.format(
-    #     INS_TITLE = 'MDD: {MDD}'.format(MDD=preptext_html(inp['MDD'])),
-    #     INS_REPORTTYPE = 'MDD',
-    #     INS_HEADING = 'MDD: {MDD}'.format(MDD=preptext_html(inp['MDD'])),
-    #     INS_BANNER = '???', # ''.join( [ '<p>{content}</p>'.format(content=preptext_html(content)) for content in fields_File_ReportInfo ] )
+    #     ...
     # )
     ## unfortunately, I won't use format(), as the text includes css formatting with curly brackets - escaping it nnn times is not looking fine
     result = result_template.replace(
-        '{{INS_TITLE}}', result_ins_title
+        '{{INS_TITLE}}', result_ins_htmlmarkup_title
     ).replace(
-        '{{INS_REPORTTYPE}}', preptext_cleanidfield(result_ins_reporttype)
+        '{{INS_PAGEHEADER}}', result_ins_htmlmarkup_headertext
     ).replace(
-        '{{INS_HEADING}}', result_ins_heading
+        '{{INS_REPORTTYPE}}', preptext_cleanidfield(result_ins_htmlmarkup_reporttype)
     ).replace(
-        '{{INS_BANNER}}', result_ins_banner
+        '{{INS_HEADING}}', result_ins_htmlmarkup_heading
+    ).replace(
+        '{{INS_BANNER}}', result_ins_htmlmarkup_banner
     )
 
     return result

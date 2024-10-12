@@ -566,7 +566,7 @@ TEMPLATE_HTML_BEGIN = """
 <body class="mdmreportpage mdmreportpage-type-{{{{INS_REPORTTYPE}}}}">
 <header class="header">
     <div class="container">
-        <p>{{{{INS_REPORTTYPE}}}} Report</p>
+        <p>{{{{INS_PAGEHEADER}}}}</p>
     </div>
 </header>
 <div class="main">
