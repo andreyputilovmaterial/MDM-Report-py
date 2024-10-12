@@ -42,7 +42,9 @@ def preptext_cellvalue(s,col_type,section_type):
     result = preptext_html(s)
     if is_structural:
         result = ''
-        result = '<p class="mdmreport-prop-row">' + ',</p><p class="mdmreport-prop-row">'.join([ '<span class="mdmreport-prop-fieldname">{field}</span> = "<span class="mdmreport-prop-fieldvalue">{value}</span>"'.format(field=preptext_html(row['name']),value=preptext_html('{s}'.format(s=row['value']).replace('"','""'))) for row in s  ]) + '</p>'
+        # result = '<p class="mdmreport-prop-row">' + ',</p><p class="mdmreport-prop-row">'.join([ '<span class="mdmreport-prop-fieldname">{field}</span> = "<span class="mdmreport-prop-fieldvalue">{value}</span>"'.format(field=preptext_html(row['name']),value=preptext_html('{s}'.format(s=row['value']).replace('"','""'))) for row in s  ]) + '</p>'
+        # removing css classes for property coloring - reduced memory consumption a lot; AP 10/12/2024
+        result = '<p class="mdmreport-prop-row">' + ',</p><p class="mdmreport-prop-row">'.join([ '{field} = "{value}"'.format(field=preptext_html(row['name']),value=preptext_html('{s}'.format(s=row['value']).replace('"','""'))) for row in s  ]) + '</p>'
     if is_syntax:
         result = preptext_html(re.sub(r'(?:(?:\r)|(?:\n))+',"\n",s))
         result = '<pre>{content}</pre>'.format(content=result)
