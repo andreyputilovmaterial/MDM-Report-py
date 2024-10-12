@@ -433,8 +433,8 @@ TEMPLATE_HTML_SCRIPTS = """
                 const colElements = rowContainingColsElements[1].querySelectorAll('td.mdmreport-contentcell');
                 Array.prototype.forEach.call(colElements,function(colEl) {
                     const cssClasses = Array.from(colEl.classList);
-                    const cssClassesMatching = cssClasses.filter(function(n) {return /^\s*?(mdmreport-col-)(.*?)\s*?$/.test(n);});
-                    cssClassesMatching.map(function(n) {return n.replace(/^\s*?(mdmreport-col-)(.*?)\s*?$/,'$2');}).forEach(function(colName) {
+                    const cssClassesMatching = cssClasses.filter(function(n) {return /^\\s*?(mdmreport-col-)(.*?)\\s*?$/ig.test(n);});
+                    cssClassesMatching.map(function(n) {return n.replace(/^\\s*?(mdmreport-col-)(.*?)\\s*?$/ig,'$2');}).forEach(function(colName) {
                         columns.push(colName);
                     });
                 });
@@ -443,9 +443,9 @@ TEMPLATE_HTML_SCRIPTS = """
             function initSettingCss() {
                 // .mdmreport-hidecol-xxx .mdmreport-col-xxx
                 const cssSheet = new CSSStyleSheet();
-                const cssSyntax = columns.map(function(col) {
-                    const colClassName = col.replace(/[^\w\-\.]/,'');
-                    return ' .mdmreport-hidecol-xxx .mdmreport-col-xxx { display: none; } '.replaceAll('xxx',colClassName);
+                const cssSyntax = columns.map(function(item) {
+                    const itemClassName = item.replace(/[^\\w\\-\\.]/ig,'');
+                    return ' .mdmreport-hidecol-xxx .mdmreport-col-xxx { display: none; } '.replaceAll('xxx',itemClassName);
                 }).join('');
                 cssSheet.replaceSync(cssSyntax);
                 document.adoptedStyleSheets = [...document.adoptedStyleSheets,cssSheet];
@@ -453,44 +453,44 @@ TEMPLATE_HTML_SCRIPTS = """
             function initAddingControlBlock() {
                 const pluginHolderEl = document.querySelector('#mdmreport_plugin_placeholder');
                 if(!pluginHolderEl) throw new Error('adding block to show/hide columns: failed to find proper place for the element: #mdmreport_plugin_placeholder');
-                    const bannerEl = document.createElement('div');
-                    bannerEl.className = 'mdmreport-layout-plugin mdmreport-banner mdmreport-banner-columns';
-                    bannerEl.innerHTML = '<form method="_POST" action="#!" onSubmit="javascript: return false;" class="mdmreport-controls"><fieldset class="mdmreport-controls"><div><legend>Show/hide columns:</legend></div></fieldset></form>';
-                    Array.prototype.forEach.call(bannerEl.querySelectorAll('form'),function(formEl) {formEl.addEventListener('submit',function(event) {event.preventDefault();event.stopPropagation();return false;});});
-                    pluginHolderEl.append(bannerEl);
-                    columns.forEach(function(col) {
+                const bannerEl = document.createElement('div');
+                bannerEl.className = 'mdmreport-layout-plugin mdmreport-banner mdmreport-banner-columns';
+                bannerEl.innerHTML = '<form method="_POST" action="#!" onSubmit="javascript: return false;" class="mdmreport-controls"><fieldset class="mdmreport-controls"><div><legend>Show/hide columns:</legend></div></fieldset></form>';
+                Array.prototype.forEach.call(bannerEl.querySelectorAll('form'),function(formEl) {formEl.addEventListener('submit',function(event) {event.preventDefault();event.stopPropagation();return false;});});
+                pluginHolderEl.append(bannerEl);
+                columns.forEach(function(col) {
+                    try {
+                        const colText = col;
+                        const colClassName = col.replace(/[^\\w\\-\\.]/ig,'');
+                        const labelEl = document.createElement('label');
+                        labelEl.textContent = colText;
+                        labelEl.classList.add('mdmreport-controls');
+                        const checkboxEl = document.createElement('input');
+                        checkboxEl.setAttribute('type','checkbox');
+                        checkboxEl.setAttribute('checked','true');
+                        checkboxEl.checked = true;
+                        checkboxEl.addEventListener('change',function(event) {
+                            const checkboxEl = event.target;
+                            const className = `mdmreport-hidecol-${colClassName}`; // mdmreport-col-xxx
+                            if( checkboxEl.checked ) {
+                                Array.prototype.forEach.call(document.querySelectorAll('table.mdmreport-table'),function(tableEl) {
+                                    tableEl.classList.remove(className);
+                                });
+                            } else {
+                                Array.prototype.forEach.call(document.querySelectorAll('table.mdmreport-table'),function(tableEl) {
+                                    tableEl.classList.add(className);
+                                });
+                            };
+                        });
+                        labelEl.prepend(checkboxEl);
+                        bannerEl.querySelector('fieldset').append(labelEl);
+                    } catch(e) {
                         try {
-                            const colText = col;
-                            const colClassName = col.replace(/[^\w\-\.]/,'');
-                            const labelEl = document.createElement('label');
-                            labelEl.textContent = colText;
-                            labelEl.classList.add('mdmreport-controls');
-                            const checkboxEl = document.createElement('input');
-                            checkboxEl.setAttribute('type','checkbox');
-                            checkboxEl.setAttribute('checked','true');
-                            checkboxEl.checked = true;
-                            checkboxEl.addEventListener('change',function(event) {
-                                const checkboxEl = event.target;
-                                const className = `mdmreport-hidecol-${colClassName}`; // mdmreport-col-xxx
-                                if( checkboxEl.checked ) {
-                                    Array.prototype.forEach.call(document.querySelectorAll('table.mdmreport-table'),function(tableEl) {
-                                        tableEl.classList.remove(className);
-                                    });
-                                } else {
-                                    Array.prototype.forEach.call(document.querySelectorAll('table.mdmreport-table'),function(tableEl) {
-                                        tableEl.classList.add(className);
-                                    });
-                                };
-                            });
-                            labelEl.prepend(checkboxEl);
-                            bannerEl.querySelector('fieldset').append(labelEl);
-                        } catch(e) {
-                            try {
-                                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
-                            } catch(ee) {};
-                            throw e;
-                        }
-                    });
+                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                        } catch(ee) {};
+                        throw e;
+                    }
+                });
             }
             initSettingCss();
             initAddingControlBlock();
@@ -506,6 +506,110 @@ TEMPLATE_HTML_SCRIPTS = """
         }
     }
     window.addEventListener('DOMContentLoaded',addControlBlock_ShowHideColumns);
+})()
+</script>
+<script>
+(function() {
+    function addControlBlock_ShowHideSections() {
+        let errorBannerEl = null;
+        try {
+            errorBannerEl = document.querySelector('#error_banner');
+            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+        } catch(e) {
+            throw e;
+            return;
+        }
+        try {
+            // 1. read data and find the list of sections in the report table
+            sectionDefs = [];
+            const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]');
+            Array.prototype.forEach.call(sectionElements,function(sectionElement) {
+                var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\\s*?section\\s+/ig,'');
+                var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\\s*?mdmreport-wrapper-section-/ig,'');
+                textTitle = textTitle.replace(/^\\s*(.*?)\\s*$/ig,'$1'); // trim
+                textCss = textCss.replace(/^\\s*(.*?)\\s*$/ig,'$1'); // trim
+                if( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) {
+                    if( !textTitle || (textTitle.length==0) ) textTitle = textCss;
+                    if( !textCss || (textCss.length==0) ) textCss = textTitle;
+                    textCss = textCss.replace(/[^\\w\\-\\.]/ig,'-');
+                    sectionDefs.push({text:textTitle,id:textCss});
+                }
+            });
+            // 2. add a control block
+            function applyDefaultSetup(listOfControls) {
+                if(listOfControls.map(a=>a.id).includes('fields')) {
+                    listOfControls.filter(a=>a.id=='fields').forEach(function(d){d.controlEl.checked=true;d.controlEl.dispatchEvent(new Event('change'));});
+                    listOfControls.filter(a=>a.id!='fields').forEach(function(d){d.controlEl.checked=false;d.controlEl.dispatchEvent(new Event('change'));});
+                };
+            }
+            function initSettingCss() {
+                const cssSheet = new CSSStyleSheet();
+                const cssSyntax = sectionDefs.map(function(item) {
+                    const itemClassName = item['id'].replace(/[^\\w\\-\\.]/,'');
+                    return ' .mdmreport-hidesection-xxx .mdmreport-wrapper-section-xxx { display: none; } '.replaceAll('xxx',itemClassName);
+                }).join('');
+                cssSheet.replaceSync(cssSyntax);
+                document.adoptedStyleSheets = [...document.adoptedStyleSheets,cssSheet];
+            }
+            function initAddingControlBlock() {
+                const pluginHolderEl = document.querySelector('#mdmreport_plugin_placeholder');
+                if(!pluginHolderEl) throw new Error('adding block to show/hide sections: failed to find proper place for the element: #mdmreport_plugin_placeholder');
+                const bannerEl = document.createElement('div');
+                bannerEl.className = 'mdmreport-layout-plugin mdmreport-banner mdmreport-banner-sections';
+                bannerEl.innerHTML = '<form method="_POST" action="#!" onSubmit="javascript: return false;" class="mdmreport-controls"><fieldset class="mdmreport-controls"><div><legend>Show/hide sections:</legend></div></fieldset></form>';
+                Array.prototype.forEach.call(bannerEl.querySelectorAll('form'),function(formEl) {formEl.addEventListener('submit',function(event) {event.preventDefault();event.stopPropagation();return false;});});
+                pluginHolderEl.append(bannerEl);
+                const controlsDefs = [];
+                sectionDefs.forEach(function(sectionDef) {
+                    try {
+                        const colText = sectionDef['text'];
+                        const colClassName = sectionDef['id'];
+                        const labelEl = document.createElement('label');
+                        labelEl.textContent = colText;
+                        labelEl.classList.add('mdmreport-controls');
+                        const checkboxEl = document.createElement('input');
+                        checkboxEl.setAttribute('type','checkbox');
+                        checkboxEl.setAttribute('checked','true');
+                        checkboxEl.checked = true;
+                        checkboxEl.addEventListener('change',function(event) {
+                            const checkboxEl = event.target;
+                            const className = `mdmreport-hidesection-${colClassName}`;
+                            if( checkboxEl.checked ) {
+                                Array.prototype.forEach.call(document.querySelectorAll('.mdmreportpage'),function(tableEl) {
+                                    tableEl.classList.remove(className);
+                                });
+                            } else {
+                                Array.prototype.forEach.call(document.querySelectorAll('.mdmreportpage'),function(tableEl) {
+                                    tableEl.classList.add(className);
+                                });
+                            };
+                        });
+                        labelEl.prepend(checkboxEl);
+                        bannerEl.querySelector('fieldset').append(labelEl);
+                        controlsDefs.push({id:sectionDef['id'],text:colText,controlEl:checkboxEl});
+                    } catch(e) {
+                        try {
+                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                        } catch(ee) {};
+                        throw e;
+                    }
+                });
+                setTimeout(function(){ applyDefaultSetup(controlsDefs); },50);
+            }
+            initSettingCss();
+            initAddingControlBlock();
+            document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
+        } catch(e) {
+            try {
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+            } catch(ee) {};
+            try {
+                document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
+            } catch(ee) {}
+            throw e;
+        }
+    }
+    window.addEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
 })()
 </script>
 """

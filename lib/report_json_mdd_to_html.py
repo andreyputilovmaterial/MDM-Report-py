@@ -36,7 +36,7 @@ def extract_filename(s):
 def preptext_cellvalue(str_value,col_type='',section_type='',flags=[]):
     if not str_value:
         return ''
-    is_syntax = not(not(re.match(r'^\str_value*?script\w*\str_value*?$',col_type))) or ( (not(not(re.match(r'^\str_value*?routing\w*\str_value*?$',section_type)))) and (not(not(re.match(r'^\str_value*?label\str_value*?$',col_type)))) )
+    is_syntax = not(not(re.match(r'^\s*?script\w*\s*?$',col_type))) or ( (not(not(re.match(r'^\s*?routing\w*\s*?$',section_type)))) and (not(not(re.match(r'^\s*?label\s*?$',col_type)))) )
     is_structural = isinstance(str_value,dict) or isinstance(str_value,list)
     result = preptext_html(str_value)
     if is_structural:
