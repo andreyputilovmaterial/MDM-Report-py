@@ -13,12 +13,18 @@ import report_html_template
 
 
 
-
-
+# helper text prep functions first
 
 def preptext_html(s):
+    # basic clean up - basic conversion escaping all tags
     s =  html.escape('{s}'.format(s=s))
+    # some replacement to add syntax so that dates are formatted
+    # if there's some certain markup - that shouln't be escape
+    # it should be printed as markup so that js works and converts UTC dates to local time
     s = re.sub(r'&lt;&lt;DATE:(.*?)&gt;&gt;',lambda m:'<span class="mdmreport-role-date" data-role="date">{d}</span>'.format(d=m[1]),s)
+    # and one more transformation - some parts
+    # (called "scripting" - including MDD syntax for all MDD items and routing syntax)
+    # so these parts include raw multi-line text - we'll normalize line breaks
     s = re.sub('([^\t\r\n\x20-\x7E])',lambda m: '&#{n};'.format(n=ord(m[1])),s)
     return s
 
@@ -33,10 +39,11 @@ def extract_filename(s):
 
 
 
-def preptext_cellvalue(str_value,col_type='',section_type='',flags=[]):
+def preptext_cellvalue(str_value,col_type='',flags=[]):
     if not str_value:
         return ''
-    is_syntax = not(not(re.match(r'^\s*?script\w*\s*?$',col_type))) or ( (not(not(re.match(r'^\s*?routing\w*\s*?$',section_type)))) and (not(not(re.match(r'^\s*?label\s*?$',col_type)))) )
+    # is_syntax = not(not(re.match(r'^\s*?script\w*\s*?$',col_type))) or ( (not(not(re.match(r'^\s*?routing\w*\s*?$',section_type)))) and (not(not(re.match(r'^\s*?label\s*?$',col_type)))) )
+    is_syntax = 'format_syntax' in flags
     is_structural = isinstance(str_value,dict) or isinstance(str_value,list)
     result = preptext_html(str_value)
     if is_structural:
@@ -72,22 +79,101 @@ def preptext_cellvalue(str_value,col_type='',section_type='',flags=[]):
 
 
 
-def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[]):
-    return '<td class="mdmreport-contentcell{added_css_classes}">{col}</td>'.format(
-        col = col,
+
+
+
+
+# and now, we list "plugins"
+# pieces of modules that add certain unnecessary transformations to the report
+# to make it more beautiful
+
+# earlier I was doing such transformations in JS - right within page when it loads
+# now I decided to bring it to earlier stage, when the file is processed, when it is created, in python
+# I thought it is more efficient - final HTML is already prepared and optimized
+# but in fact, what these "beautiful" transformations do is that they add more formatting
+# which still increases memory usage
+# any additional html tag increases memory consumption, especially if it has added styles
+# (not necessary inline styles, global styles, but still - it is rendered differently - it takes more memory)
+
+
+
+# this fancy "plugin" removes the "attributes" column and adds attributes as grey (<label> tag) to the "name" column
+# it looks absolutely perfect aesthetically
+# but is increasing memory consumption - report for merged disney BES MDD takes 2 GB in chrome memory witout these "labels" and 3 GB with this transformation performed
+# UPD: wow, I reloaded the page and it now takes 1.6 GB of memory; chrome is like unpredictable - it includes that "labels" added to "name" column and the page takes 1.6 GB
+def enchancement_plugin__combine_attributes_into_master_name_col__on_col(col_data,col_formatted,col_index=None,flags=[],column_specs=[],other_cols_ref=[]):
+    is_active = ( not ('plugin_combine_attributes_already_called' in flags) ) and ( ('name' in column_specs) and ('attributes' in column_specs) )
+    if is_active:
+        if column_specs[col_index] == 'name':
+            # attributes are added to the "name" column
+            col_attributes_data = other_cols_ref[column_specs.index('attributes')]
+            col_attributes_formatted = '{markup_begin}{contents_attributes_formatted}{markup_end}'.format( markup_begin = '<label>', markup_end = '</label>', contents_attributes_formatted = preptext_cellvalue(col_attributes_data) )
+            updated_markup_with_marker_placeholder = prep_htmlmarkup_col('{keep}{add_marker}'.format(keep=col_data,add_marker='{{@}}'),col_index,flags=[]+flags+['plugin_combine_attributes_already_called','skip_plugin_enchancement'],column_specs=column_specs,other_cols_ref=other_cols_ref)
+            updated_markup_final = updated_markup_with_marker_placeholder.replace('{{@}}',col_attributes_formatted)
+            # return '{part_preserve}{part_add}'.format( part_preserve = col_formatted, part_add = col_attributes_formatted )
+            return updated_markup_final
+        if column_specs[col_index] == 'attributes':
+            # null out - attributes are added to "name" column
+            # also, as we null out the whole syntax, including <td> tags - it means we are removing the column completely, and that's what we wanted to achieve! perfect! it is also transformed/removed in the header row, which is perfect
+            return ''
+        else:
+            return col_formatted
+    return col_formatted
+
+
+enchancement_plugins = [
+    {
+        'name': 'combine_attributes_into_master_name_col',
+        'enabled': True,
+        'on_col': enchancement_plugin__combine_attributes_into_master_name_col__on_col,
+    },
+]
+
+
+
+
+
+
+
+
+
+
+
+# and now 2 main function - to prep column markup and row markup - the main things that we have in the report
+
+def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[],other_cols_ref=[]):
+    result_input = col
+    result_formatted = '<td class="mdmreport-contentcell{added_css_classes}">{col}</td>'.format(
+        col = preptext_cellvalue(col,column_specs[col_index],flags),
         added_css_classes = ' mdmreport-col-{colclass}'.format( colclass = preptext_cleanidfield( column_specs[col_index] ) ) if preptext_cleanidfield( column_specs[col_index] ) else '' + ' mdmreport-colindex-{col_index}'.format( col_index = col_index )
     )
+    if not('skip_plugin_enchancement' in flags):
+        for plugin in enchancement_plugins:
+            if plugin['enabled']:
+                if 'on_col' in plugin:
+                    result_formatted = plugin['on_col'](result_input,result_formatted,col_index,flags,column_specs,other_cols_ref)
+    return result_formatted
+
 
 def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
+    def prep_updated_col_flags(col,col_index,column_specs):
+        flags_global = flags
+        flags_add = []
+        col_type = column_specs[col_index]
+        if (not ('header' in flags_global)) and (not(not(re.match(r'^\s*?script\w*\s*?$',col_type))) or ( ('section-routing' in flags_global) and (not(not(re.match(r'^\s*?label\s*?$',col_type)))) ) ):
+            flags_add.append('format_syntax')
+        return flags_global + flags_add
     return '<tr class="mdmreport-record{added_css_classes}">{columns}</tr>'.format(
-        columns = ''.join([ prep_htmlmarkup_col(col,col_index,flags=flags,column_specs=column_specs) for col_index,col in enumerate((row or [''])) ]),
+        columns = ''.join([ prep_htmlmarkup_col(col,col_index,flags=prep_updated_col_flags(col,col_index,column_specs),column_specs=column_specs,other_cols_ref=row) for col_index,col in enumerate((row or [''])) ]),
         added_css_classes = ' mdmreport-record-header' if 'header' in flags else ''
     )
 
 
 
 
-
+# and the main procedure - prepare overall html markup
+# that's the meaningful entry point
+# that's what this script does - gets input data from json and produces html
 
 def produce_html(inp):
 
@@ -110,7 +196,7 @@ def produce_html(inp):
     
 
 
-    result_column_headers = ( ( [ '{col}'.format(col=preptext_html(col)) for col in inp['report_scheme']['columns'] ] if 'columns' in inp['report_scheme'] else [] ) if 'report_scheme' in inp else [] )
+    result_column_headers = ( ( [ '{col}'.format(col=col) for col in inp['report_scheme']['columns'] ] if 'columns' in inp['report_scheme'] else [] ) if 'report_scheme' in inp else [] )
 
     report_data_sections = []
     for section_obj in ( inp['sections'] if 'sections' in inp else [] ):
@@ -118,7 +204,8 @@ def produce_html(inp):
         for row in section_obj['content']:
             row_add = []
             for col in result_column_headers:
-                row_add.append( preptext_cellvalue(row[col],col_type=col,section_type=section_obj['name']) if col in row else '' )
+                # row_add.append( preptext_cellvalue(row[col],col_type=col,section_type=section_obj['name']) if col in row else '' )
+                row_add.append( row[col] if col in row else '' )
             data_add.append(row_add)
         report_data_sections.append({'name':section_obj['name'],'data':data_add})
 
@@ -130,7 +217,7 @@ def produce_html(inp):
         '{table_begin}{table_header_row}{table_contents}{table_end}'.format(
             table_begin = report_html_template.TEMPLATE_HTML_TABLE_BEGIN.replace('{{TABLE_NAME}}',preptext_html(section_data['name'])).replace('{{TABLE_ID}}',preptext_cleanidfield(section_data['name'])),
             table_header_row = report_htmlmarkup_column_headers,
-            table_contents = ''.join( [ prep_htmlmarkup_row(row,column_specs=result_column_headers) for row in section_data['data'] ] ),
+            table_contents = ''.join( [ prep_htmlmarkup_row(row,column_specs=result_column_headers,flags=['section-{sec_id}'.format(sec_id=preptext_cleanidfield(section_data['name']))]) for row in section_data['data'] ] ),
             table_end = report_html_template.TEMPLATE_HTML_TABLE_END
         ) for section_data in report_data_sections
     ])
@@ -160,6 +247,8 @@ def produce_html(inp):
     )
 
     return result
+
+
 
 
 
