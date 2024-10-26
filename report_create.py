@@ -107,7 +107,7 @@ def enchancement_plugin__combine_attributes_into_master_name_col__on_col(col_dat
         if column_specs[col_index] == 'name':
             # attributes are added to the "name" column
             col_attributes_data = other_cols_ref[column_specs.index('attributes')]
-            col_attributes_formatted = '{markup_begin}{contents_attributes_formatted}{markup_end}'.format( markup_begin = '<label>', markup_end = '</label>', contents_attributes_formatted = preptext_cellvalue(col_attributes_data) )
+            col_attributes_formatted = '{markup_begin}{contents_attributes_formatted}{markup_end}'.format( markup_begin = '<label><span class="mdmreport-sronly">, with </span>', markup_end = '</label>', contents_attributes_formatted = preptext_cellvalue(col_attributes_data) )
             updated_markup_with_marker_placeholder = prep_htmlmarkup_col('{keep}{add_marker}'.format(keep=col_data,add_marker='{{@}}'),col_index,flags=[]+flags+['plugin_combine_attributes_already_called','skip_plugin_enchancement'],column_specs=column_specs,other_cols_ref=other_cols_ref)
             updated_markup_final = updated_markup_with_marker_placeholder.replace('{{@}}',col_attributes_formatted)
             # return '{part_preserve}{part_add}'.format( part_preserve = col_formatted, part_add = col_attributes_formatted )
@@ -143,9 +143,10 @@ enchancement_plugins = [
 
 def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[],other_cols_ref=[]):
     result_input = col
-    result_formatted = '<td class="mdmreport-contentcell{added_css_classes}">{col}</td>'.format(
+    result_formatted = '<td class="mdmreport-contentcell{added_css_classes}"{otherattrs}>{col}</td>'.format(
         col = preptext_cellvalue(col,column_specs[col_index],flags),
-        added_css_classes = ' mdmreport-col-{colclass}'.format( colclass = preptext_cleanidfield( column_specs[col_index] ) ) if preptext_cleanidfield( column_specs[col_index] ) else '' + ' mdmreport-colindex-{col_index}'.format( col_index = col_index )
+        added_css_classes = ' mdmreport-col-{colclass}'.format( colclass = preptext_cleanidfield( column_specs[col_index] ) ) if preptext_cleanidfield( column_specs[col_index] ) else '' + ' mdmreport-colindex-{col_index}'.format( col_index = col_index ),
+        otherattrs = ' data-columnid="{colid}"'.format(colid=preptext_cleanidfield( column_specs[col_index] ) if preptext_cleanidfield( column_specs[col_index] ) else '') if 'header' in flags else ''
     )
     if not('skip_plugin_enchancement' in flags):
         for plugin in enchancement_plugins:
@@ -197,6 +198,7 @@ def produce_html(inp):
 
 
     result_column_headers = ( ( [ '{col}'.format(col=col) for col in inp['report_scheme']['columns'] ] if 'columns' in inp['report_scheme'] else [] ) if 'report_scheme' in inp else [] )
+    result_column_headers_text_specs = (inp['report_scheme']['column_headers'] if 'column_headers' in inp['report_scheme'] else {}) if 'report_scheme' in inp else {}
 
     report_data_sections = []
     for section_obj in ( inp['sections'] if 'sections' in inp else [] ):
@@ -211,7 +213,7 @@ def produce_html(inp):
 
 
 
-    report_htmlmarkup_column_headers = ''.join( [ prep_htmlmarkup_row(row,flags=['header'],column_specs=result_column_headers) for row in [result_column_headers] ] )
+    report_htmlmarkup_column_headers = ''.join( [ prep_htmlmarkup_row(row,flags=['header'],column_specs=result_column_headers) for row in [[(result_column_headers_text_specs[col_title] if col_title in result_column_headers_text_specs else col_title) for col_title in result_column_headers]] ] )
 
     report_htmlmarkup_mainpart_with_tables = ''.join([
         '{table_begin}{table_header_row}{table_contents}{table_end}'.format(
