@@ -25,6 +25,9 @@ TEMPLATE_HTML_STYLES = """
         font-size: 14px;
         Font-family: "Helvetica";
     }
+    * {
+        box-sizing: border-box;
+    }
     .clearfix:after {
        content: " "; /* Older browser do not support empty content */
        visibility: hidden;
@@ -162,6 +165,10 @@ TEMPLATE_HTML_STYLES_TABLE = """
     font-weight: 600;
     padding-top: 0.85em;
     padding-bottom: 0.85em;
+    font-size: 100%;
+    border: 0.5px solid #666666;
+    background: #e1e1e1;
+    border-bottom: 4px solid #217346;
 }
 
 
@@ -226,6 +233,7 @@ td.mdmreport-contentcell label {
     color: #666;
     font-size: 90%;
     padding: 0.25em 0 0.25em 1em;
+    position: relative;
 }
 
 .mdmdiff-inlineoverlay-added { background: #6bc795; }
@@ -242,6 +250,18 @@ td.mdmreport-contentcell label {
 }
 .mdmreport-format-hidden, .mdmreport-table .mdmreport-format-hidden {
     display: none;
+}
+.mdmreport-sronly {
+    visibility: hidden;
+    display: block;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    border: 0;
 }
 
 /* controls */
@@ -358,10 +378,12 @@ TEMPLATE_HTML_SCRIPTS = """
             const cssSheet = new CSSStyleSheet();
             document.adoptedStyleSheets = [...document.adoptedStyleSheets,cssSheet];
             function process() {
+                // first, clear out previous formatting
                 Array.prototype.forEach.call(tables_all,function(tableEl) {
                     tableEl.classList.remove('mdmreport-table-formatting-fixeddimensions');
                 });
                 cssSheet.replaceSync('');
+                // now find new width values
                 const colWidthsData = [];
                 var colMaxIndex = 0;
                 Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
@@ -435,14 +457,24 @@ TEMPLATE_HTML_SCRIPTS = """
         }
         try {
             // 1. read data and find the list of columns in the report table
+            // it's interesting, we don't care how many columns are there; we iterate over css classes, and adding show/hide functionality per css class
+            // so, if 2 classes are added to a cell, there would be 2 checkboxes, and if there is a column missing necessary class, there would be no check box
             const columns = [];
+            const columnTitles = {};
             const rowContainingColsElements = document.querySelectorAll('table.mdmreport-table tr.mdmreport-record');
-            if(rowContainingColsElements.length>1) {
-                const colElements = rowContainingColsElements[1].querySelectorAll('td.mdmreport-contentcell');
+            if(rowContainingColsElements.length>0) {
+                const rowRefEl = rowContainingColsElements[0];
+                const colElements = rowRefEl.querySelectorAll('td.mdmreport-contentcell');
                 Array.prototype.forEach.call(colElements,function(colEl) {
                     const cssClasses = Array.from(colEl.classList);
                     const cssClassesMatching = cssClasses.filter(function(n) {return /^\\s*?(mdmreport-col-)(.*?)\\s*?$/ig.test(n);});
-                    cssClassesMatching.map(function(n) {return n.replace(/^\\s*?(mdmreport-col-)(.*?)\\s*?$/ig,'$2');}).forEach(function(colName) {
+                    cssClassesMatching.map(function(n) {return n.replace(/^\\s*?(mdmreport-col-)(.*?)\\s*?$/ig,'$2');}).forEach(function(colNameFromCSS) {
+                        const colName = colNameFromCSS;
+                        //colName = colName.replace(/^\\s*/,'').replace(/\\s*$/,'');
+                        const colTitlesAllOfThisCssClass = Array.from(rowRefEl.querySelectorAll(`.mdmreport-col-${colName}`)).map(el=>el.textContent);
+                        const colTitlesNoDuplicates = colTitlesAllOfThisCssClass.reduce(function(acc,val){if(acc.includes(val))return acc; else return [...acc,val];},[]);
+                        const colTitle = colTitlesNoDuplicates.length==1 ? colTitlesNoDuplicates[0] : `${colEl.textContent} (${colName})`;
+                        columnTitles[colName] = colTitle;
                         columns.push(colName);
                     });
                 });
@@ -493,7 +525,7 @@ TEMPLATE_HTML_SCRIPTS = """
                 controlsDefs = [];
                 columns.forEach(function(col) {
                     try {
-                        const colText = col;
+                        const colText = columnTitles[col];
                         const colClassName = col.replace(/[^\\w\\-\\.]/ig,'');
                         const labelEl = document.createElement('label');
                         labelEl.textContent = colText;
@@ -659,9 +691,9 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 0;
-    height: 1.9em;
-    padding: .1em;
+    bottom: 2px; /* to align with that green bottom border */
+    /* height: 1.9em; */
+    padding: 0; /* .1em; */
     /* line-height: 1em;
     padding: 0.35em; */
 }
