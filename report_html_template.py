@@ -330,6 +330,7 @@ td.mdmreport-contentcell label {
 TEMPLATE_HTML_SCRIPTS = """
 <script>
 (function() {
+    /* === beautify dates js === */
     function beautifyDates() {
         let errorBannerEl = null;
         try {
@@ -363,6 +364,7 @@ TEMPLATE_HTML_SCRIPTS = """
 })()
 </script>
 <script>
+    /* === align col widths js === */
 (function() {
     function alignColWidths() {
         let errorBannerEl = null;
@@ -445,6 +447,7 @@ TEMPLATE_HTML_SCRIPTS = """
 })()
 </script>
 <script>
+    /* === show/hide columns js === */
 (function() {
     function addControlBlock_ShowHideColumns() {
         let errorBannerEl = null;
@@ -576,6 +579,7 @@ TEMPLATE_HTML_SCRIPTS = """
 })()
 </script>
 <script>
+    /* === show/hide sections js === */
 (function() {
     function addControlBlock_ShowHideSections() {
         let errorBannerEl = null;
@@ -680,6 +684,294 @@ TEMPLATE_HTML_SCRIPTS = """
 })()
 </script>
 <style>
+    /* === jira connection css === */
+.mdmrep-diff-jiraaddon-col a  {
+    display: block;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    line-height: 1.1em;
+    white-space: nowrap;
+}
+    /* === end of jira connection css === */
+</style>
+<script>
+// new cell markup: <td class="mdmreport-contentcell mdmreport-col-flagdiff" data-columnid="flagdiff">Diff flag</td>
+// new cell markup: <td class="mdmreport-contentcell mdmreport-col-label">Serial number</td>
+// old cell markup: <td class="mdmreport-contentcell">October</td>
+</script>
+<script>
+    /* === jira connection js === */
+(function() {
+    const validDomains = ['lrwjira.atlassian.net','www.lrwjira.atlassian.net','www.materialplus.atlassian.net','materialplus.atlassian.net'];
+    let bannerHolderPromiseResolve = () => { throw new Error('please jiraPlugin_init the promise first'); };
+    let bannerHolderPromiseReject = () => { throw new Error('please jiraPlugin_init the promise first'); };
+    const bannerHolderPromise = new Promise((resolve,reject)=>{ bannerHolderPromiseResolve = resolve; bannerHolderPromiseReject = reject; });
+    let runPromiseResolve = () => { throw new Error('please jiraPlugin_init the promise first'); };
+    let runPromiseReject = () => { throw new Error('please jiraPlugin_init the promise first'); };
+    const runPromise = new Promise((resolve,reject)=>{ runPromiseResolve = resolve; runPromiseReject = reject; });
+    function sanitizeCellText(s) {
+        return s.replace(/&\\#(\\d+);/i,function(n,n1){if(isFinite(+n1)) return String.fromCharCode(+n1);else return n;});
+    }
+    function parsePropertiesText(s) {
+        const results = [];
+        if( /^\\s*?$/.test(s) )
+            return results;
+        const matches = s.match( /^\\s*?,?\\s*?(\\w+)\\s*?=\\s*?"((?:(?:[^"])|(?:""))*?)"((?:\\s*?,\\s*?\\w+\\s*?=\\s*?"(?:(?:[^"])|(?:""))*?")*?)\\s*?$/ );
+        if( !!matches ) {
+            results.push({name:matches[1],value:matches[2].replace(/""/ig,'"')});
+            if( !!matches[3] ) {
+                results.push(...parsePropertiesText(matches[3]));
+            }
+            return results;
+        } else {
+            throw new Error(`can't parse properties at [${s}]`);
+        }
+    }
+    function itemNameLookup(itemName,propertiesData,sectionName) {
+        const extractProperties = () => {};
+        if(false) { // ( /^\\s*?Info\\s*?\\:/.test(itemName) ) {
+            // info item - skip
+            return null;
+        } else if( (sectionName=='shared_lists') && (/^\\s*?\\w+/.test(itemName)) ) {
+            // is a shared list
+            return itemName.replace(/^\\s*?(\\w+)\\b.*?$/ig,'$1').replace(/^\\s*?SL_/ig,'');
+        } else if( (sectionName=='fields') ) {
+            // "fields" (normal questions) - let's look up the FullName property
+            const properties = propertiesData[itemName];
+            const propertyListLcase = properties.map(a=>a.name.toLowerCase());
+            if( /^\\s*?QCData\\.Flags\\b/.test(itemName) ) {
+                // A QC Flag - let's look up the "AppliesTo" property
+                if( propertyListLcase.includes('AppliesTo'.toLowerCase()) ) {
+                    // TODO: best match. or all matches?
+                    const appliesto = properties[propertyListLcase.indexOf('AppliesTo'.toLowerCase())].value.replace(/^\\s*?Question\\s*?\\-\\s*/ig,'').replace(/^\\s*/,'').replace(/\\s*$/,'');
+                    return appliesto;
+                }
+            }
+            if( propertyListLcase.includes('FullName'.toLowerCase()) ) {
+                const fullname = properties[propertyListLcase.indexOf('FullName'.toLowerCase())].value.replace(/^\\s*/,'').replace(/\\s*$/,'');
+                return fullname;
+            }
+            if( /\\.(?:categories|elements)\\s*?\\[\\s*?.*?\\s*?\\]\\s*?$/ig.test(itemName) ) {
+                const refItemName = itemName.replace(/\\.(?:categories|elements)\\s*?\\[\\s*?.*?\\s*?\\]\\s*?$/ig,'');
+                const refItemProperties = propertiesData[refItemName];
+                const refItemPropertyListLcase = refItemProperties.map(a=>a.name.toLowerCase());
+                if( refItemPropertyListLcase.includes('FullName'.toLowerCase()) ) {
+                    const fullname = refItemProperties[refItemPropertyListLcase.indexOf('FullName'.toLowerCase())].value.replace(/^\\s*/,'').replace(/\\s*$/,'');
+                    return fullname;
+                }
+            }
+            return null
+        } else if( (sectionName=='pages') ) {
+            // "pages" - usually tickets are not issued for pages, skip
+            return null
+        } else
+            return null;
+    }
+    function getJobNumberProperty(tableEl,errBannerEl) {
+        const promise = new Promise(function(resolve,reject) {
+            const rowsEl = Array.from(tableEl.querySelectorAll('tr'));
+            const rowBannerEl = rowsEl[0];
+            const rowsWithHdataEl = rowsEl.filter(function(tr){ const cols = Array.from(tr.querySelectorAll('td')); if(cols.length>1) { return /^(?:\\s*?(?:(?:mdd|mdm|hdata)\\.)?Properties\\s*?)|(?:\\s*.*?\\bMDM\\b.*?\\s*)$/ig.test(sanitizeCellText(cols[1].textContent)); } else return false; });
+            if( (rowsWithHdataEl.length>0)&&(!!rowBannerEl) ) {
+                const propertiesColIndices = [];
+                const isAPropertiesColumn = s => /^(?:(?:&#32;)|(?:\\s))*?(?:Custom)\\s*?properties(?:(?:&#32;)|(?:\\s))*?(?:(?:&#40;)|(?:\\())*?.*?(?:(?:&#42;)|(?:\\)))*?(?:(?:&#32;)|(?:\\s))*?$/ig.test(s);
+                Array.from(rowBannerEl.querySelectorAll('td')).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/\\s*?\\(\\s*?(?:Left|Right)\\s*?MDD\\s*?\\)\\s*/ig,'')).map((colText,colIndex)=>{if(colIndex<2)return false;if(isAPropertiesColumn(colText))return colIndex;else return false;}).forEach(e=>{if(!!e)propertiesColIndices.push(e);});
+                const colsEl = Array.from(rowsWithHdataEl[0].querySelectorAll('td'));
+                const propertiesData = {};
+                const itemNameColIndex = 1;
+                const cols = Array.from(colsEl).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/^\\s*?\\(\\s*?(?:Left|Right)\\s*?MDD\\s*?\\)\\s*/ig,''));
+                const itemName = cols[itemNameColIndex];
+                const properties = [];
+                propertiesColIndices.forEach(colIndex=>{
+                    properties.push(...parsePropertiesText(cols[colIndex]));
+                });
+                if( !!propertiesData[itemName] ) throw new Error(`grabbing properties for jira connections: duplicate row at #${i}:  ${itemName}`);
+                //propertiesData[itemName] = properties.reverse(); // we reverse the order so that if we find the first matching property with indexOf it comes from the last column that stands for the right, the newer mdd
+                const propertyCellContent = properties.reduce(function(acc,e){return ({...acc,[e.name]:e.value});},{});
+                return resolve(propertyCellContent['JobNumber']);
+            } else return null;
+        });
+        return promise;
+    }
+    function jiraPlugin_init(){
+        let errorBannerEl;
+        try {
+            errorBannerEl = document.querySelector('#error_banner');
+            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+        } catch(e) {
+            throw e;
+        }
+        try {
+            /* jira suggestions */
+            /* https://materialplus.atlassian.net/jira/software/c/projects/P123456/issues/?jql=project%20%3D%20%22P123456%22%20AND%20%28resolution%3Dunresolved%29%20AND%20%28not%20%28status%20in%20%28Resolved%2CDone%2CClosed%29%29%29%20AND%20%28not%20%28status%20in%20%28%22Ready%20for%20Stage%22%2C%22Need%20more%20Information%22%29%29%29%20ORDER%20BY%20key%20ASC */
+            /* import urllib.parse */
+            /* print('https://materialplus.atlassian.net/jira/software/c/projects/P123456/issues/?jql='+(urllib.parse.quote(urllib.parse.unquote('project%20%3D%20%22P123456%22%20AND%20%28resolution%3Dunresolved%29%20AND%20%28not%20%28status%20in%20%28Resolved%2CDone%2CClosed%29%29%29%20AND%20%28not%20%28status%20in%20%28%22Ready%20for%20Stage%22%2C%22Need%20more%20Information%22%29%29%29%20ORDER%20BY%20key%20ASC'), safe=''))) */
+
+            const pluginHolderEl = document.querySelector('#mdmreport_plugin_placeholder');
+            if(!pluginHolderEl) throw new Error('adding block to show/hide columns: failed to find proper place for the element: #mdmreport_plugin_placeholder');
+            const tablesEl = document.querySelectorAll('table.mdmreport-table');
+            const bannerEl = document.createElement('div');
+            bannerEl.className = 'mdmreport-layout-plugin mdmreport-banner mdmreport-banner-jirasuggestions';
+            bannerEl.innerHTML = '<legend>Jira - ticket suggestion</legend>';
+            const divBannerHolderEl = document.createElement('div');
+            const clickmeRevealBannerEl = document.createElement('a');
+            clickmeRevealBannerEl.setAttribute('href','#!');
+            clickmeRevealBannerEl.setAttribute('onclick','javascript: return false;');
+            clickmeRevealBannerEl.textContent = "   (show)"
+            clickmeRevealBannerEl.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();bannerHolderPromiseResolve({bannerHolderEl:divBannerHolderEl,tablesEl,errorBannerEl});clickmeRevealBannerEl.remove();return false;});
+            bannerEl.querySelector('legend').append(clickmeRevealBannerEl);
+            bannerEl.append(divBannerHolderEl);
+            pluginHolderEl.append(bannerEl);
+            try {
+                window.removeEventListener('DOMContentLoaded',jiraPlugin_init);
+            } catch(ee) {}
+        } catch(e) {
+            try {
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+            } catch(ee) {};
+            try {
+                window.removeEventListener('DOMContentLoaded',jiraPlugin_init);
+            } catch(ee) {}
+            throw e;
+        }
+    }
+    function jiraPlugin_workaddelementstotables(  { getJiraUrl, tablesEl, errorBannerEl, jiraPlugin_clearUp } ) {
+        try {
+            Array.from(tablesEl).forEach(function(tableEl) {
+                const sectionName = (function(tableEl){
+                    // find closest section elemt and its class
+                    var resultingId = '';
+                    const closestSecEl = tableEl.closest('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]');
+                    if(closestSecEl) {
+                        Array.from(closestSecEl.classList).forEach(function(className){
+                            if(  /^\\s*?mdmreport-wrapper-section-(.*?)\\s*?$/.test(className) ) {
+                                resultingId = className.replace(/^\\s*?mdmreport-wrapper-section-(.*?)\\s*?$/,'$1');
+                            }
+                        });
+                    }
+                    return resultingId;
+                })(tableEl);
+                const rowsEl = tableEl.querySelectorAll('tr');
+                jiraPlugin_clearUp();
+                const propertiesData = {};
+                const itemNameColIndex = 1;
+                const diffFlagColIndex = 0;
+                const propertiesColIndices = [];
+                const isAPropertiesColumn = s => /^(?:(?:&#32;)|(?:\\s))*?(?:Custom)\\s*?properties(?:(?:&#32;)|(?:\\s))*?(?:(?:&#40;)|(?:\\())*?.*?(?:(?:&#42;)|(?:\\)))*?(?:(?:&#32;)|(?:\\s))*?$/ig.test(s);
+                const isTemporarilyMovedRow = s => /^\\s*?\\(\\s*?moved\\s*?\\)\\s*?$/ig.test(s);
+                Array.prototype.forEach.call(rowsEl,function(rowEl,i) {
+                    const colsEl = rowEl.querySelectorAll('td');
+                    const cols = Array.from(colsEl).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/^\\s*?\\(\\s*?(?:Left|Right)\\s*?MDD\\s*?\\)\\s*/ig,''));
+                    if( i==0 ) {
+                        const colsWithProperties = cols.map((colText,colIndex)=>{if(colIndex<2)return false;if(isAPropertiesColumn(colText))return colIndex;else return false;});
+                        colsWithProperties.forEach(e=>{if(!!e)propertiesColIndices.push(e);});
+                    } else {
+                        const itemName = cols[itemNameColIndex];
+                        const diffFlag = cols[diffFlagColIndex];
+                        if( isTemporarilyMovedRow(diffFlag) )
+                            return;
+                        const properties = [];
+                        propertiesColIndices.forEach(colIndex=>{
+                            properties.push(...parsePropertiesText(cols[colIndex]));
+                        });
+                        if( !!propertiesData[itemName] ) throw new Error(`grabbing properties for jira connections: duplicate row at #${i}:  ${itemName}`);
+                        propertiesData[itemName] = properties.reverse(); // we reverse the order so that if we find the first matching property with indexOf it comes from the last column that stands for the right, the newer mdd
+                    }
+                });
+                Array.prototype.forEach.call(rowsEl,function(rowEl,i) {
+                    const colsEl = Array.from(rowEl.querySelectorAll('td'));
+                    const colAddEl = document.createElement('td');
+                    colAddEl.classList.add('mdmreport-contentcell');
+                    colAddEl.classList.add('mdmreport-col--jiraplugin');
+                    colAddEl.classList.add('mdmrep-diff-jiraaddon-col');
+                    if(i===0) {
+                        /* header row */
+                        colAddEl.textContent = "Jira - possible ticket lookup link"
+                    } else {
+                        if( (colsEl.length>=2) ) {
+                            const possibleItemName = itemNameLookup(sanitizeCellText(colsEl[1].textContent),propertiesData,sectionName);
+                            if( !!possibleItemName && (typeof possibleItemName==='string') && (possibleItemName.length>0) ) {
+                                const linkurl = getJiraUrl(possibleItemName);
+                                const linkEl = document.createElement('a');
+                                linkEl.setAttribute('href',linkurl);
+                                linkEl.setAttribute('_target','blank');
+                                linkEl.textContent = decodeURIComponent(linkurl);
+                                colAddEl.append(linkEl);
+                            }
+                        }
+                    }
+                    rowEl.append(colAddEl);
+                });
+            });
+        } catch(e) {
+            try {
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+            } catch(ee) {};
+            throw e;
+        }
+    }
+    function jiraPlugin_pluginpanelunhidden( { bannerHolderEl, tablesEl, errorBannerEl } ) {
+        try {
+            const bannerContentEl = document.createElement('div');
+            const propertyJobNumber = '123456';
+            bannerContentEl.innerHTML = '<form method="_POST" action="#!" onSubmit="javascript: return false;" class="mdmreport-controls"><fieldset class="mdmreport-controls"></fieldset></form>';
+            Array.prototype.forEach.call(bannerContentEl.querySelectorAll('form'),function(formEl){formEl.addEventListener('submit',function(event){event.preventDefault();event.stopPropagation();return false;});});
+            bannerContentEl.querySelector('fieldset').innerHTML = '<div class="mdmreport-controls-group"><label>PROJECT_NUM:  </label><input type="text" value="P123456" /></div><div class="mdmreport-controls-group"><label>Base url:  </label><input type="text" value="https://materialplus.atlassian.net/jira/software/c/projects/P123456/issues/?jql=" /></div></div><div class="mdmreport-controls-group"><label>JQL:  </label><input type="text" value="project = &quot;P123456&quot; AND ((summary~&quot;<<QUESTIONNAME>>&quot;) OR (summary~&quot;<<QUESTIONSHORTNAME>>&quot;) OR (question~&quot;&#92;&quot;<<QUESTIONWANAME>>&#92;&quot;&quot;)) AND (resolution=unresolved) AND (not (status in (Resolved,Done,Closed))) AND (not (status in (&quot;Ready for Stage&quot;,&quot;Need more Information&quot;))) ORDER BY key ASC" /></div><div><input type="button" value="Go!" /><p style="color: #555;"><small>Hint: you can use these keywords that will be replaced with question name: &lt;&lt;QUESTIONFULLNAME&gt;&gt;, &lt;&lt;QUESTIONSHORTNAME&gt;&gt;, &lt;&lt;QUESTIONNAME&gt;&gt;, &lt;&lt;QUESTIONWANAME&gt;&gt;.</small></p></div>'.replaceAll('123456',propertyJobNumber);
+            const inp1El = bannerContentEl.querySelector('fieldset').querySelectorAll('input')[0];
+            const inp2El = bannerContentEl.querySelector('fieldset').querySelectorAll('input')[1];
+            const inp3El = bannerContentEl.querySelector('fieldset').querySelectorAll('input')[2];
+            inp1El.addEventListener('change',function(event){ event.preventDefault(); inp2El.value = inp2El.value.replace(/(\\/projects\\/)([\\w\\-]+)(\\/)/,`$1${inp1El.value}$3`); inp2El.dispatchEvent(new Event('change')); inp3El.value = inp3El.value.replace(/(\\bproject\\b\\s*?=\\s*?"\\s*?)([\\w\\-]+)(\\s*?")/,`$1${inp1El.value}$3`); inp3El.dispatchEvent(new Event('change')); return false; });
+            inp1El.addEventListener('keypress',function(event){  inp1El.dispatchEvent(new Event('change'));});
+            inp2El.addEventListener('keypress',function(event){  inp2El.dispatchEvent(new Event('change'));});
+            inp3El.addEventListener('keypress',function(event){  inp3El.dispatchEvent(new Event('change'));});
+            inp1El.addEventListener('keyup',function(event){  inp1El.dispatchEvent(new Event('change'));});
+            inp2El.addEventListener('keyup',function(event){  inp2El.dispatchEvent(new Event('change'));});
+            inp3El.addEventListener('keyup',function(event){  inp3El.dispatchEvent(new Event('change'));});
+            const promiseTmp = Promise.resolve(); // why? what's the reason? are we just trying to call it async in a separate flow, not blocking interface? probably
+            tablesMDMPropEl = document.querySelectorAll('.mdmreport-wrapper-section-mdmproperties table.mdmreport-table');
+            if( tablesMDMPropEl.length>0 ) {
+                tableEl = tablesMDMPropEl[0];
+                promiseTmp.then(function(){getJobNumberProperty(tableEl,errorBannerEl).then(function(val){ const propertyJobNumber = `P${`${val}`.replace(/^\\s*?(P?)(\\d\\w+)\\s*?$/,'$2')}`; inp1El.value = propertyJobNumber; inp1El.dispatchEvent(new Event('change')); });});
+            }
+            const submitEl = bannerContentEl.querySelector('fieldset').querySelectorAll('input[type="button"]')[0];
+            submitEl.addEventListener('click',function(event){
+                event.preventDefault();
+                try {
+                    const val2 = inp2El.value;
+                    const val3 = inp3El.value;
+                    const prepJiraString = function(jiraStr,itemName) { let name = itemName; let shortName = itemName; let fullName = itemName; let waName = itemName; if(/^\\s*?(DT_)(\\w+)$/.test(itemName)) { name = itemName.replace(/^\\s*?(DT)_(\\w+)$/,'$2'); shortName = name; waName = `${'DT'}. ${name}`; } else if(/^\\s*?(DV)_(\\w+)$/.test(itemName)) { /* all good */ } else if(/^\\s*?([a-zA-Z]+[0-9]+\\w*?)_(\\w+)$/.test(itemName)) { name = itemName.replace(/^\\s*?([a-zA-Z]+[0-9]+\\w*?)_(\\w+)$/,'$2'); shortName = itemName.replace(/^\\s*?([a-zA-Z]+[0-9]+\\w*?)_(\\w+)$/,'$1'); waName = `${shortName}. ${name}`; }; return jiraStr.replaceAll('<<QUESTIONFULLNAME>>',fullName).replaceAll('<<QUESTIONSHORTNAME>>',shortName).replaceAll('<<QUESTIONWANAME>>',waName).replaceAll('<<QUESTIONNAME>>',name); };
+                    const getJiraUrl = function(itemName) { return `${decodeURIComponent(val2)}${encodeURIComponent(prepJiraString(val3,itemName))}`; };
+                    if( !validDomains.map(a=>a.toLowerCase()).includes((new URL(getJiraUrl(''))).hostname.toLowerCase()) )
+                        throw new Error(`Not valid jira domain! It has to be in this list: [ ${validDomains.join(', ')} ], or, update the code, it's easy; search for "validDomains"`);
+                    runPromiseResolve(  { getJiraUrl, tablesEl, errorBannerEl, jiraPlugin_clearUp } );
+                } catch(e) {
+                    try {
+                        errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                    } catch(ee) {};
+                    throw e;
+                }
+                return false;
+            });
+            function jiraPlugin_clearUp() { /* bannerContentEl.remove(); */ bannerContentEl.innerHTML = 'Done, see the right most column in the table'; };
+            bannerHolderEl.append(bannerContentEl);
+        } catch(e) {
+            try {
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+            } catch(ee) {};
+            try {
+                window.removeEventListener('DOMContentLoaded',jiraPlugin_init); // trying to save memory and clear this function from memory but that's stupid - as we have a reference here, it is stil in memory; it should be cleared at a different, outer level
+            } catch(ee) {}
+            throw e;
+        }
+    }
+    runPromise.then(jiraPlugin_workaddelementstotables);
+    bannerHolderPromise.then(jiraPlugin_pluginpanelunhidden);
+    window.addEventListener('DOMContentLoaded',jiraPlugin_init);
+})()
+</script>
+<style>
+    /* === column filtering css === */
 .mdmreport-record.mdmreport-tablefilterplugin-hide-0, .mdmreport-record.mdmreport-tablefilterplugin-hide-1, .mdmreport-record.mdmreport-tablefilterplugin-hide-2, .mdmreport-record.mdmreport-tablefilterplugin-hide-3, .mdmreport-record.mdmreport-tablefilterplugin-hide-4, .mdmreport-record.mdmreport-tablefilterplugin-hide-5, .mdmreport-record.mdmreport-tablefilterplugin-hide-6, .mdmreport-record.mdmreport-tablefilterplugin-hide-7, .mdmreport-record.mdmreport-tablefilterplugin-hide-8, .mdmreport-record.mdmreport-tablefilterplugin-hide-9, .mdmreport-record.mdmreport-tablefilterplugin-hide-10, .mdmreport-record.mdmreport-tablefilterplugin-hide-11, .mdmreport-record.mdmreport-tablefilterplugin-hide-12, .mdmreport-record.mdmreport-tablefilterplugin-hide-13, .mdmreport-record.mdmreport-tablefilterplugin-hide-14, .mdmreport-record.mdmreport-tablefilterplugin-hide-15, .mdmreport-record.mdmreport-tablefilterplugin-hide-16, .mdmreport-record.mdmreport-tablefilterplugin-hide-17, .mdmreport-record.mdmreport-tablefilterplugin-hide-18, .mdmreport-record.mdmreport-tablefilterplugin-hide-19, .mdmreport-record.mdmreport-tablefilterplugin-hide-20, .mdmreport-record.mdmreport-tablefilterplugin-hide-21, .mdmreport-record.mdmreport-tablefilterplugin-hide-22, .mdmreport-record.mdmreport-tablefilterplugin-hide-23, .mdmreport-record.mdmreport-tablefilterplugin-hide-24, .mdmreport-record.mdmreport-tablefilterplugin-hide-25, .mdmreport-record.mdmreport-tablefilterplugin-hide-26, .mdmreport-record.mdmreport-tablefilterplugin-hide-27, .mdmreport-record.mdmreport-tablefilterplugin-hide-28, .mdmreport-record.mdmreport-tablefilterplugin-hide-29, .mdmreport-record.mdmreport-tablefilterplugin-hide-30, .mdmreport-record.mdmreport-tablefilterplugin-hide-31, .mdmreport-record.mdmreport-tablefilterplugin-hide-32, .mdmreport-record.mdmreport-tablefilterplugin-hide-33, .mdmreport-record.mdmreport-tablefilterplugin-hide-34, .mdmreport-record.mdmreport-tablefilterplugin-hide-35, .mdmreport-record.mdmreport-tablefilterplugin-hide-36, .mdmreport-record.mdmreport-tablefilterplugin-hide-37, .mdmreport-record.mdmreport-tablefilterplugin-hide-38, .mdmreport-record.mdmreport-tablefilterplugin-hide-39, .mdmreport-record.mdmreport-tablefilterplugin-hide-40, .mdmreport-record.mdmreport-tablefilterplugin-hide-41, .mdmreport-record.mdmreport-tablefilterplugin-hide-42, .mdmreport-record.mdmreport-tablefilterplugin-hide-43, .mdmreport-record.mdmreport-tablefilterplugin-hide-44, .mdmreport-record.mdmreport-tablefilterplugin-hide-45, .mdmreport-record.mdmreport-tablefilterplugin-hide-46, .mdmreport-record.mdmreport-tablefilterplugin-hide-47, .mdmreport-record.mdmreport-tablefilterplugin-hide-48, .mdmreport-record.mdmreport-tablefilterplugin-hide-49, .mdmreport-record.mdmreport-tablefilterplugin-hide-50, .mdmreport-record.mdmreport-tablefilterplugin-hide-51, .mdmreport-record.mdmreport-tablefilterplugin-hide-52, .mdmreport-record.mdmreport-tablefilterplugin-hide-53, .mdmreport-record.mdmreport-tablefilterplugin-hide-54, .mdmreport-record.mdmreport-tablefilterplugin-hide-55, .mdmreport-record.mdmreport-tablefilterplugin-hide-56, .mdmreport-record.mdmreport-tablefilterplugin-hide-57, .mdmreport-record.mdmreport-tablefilterplugin-hide-58, .mdmreport-record.mdmreport-tablefilterplugin-hide-59, .mdmreport-record.mdmreport-tablefilterplugin-hide-60, .mdmreport-record.mdmreport-tablefilterplugin-hide-61, .mdmreport-record.mdmreport-tablefilterplugin-hide-62, .mdmreport-record.mdmreport-tablefilterplugin-hide-63, .mdmreport-record.mdmreport-tablefilterplugin-hide-64, .mdmreport-record.mdmreport-tablefilterplugin-hide-65, .mdmreport-record.mdmreport-tablefilterplugin-hide-66, .mdmreport-record.mdmreport-tablefilterplugin-hide-67, .mdmreport-record.mdmreport-tablefilterplugin-hide-68, .mdmreport-record.mdmreport-tablefilterplugin-hide-69, .mdmreport-record.mdmreport-tablefilterplugin-hide-70, .mdmreport-record.mdmreport-tablefilterplugin-hide-71, .mdmreport-record.mdmreport-tablefilterplugin-hide-72, .mdmreport-record.mdmreport-tablefilterplugin-hide-73, .mdmreport-record.mdmreport-tablefilterplugin-hide-74, .mdmreport-record.mdmreport-tablefilterplugin-hide-75, .mdmreport-record.mdmreport-tablefilterplugin-hide-76, .mdmreport-record.mdmreport-tablefilterplugin-hide-77, .mdmreport-record.mdmreport-tablefilterplugin-hide-78, .mdmreport-record.mdmreport-tablefilterplugin-hide-79, .mdmreport-record.mdmreport-tablefilterplugin-hide-80, .mdmreport-record.mdmreport-tablefilterplugin-hide-81, .mdmreport-record.mdmreport-tablefilterplugin-hide-82, .mdmreport-record.mdmreport-tablefilterplugin-hide-83, .mdmreport-record.mdmreport-tablefilterplugin-hide-84, .mdmreport-record.mdmreport-tablefilterplugin-hide-85, .mdmreport-record.mdmreport-tablefilterplugin-hide-86, .mdmreport-record.mdmreport-tablefilterplugin-hide-87, .mdmreport-record.mdmreport-tablefilterplugin-hide-88, .mdmreport-record.mdmreport-tablefilterplugin-hide-89, .mdmreport-record.mdmreport-tablefilterplugin-hide-90, .mdmreport-record.mdmreport-tablefilterplugin-hide-91, .mdmreport-record.mdmreport-tablefilterplugin-hide-92, .mdmreport-record.mdmreport-tablefilterplugin-hide-93, .mdmreport-record.mdmreport-tablefilterplugin-hide-94, .mdmreport-record.mdmreport-tablefilterplugin-hide-95, .mdmreport-record.mdmreport-tablefilterplugin-hide-96, .mdmreport-record.mdmreport-tablefilterplugin-hide-97, .mdmreport-record.mdmreport-tablefilterplugin-hide-98, .mdmreport-record.mdmreport-tablefilterplugin-hide-99 {
     display: none!important;
 }
@@ -699,6 +991,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
 }
 </style>
 <script>
+    /* === column filtering js === */
 (function() {
     function addElementsToTables_TableFilters() {
         let errorBannerEl = null;
