@@ -247,7 +247,7 @@ def produce_html(inp):
         result_ins_htmlmarkup_heading = 'MDD: {filepath}'.format(filepath=preptext_html(extract_filename(inp['source_file'])))
         result_ins_htmlmarkup_headertext = '' # it's too obvious, we shouldn't print unnecessary line; it says "MDD" with a very big font size in h1
     elif result_ins_htmlmarkup_reporttype=='diff':
-        result_ins_htmlmarkup_title = 'Diff'
+        result_ins_htmlmarkup_title = 'Diff: {MDD_A} vs {MDD_B}'.format(MDD_A=preptext_html(extract_filename(inp['source_left'])),MDD_B=preptext_html(extract_filename(inp['source_right'])))
         result_ins_htmlmarkup_heading = 'Diff'
     else:
         result_ins_htmlmarkup_title = '???'
