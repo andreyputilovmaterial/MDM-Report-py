@@ -13,6 +13,8 @@ import report_html_template
 
 
 
+
+
 # helper text prep functions first
 
 
@@ -130,11 +132,39 @@ def enchancement_plugin__add_diff_classes_per_row__on_row(row,result_formatted,f
     if is_active:
         classes_add = ''
         diffflag = row[column_specs.index('flagdiff')]
-        if re.match(r'^.*?(?:(?:add)|(?:insert)).*?',diffflag):
+        was_row_added = re.match(r'^.*?(?:(?:add)|(?:insert)).*?',diffflag)
+        was_row_removed = re.match(r'^.*?(?:(?:remove)|(?:delete)).*?',diffflag)
+        was_row_changed = False
+        for col in other_cols_ref:
+            col_text = '{c}'.format(c=col)
+            if isinstance(col,dict) or isinstance(col,list):
+                col_text = json.dumps(col)
+            was_row_changed = was_row_changed or re.match(r'.*?(?:(?:<<ADDED>>)|(?:<<REMOVED>>)).*?',col_text,flags=re.DOTALL)
+        if was_row_added:
             classes_add = classes_add+ ' mdmdiff-added'
-        if re.match(r'^.*?(?:(?:remove)|(?:delete)).*?',diffflag):
+        if was_row_removed:
             classes_add = classes_add+ ' mdmdiff-removed'
+        if was_row_changed and not ( was_row_added or was_row_removed ):
+            classes_add = classes_add+ ' mdmdiff-diff'
         result_formatted = re.sub(r'(<\s*?tr\b\s*\bclass\s*=\s*"[^"]*?)(")',lambda m:'{begin}{classes_add}{close}'.format(begin=m[1],close=m[2],classes_add=classes_add),result_formatted)
+    return result_formatted
+
+def enchancement_plugin__add_diff_classes_per_row__on_col(col_data,result_formatted,col_index=None,flags=[],column_specs=[],other_cols_ref=[]):
+    is_active = ( not ('plugin_add_diff_classes_per_row_already_called' in flags) ) and ( ('flagdiff' in column_specs) )
+    if is_active:
+        if column_specs[col_index] == 'flagdiff':
+            row = other_cols_ref
+            diffflag = row[column_specs.index('flagdiff')]
+            was_row_added = re.match(r'^.*?(?:(?:add)|(?:insert)).*?',diffflag)
+            was_row_removed = re.match(r'^.*?(?:(?:remove)|(?:delete)).*?',diffflag)
+            was_row_changed = False
+            for col in row:
+                col_text = '{c}'.format(c=col)
+                if isinstance(col,dict) or isinstance(col,list):
+                    col_text = json.dumps(col)
+                was_row_changed = was_row_changed or re.match(r'.*?(?:(?:<<ADDED>>)|(?:<<REMOVED>>)).*?',col_text,flags=re.DOTALL)
+            if was_row_added or was_row_removed or was_row_changed:
+                result_formatted = re.sub(r'(<\s*?\w+.*?>)(.*?)(<\s*?/.*?>)',lambda m:'{begin}{content}{content_add}{close}'.format(begin=m[1],close=m[3],content=m[2],content_add=' (changed)'),result_formatted,flags=re.DOTALL)
     return result_formatted
 
 
@@ -148,6 +178,7 @@ enchancement_plugins = [
         'name': 'enchancement_plugin__add_diff_classes_per_row__on_row',
         'enabled': True,
         'on_row': enchancement_plugin__add_diff_classes_per_row__on_row,
+        'on_col': enchancement_plugin__add_diff_classes_per_row__on_col,
     },
 ]
 
