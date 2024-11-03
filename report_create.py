@@ -135,6 +135,9 @@ def enchancement_plugin__add_diff_classes_per_row__on_row(row,result_formatted,f
         was_row_added = re.match(r'^.*?(?:(?:add)|(?:insert)).*?',diffflag)
         was_row_removed = re.match(r'^.*?(?:(?:remove)|(?:delete)).*?',diffflag)
         was_row_changed = False
+        was_row_moved = re.match(r'^.*?(?:(?:move)).*?',diffflag) and not re.match(r'^.*?(?:(?:remove)).*?',diffflag)
+        # if was_row_moved:
+        #     was_row_changed = True
         for col in other_cols_ref:
             col_text = '{c}'.format(c=col)
             if isinstance(col,dict) or isinstance(col,list):
@@ -146,6 +149,8 @@ def enchancement_plugin__add_diff_classes_per_row__on_row(row,result_formatted,f
             classes_add = classes_add+ ' mdmdiff-removed'
         if was_row_changed and not ( was_row_added or was_row_removed ):
             classes_add = classes_add+ ' mdmdiff-diff'
+        if was_row_moved and not ( was_row_added or was_row_removed or was_row_changed ):
+            classes_add = classes_add+ ' mdmdiff-moved mdmdiff-ghost'
         result_formatted = re.sub(r'(<\s*?tr\b\s*\bclass\s*=\s*"[^"]*?)(")',lambda m:'{begin}{classes_add}{close}'.format(begin=m[1],close=m[2],classes_add=classes_add),result_formatted)
     return result_formatted
 
@@ -158,6 +163,9 @@ def enchancement_plugin__add_diff_classes_per_row__on_col(col_data,result_format
             was_row_added = re.match(r'^.*?(?:(?:add)|(?:insert)).*?',diffflag)
             was_row_removed = re.match(r'^.*?(?:(?:remove)|(?:delete)).*?',diffflag)
             was_row_changed = False
+            was_row_moved = re.match(r'^.*?(?:(?:move)).*?',diffflag) and not re.match(r'^.*?(?:(?:remove)).*?',diffflag)
+            # if was_row_moved:
+            #     was_row_changed = True
             for col in row:
                 col_text = '{c}'.format(c=col)
                 if isinstance(col,dict) or isinstance(col,list):
