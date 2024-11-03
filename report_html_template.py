@@ -15,6 +15,8 @@ def preptext_html_needsescaping(s):
 
 
 
+# TODO: JobNumber in jira - make it possible to read from fields
+
 
 TEMPLATE_HTML_CSS_NORMALIZECSS = """
 article,aside,details,figcaption,figure,footer,header,hgroup,nav,section,summary{display:block;}audio,canvas,video{display:inline-block;*display:inline;*zoom:1;}audio:not([controls]) {display:none;height:0;}[hidden]{display:none;}html{font-size:100%;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}html,button,input,select,textarea{font-family:sans-serif;}body{margin:0;}a:focus{outline:thin dotted;}a:active,a:hover{outline:0;}h1{font-size:2em;margin:0.67em 0;}h2{font-size:1.5em;margin:0.83em 0;}h3{font-size:1.17em;margin:1em 0;}h4{font-size:1em;margin:1.33em 0;}h5{font-size:0.83em;margin:1.67em 0;}h6{font-size:0.75em;margin:2.33em 0;}abbr[title]{border-bottom:1px dotted;}b,strong{font-weight:bold;}blockquote{margin:1em 40px;}dfn{font-style:italic;}mark{background:#ff0;color:#000;}p,pre{margin:1em 0;}code,kbd,pre,samp{font-family:monospace,serif;_font-family:'courier new',monospace;font-size:1em;}pre{white-space:pre;white-space:pre-wrap;word-wrap:break-word;}q{quotes:none;}q:before,q:after{content:'';content:none;}small{font-size:75%;}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline;}sup{top:-0.5em;}sub{bottom:-0.25em;}dl,menu,ol,ul{margin:1em 0;}dd{margin:0 0 0 40px;}menu,ol,ul{padding:0 0 0 40px;}nav ul,nav ol{list-style:none;list-style-image:none;}img{border:0;-ms-interpolation-mode:bicubic;}svg:not(:root) {overflow:hidden;}figure{margin:0;}form{margin:0;}fieldset{border:1px solid #c0c0c0;margin:0 2px;padding:0.35em 0.625em 0.75em;}legend{border:0;padding:0;white-space:normal;*margin-left:-7px;}button,input,select,textarea{font-size:100%;margin:0;vertical-align:baseline;*vertical-align:middle;}button,input{line-height:normal;}button,html input[type="button"],input[type="reset"],input[type="submit"]{-webkit-appearance:button;cursor:pointer;*overflow:visible;}button[disabled],input[disabled]{cursor:default;}input[type="checkbox"],input[type="radio"]{box-sizing:border-box;padding:0;*height:13px;*width:13px;}input[type="search"]{-webkit-appearance:textfield;-moz-box-sizing:content-box;-webkit-box-sizing:content-box;box-sizing:content-box;}input[type="search"]::-webkit-search-cancel-button,input[type="search"]::-webkit-search-decoration{-webkit-appearance:none;}button::-moz-focus-inner,input::-moz-focus-inner{border:0;padding:0;}textarea{overflow:auto;vertical-align:top;}table{border-collapse:collapse;border-spacing:0;}
@@ -214,7 +216,7 @@ TEMPLATE_HTML_STYLES_TABLE = """
 /*     font-size: 70%; */
 /* } */
 .mdmreport-table .mdmreport-record.mdmdiff-ghost {
-    background: #eeeeee;
+    background: #fff5da;
     color: #444444;
 }
 .mdmreport-table .mdmreport-record.mdmdiff-diff {
@@ -713,6 +715,18 @@ TEMPLATE_HTML_SCRIPTS = """
     function sanitizeCellText(s) {
         return s.replace(/&\\#(\\d+);/i,function(n,n1){if(isFinite(+n1)) return String.fromCharCode(+n1);else return n;});
     }
+    function err(e){
+        let errorBannerEl;
+        try {
+            errorBannerEl = document.querySelector('#error_banner');
+            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+        } catch(e) {
+            throw e;
+        }
+        try {
+            errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: Jira connection: ${e}<br />`;
+        } catch(ee) {};
+    }
     function parsePropertiesText(s) {
         const results = [];
         if( /^\\s*?$/.test(s) )
@@ -725,83 +739,106 @@ TEMPLATE_HTML_SCRIPTS = """
             }
             return results;
         } else {
-            throw new Error(`can't parse properties at [${s}]`);
+            // // TODO: why throw an exception and stop? Can we just ignore?
+            // // throw new Error(`can't parse properties at [${s}]`);
+            // err(`Warning: Jira connection plugin: Reading custom properties: can't parse this as properties: "${s}"`);
+            // return results;
+            // // Actually, no, the function should read the properties, if it can't, it fails; if we want to handle failure differently, i.e. not break - we can do at a level where we check results of this fn
+            throw new Error(`Reading custom properties: can't parse this as properties: "${s}"`);
         }
     }
     function itemNameLookup(itemName,propertiesData,sectionName) {
-        const extractProperties = () => {};
-        if(false) { // ( /^\\s*?Info\\s*?\\:/.test(itemName) ) {
-            // info item - skip
-            return null;
-        } else if( (sectionName=='shared_lists') && (/^\\s*?\\w+/.test(itemName)) ) {
-            // is a shared list
-            return itemName.replace(/^\\s*?(\\w+)\\b.*?$/ig,'$1').replace(/^\\s*?SL_/ig,'');
-        } else if( (sectionName=='fields') ) {
-            // "fields" (normal questions) - let's look up the FullName property
-            const properties = propertiesData[itemName];
-            const propertyListLcase = properties.map(a=>a.name.toLowerCase());
-            if( /^\\s*?QCData\\.Flags\\b/.test(itemName) ) {
-                // A QC Flag - let's look up the "AppliesTo" property
-                if( propertyListLcase.includes('AppliesTo'.toLowerCase()) ) {
-                    // TODO: best match. or all matches?
-                    const appliesto = properties[propertyListLcase.indexOf('AppliesTo'.toLowerCase())].value.replace(/^\\s*?Question\\s*?\\-\\s*/ig,'').replace(/^\\s*/,'').replace(/\\s*$/,'');
-                    return appliesto;
+        try {
+            const extractProperties = () => {};
+            if(false) { // ( /^\\s*?Info\\s*?\\:/.test(itemName) ) {
+                // info item - skip
+                return null;
+            } else if( (sectionName=='shared_lists') && (/^\\s*?\\w+/.test(itemName)) ) {
+                // is a shared list
+                return itemName.replace(/^\\s*?(\\w+)\\b.*?$/ig,'$1').replace(/^\\s*?SL_/ig,'');
+            } else if( (sectionName=='fields') ) {
+                // "fields" (normal questions) - let's look up the FullName property
+                const properties = propertiesData[itemName];
+                const propertyListLcase = properties.map(a=>a.name.toLowerCase());
+                if( /^\\s*?QCData\\.Flags\\b/.test(itemName) ) {
+                    // A QC Flag - let's look up the "AppliesTo" property
+                    if( propertyListLcase.includes('AppliesTo'.toLowerCase()) ) {
+                        // TODO: best match. or all matches?
+                        const appliesto = properties[propertyListLcase.indexOf('AppliesTo'.toLowerCase())].value.replace(/^\\s*?Question\\s*?\\-\\s*/ig,'').replace(/^\\s*/,'').replace(/\\s*$/,'');
+                        return appliesto;
+                    }
                 }
-            }
-            if( propertyListLcase.includes('FullName'.toLowerCase()) ) {
-                const fullname = properties[propertyListLcase.indexOf('FullName'.toLowerCase())].value.replace(/^\\s*/,'').replace(/\\s*$/,'');
-                return fullname;
-            }
-            if( /\\.(?:categories|elements)\\s*?\\[\\s*?.*?\\s*?\\]\\s*?$/ig.test(itemName) ) {
-                const refItemName = itemName.replace(/\\.(?:categories|elements)\\s*?\\[\\s*?.*?\\s*?\\]\\s*?$/ig,'');
-                const refItemProperties = propertiesData[refItemName];
-                const refItemPropertyListLcase = refItemProperties.map(a=>a.name.toLowerCase());
-                if( refItemPropertyListLcase.includes('FullName'.toLowerCase()) ) {
-                    const fullname = refItemProperties[refItemPropertyListLcase.indexOf('FullName'.toLowerCase())].value.replace(/^\\s*/,'').replace(/\\s*$/,'');
+                if( propertyListLcase.includes('FullName'.toLowerCase()) ) {
+                    const fullname = properties[propertyListLcase.indexOf('FullName'.toLowerCase())].value.replace(/^\\s*/,'').replace(/\\s*$/,'');
                     return fullname;
                 }
-            }
-            return null
-        } else if( (sectionName=='pages') ) {
-            // "pages" - usually tickets are not issued for pages, skip
-            return null
-        } else
-            return null;
-    }
-    function getJobNumberProperty(tableEl,errBannerEl) {
-        const promise = new Promise(function(resolve,reject) {
-            const rowsEl = Array.from(tableEl.querySelectorAll('tr'));
-            const rowBannerEl = rowsEl[0];
-            const rowsWithHdataEl = rowsEl.filter(function(tr){ const cols = Array.from(tr.querySelectorAll('td')); if(cols.length>1) { return /^(?:\\s*?(?:(?:mdd|mdm|hdata)\\.)?Properties\\s*?)|(?:\\s*.*?\\bMDM\\b.*?\\s*)$/ig.test(sanitizeCellText(cols[1].textContent)); } else return false; });
-            if( (rowsWithHdataEl.length>0)&&(!!rowBannerEl) ) {
-                const propertiesColIndices = [];
-                const isAPropertiesColumn = s => /^(?:(?:&#32;)|(?:\\s))*?(?:Custom)\\s*?properties(?:(?:&#32;)|(?:\\s))*?(?:(?:&#40;)|(?:\\())*?.*?(?:(?:&#42;)|(?:\\)))*?(?:(?:&#32;)|(?:\\s))*?$/ig.test(s);
-                Array.from(rowBannerEl.querySelectorAll('td')).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/\\s*?\\(\\s*?(?:Left|Right)\\s*?MDD\\s*?\\)\\s*/ig,'')).map((colText,colIndex)=>{if(colIndex<2)return false;if(isAPropertiesColumn(colText))return colIndex;else return false;}).forEach(e=>{if(!!e)propertiesColIndices.push(e);});
-                const colsEl = Array.from(rowsWithHdataEl[0].querySelectorAll('td'));
-                const propertiesData = {};
-                const itemNameColIndex = 1;
-                const cols = Array.from(colsEl).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/^\\s*?\\(\\s*?(?:Left|Right)\\s*?MDD\\s*?\\)\\s*/ig,''));
-                const itemName = cols[itemNameColIndex];
-                const properties = [];
-                propertiesColIndices.forEach(colIndex=>{
-                    properties.push(...parsePropertiesText(cols[colIndex]));
-                });
-                if( !!propertiesData[itemName] ) throw new Error(`grabbing properties for jira connections: duplicate row at #${i}:  ${itemName}`);
-                //propertiesData[itemName] = properties.reverse(); // we reverse the order so that if we find the first matching property with indexOf it comes from the last column that stands for the right, the newer mdd
-                const propertyCellContent = properties.reduce(function(acc,e){return ({...acc,[e.name]:e.value});},{});
-                return resolve(propertyCellContent['JobNumber']);
-            } else return null;
-        });
-        return promise;
-    }
-    function jiraPlugin_init(){
-        let errorBannerEl;
-        try {
-            errorBannerEl = document.querySelector('#error_banner');
-            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                if( /\\.(?:categories|elements)\\s*?\\[\\s*?.*?\\s*?\\]\\s*?$/ig.test(itemName) ) {
+                    const refItemName = itemName.replace(/\\.(?:categories|elements)\\s*?\\[\\s*?.*?\\s*?\\]\\s*?$/ig,'');
+                    const refItemProperties = propertiesData[refItemName];
+                    const refItemPropertyListLcase = refItemProperties.map(a=>a.name.toLowerCase());
+                    if( refItemPropertyListLcase.includes('FullName'.toLowerCase()) ) {
+                        const fullname = refItemProperties[refItemPropertyListLcase.indexOf('FullName'.toLowerCase())].value.replace(/^\\s*/,'').replace(/\\s*$/,'');
+                        return fullname;
+                    }
+                }
+                return null
+            } else if( (sectionName=='pages') ) {
+                // "pages" - usually tickets are not issued for pages, skip
+                return null
+            } else
+                return null;
         } catch(e) {
+            err(e);
             throw e;
         }
+    }
+    function getJobNumberProperty(rowsEl,rowBannerEl) {
+        try {
+            const promise = new Promise(function(resolve,reject) {
+                try {
+                    const rowsWithHdataEl = rowsEl; // rowsEl.filter(function(tr){ const cols = Array.from(tr.querySelectorAll('td')); if(cols.length>1) { return /^(?:\\s*?(?:(?:mdd|mdm|hdata)\\.)?Properties\\s*?)|(?:\\s*.*?\\bMDM\\b.*?\\s*)$/ig.test(sanitizeCellText(cols[1].textContent)); } else return false; });
+                    Array.from(rowsEl).forEach(function(row){
+                        const propertiesColIndices = [];
+                        const isAPropertiesColumn = s => /^(?:(?:&#32;)|(?:\\s))*?(?:Custom)\\s*?properties(?:(?:&#32;)|(?:\\s))*?(?:(?:&#40;)|(?:\\())*?.*?(?:(?:&#42;)|(?:\\)))*?(?:(?:&#32;)|(?:\\s))*?$/ig.test(s);
+                        Array.from(rowBannerEl.querySelectorAll('td')).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/\\s*?\\(\\s*?(?:Left|Right)\\s*?MDD\\s*?\\)\\s*/ig,'')).map((colText,colIndex)=>{if(colIndex<2)return false;if(isAPropertiesColumn(colText))return colIndex;else return false;}).forEach(e=>{if(!!e)propertiesColIndices.push(e);});
+                        const colsEl = Array.from(row.querySelectorAll('td'));
+                        const propertiesData = {};
+                        const itemNameColIndex = 1;
+                        const cols = Array.from(colsEl).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/^\\s*?\\(\\s*?(?:Left|Right)\\s*?MDD\\s*?\\)\\s*/ig,''));
+                        const itemName = cols[itemNameColIndex];
+                        const properties = [];
+                        const parsePropertiesTextFailSafe = function(s){
+                            try {
+                                return parsePropertiesText(s);
+                            } catch(e) {
+                                err_msg = `${e} (processing row: "${itemName})"`.replace('Error','Warning');
+                                err(err_msg);
+                                return [];
+                            }
+                        }
+                        propertiesColIndices.forEach(colIndex=>{
+                            properties.push(...parsePropertiesTextFailSafe(cols[colIndex]));
+                        });
+                        //if( !!propertiesData[itemName] ) throw new Error(`grabbing properties: duplicate row at #${i}:  ${itemName}`);
+                        //propertiesData[itemName] = properties.reverse(); // we reverse the order so that if we find the first matching property with indexOf it comes from the last column that stands for the right, the newer mdd
+                        const propertyCellContent = properties.reduce(function(acc,e){return ({...acc,[e.name]:e.value});},{});
+                        if( Object.keys(propertyCellContent).includes('JobNumber') ) {
+                            return resolve(propertyCellContent['JobNumber']);
+                        }
+                    });
+                } catch(e) {
+                    err(e);
+                    throw e;
+                }
+                return reject('JobJumber not found');
+            });
+            return promise;
+        } catch(e) {
+            err(e);
+            throw e;
+        }
+    }
+    function jiraPlugin_init(){
         try {
             /* jira suggestions */
             /* https://materialplus.atlassian.net/jira/software/c/projects/P123456/issues/?jql=project%20%3D%20%22P123456%22%20AND%20%28resolution%3Dunresolved%29%20AND%20%28not%20%28status%20in%20%28Resolved%2CDone%2CClosed%29%29%29%20AND%20%28not%20%28status%20in%20%28%22Ready%20for%20Stage%22%2C%22Need%20more%20Information%22%29%29%29%20ORDER%20BY%20key%20ASC */
@@ -819,7 +856,7 @@ TEMPLATE_HTML_SCRIPTS = """
             clickmeRevealBannerEl.setAttribute('href','#!');
             clickmeRevealBannerEl.setAttribute('onclick','javascript: return false;');
             clickmeRevealBannerEl.textContent = "   (show)"
-            clickmeRevealBannerEl.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();bannerHolderPromiseResolve({bannerHolderEl:divBannerHolderEl,tablesEl,errorBannerEl});clickmeRevealBannerEl.remove();return false;});
+            clickmeRevealBannerEl.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();bannerHolderPromiseResolve({bannerHolderEl:divBannerHolderEl,tablesEl});clickmeRevealBannerEl.remove();return false;});
             bannerEl.querySelector('legend').append(clickmeRevealBannerEl);
             bannerEl.append(divBannerHolderEl);
             pluginHolderEl.append(bannerEl);
@@ -827,16 +864,14 @@ TEMPLATE_HTML_SCRIPTS = """
                 window.removeEventListener('DOMContentLoaded',jiraPlugin_init);
             } catch(ee) {}
         } catch(e) {
-            try {
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
-            } catch(ee) {};
+            err(e);
             try {
                 window.removeEventListener('DOMContentLoaded',jiraPlugin_init);
             } catch(ee) {}
             throw e;
         }
     }
-    function jiraPlugin_workaddelementstotables(  { getJiraUrl, tablesEl, errorBannerEl, jiraPlugin_clearUp } ) {
+    function jiraPlugin_workaddelementstotables(  { getJiraUrl, tablesEl, jiraPlugin_clearUp } ) {
         try {
             Array.from(tablesEl).forEach(function(tableEl) {
                 const sectionName = (function(tableEl){
@@ -872,11 +907,21 @@ TEMPLATE_HTML_SCRIPTS = """
                         if( isTemporarilyMovedRow(diffFlag) )
                             return;
                         const properties = [];
+                        const parsePropertiesTextFailSafe = function(s){
+                            try {
+                                return parsePropertiesText(s);
+                            } catch(e) {
+                                err_msg = `${e} (processing row: "${itemName})"`.replace('Error','Warning');
+                                err(err_msg);
+                                return [];
+                            }
+                        }
                         propertiesColIndices.forEach(colIndex=>{
-                            properties.push(...parsePropertiesText(cols[colIndex]));
+                            properties.push(...parsePropertiesTextFailSafe(cols[colIndex]));
                         });
-                        if( !!propertiesData[itemName] ) throw new Error(`grabbing properties for jira connections: duplicate row at #${i}:  ${itemName}`);
-                        propertiesData[itemName] = properties.reverse(); // we reverse the order so that if we find the first matching property with indexOf it comes from the last column that stands for the right, the newer mdd
+                        //if( !!propertiesData[itemName] ) throw new Error(`grabbing properties for jira connections: duplicate row at #${i}:  ${itemName}`);
+                        if( !propertiesData[itemName] ) propertiesData[itemName] = [];
+                        propertiesData[itemName] = [ ...propertiesData[itemName], ...properties.reverse() ]; // we reverse the order so that if we find the first matching property with indexOf it comes from the last column that stands for the right, the newer mdd
                     }
                 });
                 Array.prototype.forEach.call(rowsEl,function(rowEl,i) {
@@ -905,13 +950,11 @@ TEMPLATE_HTML_SCRIPTS = """
                 });
             });
         } catch(e) {
-            try {
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
-            } catch(ee) {};
+            err(e);
             throw e;
         }
     }
-    function jiraPlugin_pluginpanelunhidden( { bannerHolderEl, tablesEl, errorBannerEl } ) {
+    function jiraPlugin_pluginpanelunhidden( { bannerHolderEl, tablesEl } ) {
         try {
             const bannerContentEl = document.createElement('div');
             const propertyJobNumber = '123456';
@@ -929,11 +972,28 @@ TEMPLATE_HTML_SCRIPTS = """
             inp2El.addEventListener('keyup',function(event){  inp2El.dispatchEvent(new Event('change'));});
             inp3El.addEventListener('keyup',function(event){  inp3El.dispatchEvent(new Event('change'));});
             const promiseTmp = Promise.resolve(); // why? what's the reason? are we just trying to call it async in a separate flow, not blocking interface? probably
-            tablesMDMPropEl = document.querySelectorAll('.mdmreport-wrapper-section-mdmproperties table.mdmreport-table');
-            if( tablesMDMPropEl.length>0 ) {
-                tableEl = tablesMDMPropEl[0];
-                promiseTmp.then(function(){getJobNumberProperty(tableEl,errorBannerEl).then(function(val){ const propertyJobNumber = `P${`${val}`.replace(/^\\s*?(P?)(\\d\\w+)\\s*?$/,'$2')}`; inp1El.value = propertyJobNumber; inp1El.dispatchEvent(new Event('change')); });});
-            }
+            promiseTmp.then(function(){
+                try {
+                    const rowsPotentiallyMDMPropEl = document.querySelectorAll('.mdmreport-wrapper-section-mdmproperties table.mdmreport-table tr.mdmreport-record:not(.mdmreport-record-header), .mdmreport-wrapper-section-fields table.mdmreport-table tr.mdmreport-record:not(.mdmreport-record-header)');
+                    const rowsBannerEl = document.querySelectorAll('table.mdmreport-table tr.mdmreport-record.mdmreport-record-header');
+                    if(!(rowsBannerEl.length>0)) throw new Error('Not found a row with column headers for checking properties to grab JobNumber value');
+                    const rowBannerEl = rowsBannerEl[0];
+                    const weGetJobnumberPromise = getJobNumberProperty(Array.from(rowsPotentiallyMDMPropEl),rowBannerEl);
+                    weGetJobnumberPromise.then( function(val) {
+                        try {
+                            const propertyJobNumber = `P${`${val}`.replace(/^\\s*?(P?)(\\d\\w+)\\s*?$/,'$2')}`;
+                            inp1El.value = propertyJobNumber;
+                            inp1El.dispatchEvent(new Event('change'));
+                        } catch(e) {
+                            err(e);
+                            throw e;
+                        }
+                    });
+                } catch(e) {
+                    err(e);
+                    throw e;
+                }
+            });
             const submitEl = bannerContentEl.querySelector('fieldset').querySelectorAll('input[type="button"]')[0];
             submitEl.addEventListener('click',function(event){
                 event.preventDefault();
@@ -944,11 +1004,9 @@ TEMPLATE_HTML_SCRIPTS = """
                     const getJiraUrl = function(itemName) { return `${decodeURIComponent(val2)}${encodeURIComponent(prepJiraString(val3,itemName))}`; };
                     if( !validDomains.map(a=>a.toLowerCase()).includes((new URL(getJiraUrl(''))).hostname.toLowerCase()) )
                         throw new Error(`Not valid jira domain! It has to be in this list: [ ${validDomains.join(', ')} ], or, update the code, it's easy; search for "validDomains"`);
-                    runPromiseResolve(  { getJiraUrl, tablesEl, errorBannerEl, jiraPlugin_clearUp } );
+                    runPromiseResolve(  { getJiraUrl, tablesEl, jiraPlugin_clearUp } );
                 } catch(e) {
-                    try {
-                        errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
-                    } catch(ee) {};
+                    err(e);
                     throw e;
                 }
                 return false;
@@ -956,9 +1014,7 @@ TEMPLATE_HTML_SCRIPTS = """
             function jiraPlugin_clearUp() { /* bannerContentEl.remove(); */ bannerContentEl.innerHTML = 'Done, see the right most column in the table'; };
             bannerHolderEl.append(bannerContentEl);
         } catch(e) {
-            try {
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
-            } catch(ee) {};
+            err(e);
             try {
                 window.removeEventListener('DOMContentLoaded',jiraPlugin_init); // trying to save memory and clear this function from memory but that's stupid - as we have a reference here, it is stil in memory; it should be cleared at a different, outer level
             } catch(ee) {}

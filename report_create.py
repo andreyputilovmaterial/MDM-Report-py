@@ -14,6 +14,13 @@ import report_html_template
 
 
 
+# TODO:
+# combine attributes to name column in diff too
+
+
+# TODO: Excel Provider!!!
+
+
 
 # helper text prep functions first
 
@@ -171,6 +178,7 @@ def enchancement_plugin__add_diff_classes_per_row__on_col(col_data,result_format
                 if isinstance(col,dict) or isinstance(col,list):
                     col_text = json.dumps(col)
                 was_row_changed = was_row_changed or re.match(r'.*?(?:(?:<<ADDED>>)|(?:<<REMOVED>>)).*?',col_text,flags=re.DOTALL)
+            was_row_changed = was_row_changed or was_row_moved # changing position is a change too
             if was_row_added or was_row_removed or was_row_changed:
                 result_formatted = re.sub(r'(<\s*?\w+.*?>)(.*?)(<\s*?/.*?>)',lambda m:'{begin}{content}{content_add}{close}'.format(begin=m[1],close=m[3],content=m[2],content_add=' (changed)'),result_formatted,flags=re.DOTALL)
     return result_formatted
