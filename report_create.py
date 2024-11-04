@@ -1,5 +1,5 @@
 # import os, time, re, sys
-from datetime import datetime, timezone
+from datetime import datetime
 # from dateutil import tz
 import argparse
 from pathlib import Path
@@ -7,7 +7,10 @@ import re
 import json
 import html
 
-import report_html_template
+if __name__ == '__main__':
+    import report_html_template
+else:
+    from . import report_html_template
 
 
 
@@ -336,7 +339,7 @@ if __name__ == '__main__':
         description="Produce a summary of MDD in html (read from json)"
     )
     parser.add_argument(
-        'inpfile',
+        '--inpfile',
         help='JSON with Input MDD map'
     )
     args = parser.parse_args()
