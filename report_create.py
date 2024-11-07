@@ -7,12 +7,18 @@ import re
 import json
 import html
 
+
+
+
 if __name__ == '__main__':
+    # run as a program
     import report_html_template
-else:
+elif '.' in __name__:
+    # package
     from . import report_html_template
-
-
+else:
+    # included with no parent package
+    import report_html_template
 
 
 
