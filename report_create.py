@@ -26,13 +26,8 @@ else:
 
 
 
+
 # helper text prep functions first
-
-
-
-
-
-# TODO: when attributes are comvbined into "name" column we need to remove/suppress blank remaining columns
 
 def sanitize_text_normalizelinebreaks(str_output):
     str_output = re.sub(r'\r','\n',re.sub(r'\r?\n','\n',str_output))
@@ -165,30 +160,45 @@ def sanitize_tablecellcontents(inp_value,flags=[]):
 # it looks absolutely perfect aesthetically
 # but is increasing memory consumption - report for merged disney BES MDD takes 2 GB in chrome memory witout these "labels" and 3 GB with this transformation performed
 # UPD: wow, I reloaded the page and it now takes 1.6 GB of memory; chrome is like unpredictable - it includes that "labels" added to "name" column and the page takes 1.6 GB
-def enchancement_plugin__combine_attributes_into_master_name_col__on_col(col_data,col_index=None,flags=[],column_specs=[],other_cols_ref=[]):
+
+def enchancement_plugin__combine_attributes_into_master_name_col__on_table(rows,column_specs,flags=[]):
     def is_column_id_for_attribute_column(col_id):
         return re.match(r'^.*?\b(?:attribute)(?:s)?\b\s*?(?:\s*?.*?)?\s*?$',re.sub(r'_',' ',col_id))
-    is_active = ( not ('plugin_combine_attributes_already_called' in flags) ) and ( ('name' in column_specs) and (len([col for col in column_specs if is_column_id_for_attribute_column(col)])>0) )
+    # def is_column_id_for_name_column(col_id):
+    #     return re.match(r'^.*?\bname\s*?$',re.sub(r'_',' ',col_id))
+    col_id_name = column_specs.index('name')
+    col_ids_atts = []
+    for i,col in enumerate(column_specs):
+        if is_column_id_for_attribute_column(col):
+            col_ids_atts.append(i)
+    is_active = ( not ('plugin_combine_attributes_already_called' in flags) ) and ( (col_id_name>=0) and (len(col_ids_atts)>0) )
     if is_active:
-        if column_specs[col_index] == 'name':
-            # attributes are added to the "name" column
-            result_parts = [col_data]
-            result_parts_added_check = [] # to avoid duplicates - if left MDD column and right MDD column are identical we will only print it once
-            for col_id_column_add_with_attrs in [col for col in column_specs if is_column_id_for_attribute_column(col)]:
-                col_attributes_data = other_cols_ref[column_specs.index(col_id_column_add_with_attrs)]
-                if col_attributes_data:
-                    col_attributes_data_check = json.dumps(col_attributes_data) # to avoid duplicates - if left MDD column and right MDD column are identical we will only print it once
-                    if not (col_attributes_data_check in result_parts_added_check): # to avoid duplicates - if left MDD column and right MDD column are identical we will only print it once
-                        result_parts.append({'text':{'parts':[{'text':', with ','role':'sronly'},col_attributes_data]},'role':'label'})
-                        result_parts_added_check.append(col_attributes_data_check)
-            col_data = {'parts':result_parts}
-            return col_data,flags
-        if is_column_id_for_attribute_column(column_specs[col_index]):
-            # null out - attributes are added to "name" column
-            return None,flags
-        else:
-            return col_data,flags
-    return col_data,flags
+        rows_upd = []
+        row_exclusions = col_ids_atts
+        for row in rows:
+            name_col_upd_data = {'parts':[
+                row[col_id_name]
+            ]}
+            check_duplicates = []
+            for col_id_att in col_ids_atts:
+                col_att_data = row[col_id_att]
+                row[col_id_att] = None
+                col_att_data_fingerprint = json.dumps(col_att_data)
+                if col_att_data_fingerprint in check_duplicates:
+                    # skip, already added
+                    pass
+                else:
+                    check_duplicates.append(col_att_data_fingerprint)
+                    col_att_data_formatted = {'text':{'parts':[{'text':', with ','role':'sronly'},col_att_data]},'role':'label'}
+                    name_col_upd_data['parts'].append(col_att_data_formatted)
+
+            row[col_id_name] = name_col_upd_data
+            row_filtered = [ col for i,col in enumerate(row) if not (i in row_exclusions) ]
+            rows_upd.append(row_filtered)
+        rows = rows_upd
+        column_specs = [ col for i,col in enumerate(column_specs) if not (i in row_exclusions) ]
+
+    return rows,column_specs,flags
 
 
 def enchancement_plugin__add_diff_classes_per_row__on_row(row,flags,column_specs,other_cols_ref=[]):
@@ -207,6 +217,9 @@ def enchancement_plugin__add_diff_classes_per_row__on_row(row,flags,column_specs
             col_text = '{c}'.format(c=col)
             if isinstance(col,dict) or isinstance(col,list):
                 col_text = json.dumps(col)
+            # TODO: same comment as in "on_col" event
+            # do we really need such inspections?
+            # this might be complicted
             was_row_changed = was_row_changed or re.match(r'.*?(?:(?:<<ADDED>>)|(?:<<REMOVED>>)).*?',col_text,flags=re.DOTALL)
         if was_row_added:
             flags_added.append('format-cssclass-mdmdiff-added')
@@ -235,7 +248,11 @@ def enchancement_plugin__add_diff_classes_per_row__on_col(col_data,col_index=Non
                 col_text = '{c}'.format(c=col)
                 if isinstance(col,dict) or isinstance(col,list):
                     col_text = json.dumps(col)
-                # TODO: iteratively detect {'parts':[...,{'text':'...','role':'added|removed|role-added...'}]}
+                # TODO: do we need this?
+                # inspecting the whole row, every column, to see if something changed?
+                # this can be complicated, as cell contents is not always plain text, it can be complicated structures
+                # and checking this iteratively... uuufffhhh no
+                # inspecting {'parts':[...,{'text':'...','role':'added|removed|role-added...'}]}
                 # super complicated
                 was_row_changed = was_row_changed or re.match(r'.*?(?:(?:<<ADDED>>)|(?:<<REMOVED>>)).*?',col_text,flags=re.DOTALL)
             was_row_changed = was_row_changed or was_row_moved # changing position is a change too
@@ -248,7 +265,8 @@ enchancement_plugins = [
     {
         'name': 'combine_attributes_into_master_name_col',
         'enabled': True,
-        'on_col': enchancement_plugin__combine_attributes_into_master_name_col__on_col,
+        # 'on_col': enchancement_plugin__combine_attributes_into_master_name_col__on_col,
+        'on_table': enchancement_plugin__combine_attributes_into_master_name_col__on_table,
     },
     {
         'name': 'enchancement_plugin__add_diff_classes_per_row__on_row',
@@ -316,7 +334,7 @@ def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
                     flags = list(set([]+flags+flags_upd))
     
     col_css_classes = ['mdmreport-record']
-    if 'header' in flags:
+    if 'row-header' in flags:
         col_css_classes.append('mdmreport-record-header')
     for flag in [flag for flag in flags if re.match(r'^\s*?format-cssclass-\w',flag)]:
         cssclassname = re.sub(r'^\s*?format-cssclass-(\w[\w\-.]*).*?$',lambda m: m[1],flag)
@@ -328,6 +346,28 @@ def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
     )
     
     return result_formatted
+
+def prep_htmlmarkup_section(section_data,column_specs,column_titles,flags=[]):
+
+    row_first = [ row for row in [[(column_titles[col_title] if col_title in column_titles else col_title) for col_title in column_specs]] ]
+    rows = []+row_first+section_data['data']
+
+    column_specs_localcopy = column_specs
+
+    if not('skip_plugin_enchancement' in flags):
+        for plugin in enchancement_plugins:
+            if plugin['enabled']:
+                if 'on_table' in plugin:
+                    result_upd,column_specs_upd,flags_upd = plugin['on_table'](rows,column_specs_localcopy,flags)
+                    rows = result_upd
+                    column_specs_localcopy = column_specs_upd
+                    flags = list(set([]+flags+flags_upd))
+ 
+    return '{table_begin}{table_contents}{table_end}'.format(
+        table_begin = report_html_template.TEMPLATE_HTML_TABLE_BEGIN.replace('{{TABLE_NAME}}',sanitize_text_html(section_data['name'])).replace('{{TABLE_ID}}',sanitize_idfield(section_data['name'])),
+        table_contents = ''.join( [ prep_htmlmarkup_row(row,column_specs=column_specs_localcopy,flags=[]+flags+(['row-header'] if i==0 else [])+['section-{sec_id}'.format(sec_id=sanitize_idfield(section_data['name']))]) for i,row in enumerate(rows) ] ),
+        table_end = report_html_template.TEMPLATE_HTML_TABLE_END
+    )
 
 
 
@@ -372,15 +412,8 @@ def produce_html(inp):
 
 
 
-    report_htmlmarkup_column_headers = ''.join( [ prep_htmlmarkup_row(row,flags=['header'],column_specs=result_column_headers) for row in [[(result_column_headers_text_specs[col_title] if col_title in result_column_headers_text_specs else col_title) for col_title in result_column_headers]] ] )
-
     report_htmlmarkup_mainpart_with_tables = ''.join([
-        '{table_begin}{table_header_row}{table_contents}{table_end}'.format(
-            table_begin = report_html_template.TEMPLATE_HTML_TABLE_BEGIN.replace('{{TABLE_NAME}}',sanitize_text_html(section_data['name'])).replace('{{TABLE_ID}}',sanitize_idfield(section_data['name'])),
-            table_header_row = report_htmlmarkup_column_headers,
-            table_contents = ''.join( [ prep_htmlmarkup_row(row,column_specs=result_column_headers,flags=['section-{sec_id}'.format(sec_id=sanitize_idfield(section_data['name']))]) for row in section_data['data'] ] ),
-            table_end = report_html_template.TEMPLATE_HTML_TABLE_END
-        ) for section_data in report_data_sections
+        prep_htmlmarkup_section(section_data,result_column_headers,result_column_headers_text_specs) for section_data in report_data_sections
     ])
 
     result_template = '{begin}{report_contents}{end}'.format(
