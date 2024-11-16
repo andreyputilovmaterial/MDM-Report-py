@@ -422,6 +422,11 @@ def entry_point(config={}):
         '--inpfile',
         help='JSON with Input MDD map'
     )
+    parser.add_argument(
+        '--output-format',
+        help='Set output format: html or excel',
+        required=False
+    )
     args = None
     args_rest = None
     if( ('arglist_strict' in config) and (not config['arglist_strict']) ):
@@ -433,6 +438,9 @@ def entry_point(config={}):
         input_map_filename = Path(args.inpfile)
         input_map_filename = '{input_map_filename}'.format(input_map_filename=input_map_filename.resolve())
     # input_map_filename_specs = open(input_map_filename_specs_name, encoding="utf8")
+    config_output_format = 'html'
+    if args.output_format:
+        config_output_format = args.output_format
 
     print('MDM report script: script started at {dt}'.format(dt=time_start))
 
@@ -440,7 +448,11 @@ def entry_point(config={}):
     with open(input_map_filename, encoding="utf8") as input_map_file:
         mdd_map_in_json = json.load(input_map_file)
 
-    result = produce_html(mdd_map_in_json)
+    result = None
+    if config_output_format=='html':
+        result = produce_html(mdd_map_in_json)
+    else:
+        raise ValueError('report.py: unsupported output format: {fmt}'.format(fmt=config_output_format))
     
     result_fname = ( Path(input_map_filename).parents[0] / '{basename}{ext}'.format(basename=Path(input_map_filename).name,ext='.html') if Path(input_map_filename).is_file() else re.sub(r'^\s*?(.*?)\s*?$',lambda m: '{base}{added}'.format(base=m[1],added='.html'),'{path}'.format(path=input_map_filename)) )
     print('MDM report script: saving as "{fname}"'.format(fname=result_fname))
