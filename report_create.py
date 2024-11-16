@@ -29,13 +29,10 @@ else:
 # helper text prep functions first
 
 
-# TODO:
-# # Jira - grabbing project number - check that all is working correctly when we exclude mdmproperteis sectiton
 
 # TODO:
 # all js code - check that if something is added to an error banner, syntax is always escaped
 
-# TODO: double quotes - not working, not escaped
 
 # TODO: when attributes are comvbined into "name" column we need to remove/suppress blank remaining columns
 
@@ -73,12 +70,12 @@ def sanitize_text_extract_filename(s):
 
 
 
-def sanitize_value_astext(inp_value,col_type='',flags=[]):
+def sanitize_value_astext(inp_value,flags=[]):
     if 'format-escapequotes-vbsstyle' in flags:
         inp_value = inp_value.replace('"','""')
     return sanitize_text_html(inp_value,flags=list(set(flags)-set(['format-escapequotes-vbsstyle'])))
 
-def sanitize_value_asproperties(inp_value,col_type='',flags=[]):
+def sanitize_value_asproperties(inp_value,flags=[]):
     # removing css classes for property coloring - reduced memory consumption a lot; AP 10/12/2024
     # unsuppress to have properties colored
     # ins_partbegin = '<span class="mdmreport-prop-fieldname">'
@@ -106,44 +103,43 @@ def sanitize_value_asproperties(inp_value,col_type='',flags=[]):
     )
     return result
 
-def sanitize_value_general(inp_value,col_type='',flags=[]):
+def sanitize_value_general(inp_value,flags=[]):
     # it's recursive!
     for flag in flags:
         if (flag=='role-time') or (flag=='role-date') or (flag=='role-datetime'):
-            return '<span class="mdmreport-role-date" data-role="date">{d}</span>'.format(d=sanitize_value_general(inp_value,col_type,flags=list(set(flags)-set([flag]))))
+            return '<span class="mdmreport-role-date" data-role="date">{d}</span>'.format(d=sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
         elif flag=='role-added':
-            return '<span class="mdmdiff-inlineoverlay-added">{d}</span>'.format(d=sanitize_value_general(inp_value,col_type,flags=list(set(flags)-set([flag]))))
+            return '<span class="mdmdiff-inlineoverlay-added">{d}</span>'.format(d=sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
         elif flag=='role-removed':
-            return '<span class="mdmdiff-inlineoverlay-removed">{d}</span>'.format(d=sanitize_value_general(inp_value,col_type,flags=list(set(flags)-set([flag]))))
+            return '<span class="mdmdiff-inlineoverlay-removed">{d}</span>'.format(d=sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
         elif flag=='role-sronly':
-            return '<span class="mdmreport-sronly">{d}</span>'.format(d=sanitize_value_general(inp_value,col_type,flags=list(set(flags)-set([flag]))))
+            return '<span class="mdmreport-sronly">{d}</span>'.format(d=sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
         elif flag=='role-label':
-            return '<label>{d}</label>'.format(d=sanitize_value_general(inp_value,col_type,flags=list(set(flags)-set([flag]))))
+            return '<label>{d}</label>'.format(d=sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
     result = None
     if not inp_value:
         return ''
-    # is_syntax = not(not(re.match(r'^\s*?script\w*\s*?$',col_type))) or ( (not(not(re.match(r'^\s*?routing\w*\s*?$',section_type)))) and (not(not(re.match(r'^\s*?label\s*?$',col_type)))) )
     if isinstance(inp_value,list) and ([(True if 'name' in dict.keys(item) else False) for item in inp_value].count(True)==len(inp_value)):
-        result = sanitize_value_asproperties(inp_value,col_type,flags)
+        result = sanitize_value_asproperties(inp_value,flags)
     elif isinstance(inp_value,dict) and 'parts' in dict.keys(inp_value):
-        result = ''.join( sanitize_value_general(part['text'],col_type,[]+flags+['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',part['role']))]) if isinstance(part,dict) and 'text' in dict.keys(part) else sanitize_value_general(part,col_type,flags) for part in inp_value['parts'] )
+        result = ''.join( sanitize_value_general(part['text'],[]+flags+['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',part['role']))]) if isinstance(part,dict) and 'text' in dict.keys(part) else sanitize_value_general(part,flags) for part in inp_value['parts'] )
     elif isinstance(inp_value,dict) and 'text' in dict.keys(inp_value):
-        result = sanitize_value_general(inp_value['text'],col_type,flags)
+        result = sanitize_value_general(inp_value['text'],flags)
     elif isinstance(inp_value,str):
-        result =  sanitize_value_astext(inp_value,col_type,flags)
+        result =  sanitize_value_astext(inp_value,flags)
     elif isinstance(inp_value,dict) or isinstance(inp_value,list):
-        result =  sanitize_value_astext(json.dumps(inp_value),col_type,flags)
+        result =  sanitize_value_astext(json.dumps(inp_value),flags)
     elif ('{fmt}'.format(fmt=inp_value)==inp_value):
-        result =  sanitize_value_astext(inp_value,col_type,flags)
+        result =  sanitize_value_astext(inp_value,flags)
     else:
-        result =  sanitize_value_astext(json.dumps(inp_value),col_type,flags)
+        result =  sanitize_value_astext(json.dumps(inp_value),flags)
     return result
 
-def sanitize_tablecellcontents(inp_value,col_type='',flags=[]):
+def sanitize_tablecellcontents(inp_value,flags=[]):
     result = None
     if not inp_value:
         return ''
-    result = sanitize_value_general(inp_value,col_type,[flag for flag in flags if flag!='format_syntax'])
+    result = sanitize_value_general(inp_value,[flag for flag in flags if flag!='format_syntax'])
     if 'format_syntax' in flags:
         result = '<pre>{content}</pre>'.format(content=sanitize_text_normalizelinebreaks(result)) # it's already done globally at the first line of sanitize_value_astext which should have been already called
     return result
@@ -296,7 +292,7 @@ def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[],other_cols_ref=[]
         col_css_classes.append(cssclassname)
 
     result_formatted = '<td class="{added_css_classes}"{otherattrs}>{col}</td>'.format(
-        col = sanitize_tablecellcontents(col,column_specs[col_index],flags),
+        col = sanitize_tablecellcontents(col,flags),
         added_css_classes = ' '.join(col_css_classes),
         otherattrs = ' data-columnid="{colid}"'.format(colid=sanitize_idfield( column_specs[col_index] ) if sanitize_idfield( column_specs[col_index] ) else '') if 'header' in flags else ''
     )
@@ -372,7 +368,6 @@ def produce_html(inp):
         for row in ( section_obj['content'] if section_obj['content']else [] ):
             row_add = []
             for col in result_column_headers:
-                # row_add.append( sanitize_tablecellcontents(row[col],col_type=col,section_type=section_obj['name']) if col in row else '' )
                 row_add.append( row[col] if col in row else '' )
             data_add.append(row_add)
         report_data_sections.append({'name':section_obj['name'],'data':data_add})
