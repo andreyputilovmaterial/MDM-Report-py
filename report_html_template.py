@@ -102,7 +102,7 @@ TEMPLATE_HTML_STYLES = """
     }
 """
 
-TEMPLATE_HTML_STYLES_TABLE = """
+TEMPLATE_HTML_STYLES_TABLE = r"""
 .mdmreport-table-wrapper {
     /* font-size: 12px; */
     font-size: 13px;
@@ -303,7 +303,7 @@ td.mdmreport-contentcell label {
     padding: 0.1em 0 0.1em;
 }
 .mdmreport-controls label input[type="checkbox"]:checked:before {
-    content: "\\002A09";
+    content: "\002A09";
 }
 .mdmreport-controls-group input.mdmreport-controls[type="text"], .mdmreport-controls .mdmreport-controls-group input[type="text"] {
     display: block;
@@ -329,7 +329,7 @@ td.mdmreport-contentcell label {
 
     """
 
-TEMPLATE_HTML_SCRIPTS = """
+TEMPLATE_HTML_SCRIPTS = r"""
 <script>
 (function() {
     /* === beautify dates js === */
@@ -457,13 +457,13 @@ TEMPLATE_HTML_SCRIPTS = """
             return Array.from(columns);
         }
         function difference(a,b){/* something is not working with Sets in my chrome, strange - adding this helper fn to find differences as between arrays */  return new Set(Array.from(a).filter(function(ai){return !Array.from(b).includes(ai);})); }
-        const columns_subsetName = new Set(columnIDs.filter(function(id){return /^\\s*?name\\s*?$/.test(id)}));
-        const columns_subsetFlag = new Set(columnIDs.filter(function(id){return /^\\s*?flag.*\\s*?$/.test(id)}));
-        const columns_subsetLabel = new Set(columnIDs.filter(function(id){return /^\\s*?label\\w*\\s*?$/.test(id)}));
-        const columns_subsetProperties = new Set(columnIDs.filter(function(id){return /^\\s*?properties\\w*\\s*?$/.test(id)}));
-        const columns_subsetAttributes = new Set(columnIDs.filter(function(id){return /^\\s*?attributes\\w*\\s*?$/.test(id)}));
-        const columns_subsetTranslations = new Set(columnIDs.filter(function(id){return /^\\s*?langcode.*\\s*?$/.test(id)}));
-        const columns_subsetScripting = new Set(columnIDs.filter(function(id){return /^\\s*?script\\w*\\s*?$/.test(id)}));
+        const columns_subsetName = new Set(columnIDs.filter(function(id){return /^\s*?name\s*?$/.test(id)}));
+        const columns_subsetFlag = new Set(columnIDs.filter(function(id){return /^\s*?flag.*\s*?$/.test(id)}));
+        const columns_subsetLabel = new Set(columnIDs.filter(function(id){return /^\s*?label\w*\s*?$/.test(id)}));
+        const columns_subsetProperties = new Set(columnIDs.filter(function(id){return /^\s*?properties\w*\s*?$/.test(id)}));
+        const columns_subsetAttributes = new Set(columnIDs.filter(function(id){return /^\s*?attributes\w*\s*?$/.test(id)}));
+        const columns_subsetTranslations = new Set(columnIDs.filter(function(id){return /^\s*?langcode.*\s*?$/.test(id)}));
+        const columns_subsetScripting = new Set(columnIDs.filter(function(id){return /^\s*?script\w*\s*?$/.test(id)}));
         if( ( (Array.from(addedData.sectionDefs)).includes('routing') ) && ( Array.from(difference(addedData.sectionDefs,['routing']))==0 ) ) {
             if(Array.from(columns_subsetLabel).length>0) {
                 return Array.from(columns_subsetLabel);
@@ -503,10 +503,10 @@ TEMPLATE_HTML_SCRIPTS = """
                 const colElements = rowRefEl.querySelectorAll('td.mdmreport-contentcell');
                 Array.prototype.forEach.call(colElements,function(colEl) {
                     const cssClasses = Array.from(colEl.classList);
-                    const cssClassesMatching = cssClasses.filter(function(n) {return /^\\s*?(mdmreport-col-)(.*?)\\s*?$/ig.test(n);});
-                    cssClassesMatching.map(function(n) {return n.replace(/^\\s*?(mdmreport-col-)(.*?)\\s*?$/ig,'$2');}).forEach(function(colNameFromCSS) {
+                    const cssClassesMatching = cssClasses.filter(function(n) {return /^\s*?(mdmreport-col-)(.*?)\s*?$/ig.test(n);});
+                    cssClassesMatching.map(function(n) {return n.replace(/^\s*?(mdmreport-col-)(.*?)\s*?$/ig,'$2');}).forEach(function(colNameFromCSS) {
                         const colName = colNameFromCSS;
-                        //colName = colName.replace(/^\\s*/,'').replace(/\\s*$/,'');
+                        //colName = colName.replace(/^\s*/,'').replace(/\s*$/,'');
                         const colTitlesAllOfThisCssClass = Array.from(rowRefEl.querySelectorAll(`.mdmreport-col-${colName}`)).map(el=>el.textContent);
                         const colTitlesNoDuplicates = colTitlesAllOfThisCssClass.reduce(function(acc,val){if(acc.includes(val))return acc; else return [...acc,val];},[]);
                         const colTitle = colTitlesNoDuplicates.length==1 ? colTitlesNoDuplicates[0] : `${colEl.textContent} (${colName})`;
@@ -524,7 +524,7 @@ TEMPLATE_HTML_SCRIPTS = """
                     columnsAll = listOfControls.map(function(a){return a.id});
                     addedData = {
                         columnDefs: listOfControls,
-                        sectionDefs: (function() { sectionDefs = []; const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]'); Array.prototype.forEach.call(sectionElements,function(sectionElement) { var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\\s*?section\\s+/ig,''); var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\\s*?mdmreport-wrapper-section-/ig,''); textTitle = textTitle.replace(/^\\s*(.*?)\\s*$/ig,'$1'); /* trim */ textCss = textCss.replace(/^\\s*(.*?)\\s*$/ig,'$1'); /* trim */ if( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) { if( !textTitle || (textTitle.length==0) ) textTitle = textCss; if( !textCss || (textCss.length==0) ) textCss = textTitle; textCss = textCss.replace(/[^\\w\\-\\.]/ig,'-'); sectionDefs.push({text:textTitle,id:textCss}); } }); return sectionDefs.map(function(d){return d.id}); })()
+                        sectionDefs: (function() { sectionDefs = []; const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]'); Array.prototype.forEach.call(sectionElements,function(sectionElement) { var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\s*?section\s+/ig,''); var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\s*?mdmreport-wrapper-section-/ig,''); textTitle = textTitle.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */ textCss = textCss.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */ if( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) { if( !textTitle || (textTitle.length==0) ) textTitle = textCss; if( !textCss || (textCss.length==0) ) textCss = textTitle; textCss = textCss.replace(/[^\w\-\.]/ig,'-'); sectionDefs.push({text:textTitle,id:textCss}); } }); return sectionDefs.map(function(d){return d.id}); })()
                     };
                     columnsShown = decideColumnsShownAtStartup(columnsAll,addedData);
                     columnsAll.forEach(function(columnId){
@@ -549,7 +549,7 @@ TEMPLATE_HTML_SCRIPTS = """
                 // .mdmreport-hidecol-xxx .mdmreport-col-xxx
                 const cssSheet = new CSSStyleSheet();
                 const cssSyntax = columns.map(function(item) {
-                    const itemClassName = item.replace(/[^\\w\\-\\.]/ig,'');
+                    const itemClassName = item.replace(/[^\w\-\.]/ig,'');
                     return ' .mdmreport-hidecol-xxx .mdmreport-col-xxx { display: none; } '.replaceAll('xxx',itemClassName);
                 }).join('');
                 cssSheet.replaceSync(cssSyntax);
@@ -567,7 +567,7 @@ TEMPLATE_HTML_SCRIPTS = """
                 columns.forEach(function(col) {
                     try {
                         const colText = columnTitles[col];
-                        const colClassName = col.replace(/[^\\w\\-\\.]/ig,'');
+                        const colClassName = col.replace(/[^\w\-\.]/ig,'');
                         const labelEl = document.createElement('label');
                         labelEl.textContent = colText;
                         labelEl.classList.add('mdmreport-controls');
@@ -633,14 +633,14 @@ TEMPLATE_HTML_SCRIPTS = """
             sectionDefs = [];
             const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]');
             Array.prototype.forEach.call(sectionElements,function(sectionElement) {
-                var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\\s*?section\\s+/ig,'');
-                var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\\s*?mdmreport-wrapper-section-/ig,'');
-                textTitle = textTitle.replace(/^\\s*(.*?)\\s*$/ig,'$1'); /* trim */
-                textCss = textCss.replace(/^\\s*(.*?)\\s*$/ig,'$1'); /* trim */
+                var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\s*?section\s+/ig,'');
+                var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\s*?mdmreport-wrapper-section-/ig,'');
+                textTitle = textTitle.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */
+                textCss = textCss.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */
                 if( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) {
                     if( !textTitle || (textTitle.length==0) ) textTitle = textCss;
                     if( !textCss || (textCss.length==0) ) textCss = textTitle;
-                    textCss = textCss.replace(/[^\\w\\-\\.]/ig,'-');
+                    textCss = textCss.replace(/[^\w\-\.]/ig,'-');
                     sectionDefs.push({text:textTitle,id:textCss});
                 }
             });
@@ -654,7 +654,7 @@ TEMPLATE_HTML_SCRIPTS = """
             function initSettingCss() {
                 const cssSheet = new CSSStyleSheet();
                 const cssSyntax = sectionDefs.map(function(item) {
-                    const itemClassName = item['id'].replace(/[^\\w\\-\\.]/,'');
+                    const itemClassName = item['id'].replace(/[^\w\-\.]/,'');
                     return ' .mdmreport-hidesection-xxx .mdmreport-wrapper-section-xxx { display: none; } '.replaceAll('xxx',itemClassName);
                 }).join('');
                 cssSheet.replaceSync(cssSyntax);
@@ -749,7 +749,7 @@ TEMPLATE_HTML_SCRIPTS = """
     let runPromiseReject = () => { throw new Error('please jiraPlugin_init the promise first'); };
     const runPromise = new Promise((resolve,reject)=>{ runPromiseResolve = resolve; runPromiseReject = reject; });
     function sanitizeCellText(s) {
-        return s.replace(/&\\#(\\d+);/i,function(n,n1){if(isFinite(+n1)) return String.fromCharCode(+n1);else return n;});
+        return s.replace(/&\#(\d+);/i,function(n,n1){if(isFinite(+n1)) return String.fromCharCode(+n1);else return n;});
     }
     function err(e){
         let errorBannerEl;
@@ -765,9 +765,9 @@ TEMPLATE_HTML_SCRIPTS = """
     }
     function parsePropertiesText(s) {
         const results = [];
-        if( /^\\s*?$/.test(s) )
+        if( /^\s*?$/.test(s) )
             return results;
-        const matches = s.match( /^\\s*?,?\\s*?(\\w+)\\s*?=\\s*?"((?:(?:[^"])|(?:""))*?)"((?:\\s*?,\\s*?\\w+\\s*?=\\s*?"(?:(?:[^"])|(?:""))*?")*?)\\s*?$/ );
+        const matches = s.match( /^\s*?,?\s*?(\w+)\s*?=\s*?"((?:(?:[^"])|(?:""))*?)"((?:\s*?,\s*?\w+\s*?=\s*?"(?:(?:[^"])|(?:""))*?")*?)\s*?$/ );
         if( !!matches ) {
             results.push({name:matches[1],value:matches[2].replace(/""/ig,'"')});
             if( !!matches[3] ) {
@@ -786,34 +786,34 @@ TEMPLATE_HTML_SCRIPTS = """
     function itemNameLookup(itemName,propertiesData,sectionName) {
         try {
             const extractProperties = () => {};
-            if(false) { // ( /^\\s*?Info\\s*?\\:/.test(itemName) ) {
+            if(false) { // ( /^\s*?Info\s*?\:/.test(itemName) ) {
                 // info item - skip
                 return null;
-            } else if( (sectionName=='shared_lists') && (/^\\s*?\\w+/.test(itemName)) ) {
+            } else if( (sectionName=='shared_lists') && (/^\s*?\w+/.test(itemName)) ) {
                 // is a shared list
-                return itemName.replace(/^\\s*?(\\w+)\\b.*?$/ig,'$1').replace(/^\\s*?SL_/ig,'');
+                return itemName.replace(/^\s*?(\w+)\b.*?$/ig,'$1').replace(/^\s*?SL_/ig,'');
             } else if( (sectionName=='fields') ) {
                 // "fields" (normal questions) - let's look up the FullName property
                 const properties = propertiesData[itemName];
                 const propertyListLcase = properties.map(a=>a.name.toLowerCase());
-                if( /^\\s*?QCData\\.Flags\\b/.test(itemName) ) {
+                if( /^\s*?QCData\.Flags\b/.test(itemName) ) {
                     // A QC Flag - let's look up the "AppliesTo" property
                     if( propertyListLcase.includes('AppliesTo'.toLowerCase()) ) {
                         // TODO: best match. or all matches?
-                        const appliesto = properties[propertyListLcase.indexOf('AppliesTo'.toLowerCase())].value.replace(/^\\s*?Question\\s*?\\-\\s*/ig,'').replace(/^\\s*/,'').replace(/\\s*$/,'');
+                        const appliesto = properties[propertyListLcase.indexOf('AppliesTo'.toLowerCase())].value.replace(/^\s*?Question\s*?\-\s*/ig,'').replace(/^\s*/,'').replace(/\s*$/,'');
                         return appliesto;
                     }
                 }
                 if( propertyListLcase.includes('FullName'.toLowerCase()) ) {
-                    const fullname = properties[propertyListLcase.indexOf('FullName'.toLowerCase())].value.replace(/^\\s*/,'').replace(/\\s*$/,'');
+                    const fullname = properties[propertyListLcase.indexOf('FullName'.toLowerCase())].value.replace(/^\s*/,'').replace(/\s*$/,'');
                     return fullname;
                 }
-                if( /\\.(?:categories|elements)\\s*?\\[\\s*?.*?\\s*?\\]\\s*?$/ig.test(itemName) ) {
-                    const refItemName = itemName.replace(/\\.(?:categories|elements)\\s*?\\[\\s*?.*?\\s*?\\]\\s*?$/ig,'');
+                if( /\.(?:categories|elements)\s*?\[\s*?.*?\s*?\]\s*?$/ig.test(itemName) ) {
+                    const refItemName = itemName.replace(/\.(?:categories|elements)\s*?\[\s*?.*?\s*?\]\s*?$/ig,'');
                     const refItemProperties = propertiesData[refItemName];
                     const refItemPropertyListLcase = refItemProperties.map(a=>a.name.toLowerCase());
                     if( refItemPropertyListLcase.includes('FullName'.toLowerCase()) ) {
-                        const fullname = refItemProperties[refItemPropertyListLcase.indexOf('FullName'.toLowerCase())].value.replace(/^\\s*/,'').replace(/\\s*$/,'');
+                        const fullname = refItemProperties[refItemPropertyListLcase.indexOf('FullName'.toLowerCase())].value.replace(/^\s*/,'').replace(/\s*$/,'');
                         return fullname;
                     }
                 }
@@ -832,15 +832,15 @@ TEMPLATE_HTML_SCRIPTS = """
         try {
             const promise = new Promise(function(resolve,reject) {
                 try {
-                    const rowsWithHdataEl = rowsEl; // rowsEl.filter(function(tr){ const cols = Array.from(tr.querySelectorAll('td')); if(cols.length>1) { return /^(?:\\s*?(?:(?:mdd|mdm|hdata)\\.)?Properties\\s*?)|(?:\\s*.*?\\bMDM\\b.*?\\s*)$/ig.test(sanitizeCellText(cols[1].textContent)); } else return false; });
+                    const rowsWithHdataEl = rowsEl; // rowsEl.filter(function(tr){ const cols = Array.from(tr.querySelectorAll('td')); if(cols.length>1) { return /^(?:\s*?(?:(?:mdd|mdm|hdata)\.)?Properties\s*?)|(?:\s*.*?\bMDM\b.*?\s*)$/ig.test(sanitizeCellText(cols[1].textContent)); } else return false; });
                     Array.from(rowsEl).forEach(function(row){
                         const propertiesColIndices = [];
-                        const isAPropertiesColumn = s => /^(?:(?:&#32;)|(?:\\s))*?(?:Custom)\\s*?properties(?:(?:&#32;)|(?:\\s))*?(?:(?:&#40;)|(?:\\())*?.*?(?:(?:&#42;)|(?:\\)))*?(?:(?:&#32;)|(?:\\s))*?$/ig.test(s);
-                        Array.from(rowBannerEl.querySelectorAll('td')).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/\\s*?\\(\\s*?(?:Left|Right)\\s*?MDD\\s*?\\)\\s*/ig,'')).map((colText,colIndex)=>{if(colIndex<2)return false;if(isAPropertiesColumn(colText))return colIndex;else return false;}).forEach(e=>{if(!!e)propertiesColIndices.push(e);});
+                        const isAPropertiesColumn = s => /^(?:(?:&#32;)|(?:\s))*?(?:Custom)\s*?properties(?:(?:&#32;)|(?:\s))*?(?:(?:&#40;)|(?:\())*?.*?(?:(?:&#42;)|(?:\)))*?(?:(?:&#32;)|(?:\s))*?$/ig.test(s);
+                        Array.from(rowBannerEl.querySelectorAll('td')).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/\s*?\(\s*?(?:Left|Right)\s*?MDD\s*?\)\s*/ig,'')).map((colText,colIndex)=>{if(colIndex<2)return false;if(isAPropertiesColumn(colText))return colIndex;else return false;}).forEach(e=>{if(!!e)propertiesColIndices.push(e);});
                         const colsEl = Array.from(row.querySelectorAll('td'));
                         const propertiesData = {};
                         const itemNameColIndex = 1;
-                        const cols = Array.from(colsEl).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/^\\s*?\\(\\s*?(?:Left|Right)\\s*?MDD\\s*?\\)\\s*/ig,''));
+                        const cols = Array.from(colsEl).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/^\s*?\(\s*?(?:Left|Right)\s*?MDD\s*?\)\s*/ig,''));
                         const itemName = cols[itemNameColIndex];
                         const properties = [];
                         const parsePropertiesTextFailSafe = function(s){
@@ -916,8 +916,8 @@ TEMPLATE_HTML_SCRIPTS = """
                     const closestSecEl = tableEl.closest('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]');
                     if(closestSecEl) {
                         Array.from(closestSecEl.classList).forEach(function(className){
-                            if(  /^\\s*?mdmreport-wrapper-section-(.*?)\\s*?$/.test(className) ) {
-                                resultingId = className.replace(/^\\s*?mdmreport-wrapper-section-(.*?)\\s*?$/,'$1');
+                            if(  /^\s*?mdmreport-wrapper-section-(.*?)\s*?$/.test(className) ) {
+                                resultingId = className.replace(/^\s*?mdmreport-wrapper-section-(.*?)\s*?$/,'$1');
                             }
                         });
                     }
@@ -929,11 +929,11 @@ TEMPLATE_HTML_SCRIPTS = """
                 const itemNameColIndex = 1;
                 const diffFlagColIndex = 0;
                 const propertiesColIndices = [];
-                const isAPropertiesColumn = s => /^(?:(?:&#32;)|(?:\\s))*?(?:Custom)\\s*?properties(?:(?:&#32;)|(?:\\s))*?(?:(?:&#40;)|(?:\\())*?.*?(?:(?:&#42;)|(?:\\)))*?(?:(?:&#32;)|(?:\\s))*?$/ig.test(s);
-                const isTemporarilyMovedRow = s => /^\\s*?\\(\\s*?moved\\s*?\\)\\s*?$/ig.test(s);
+                const isAPropertiesColumn = s => /^(?:(?:&#32;)|(?:\s))*?(?:Custom)\s*?properties(?:(?:&#32;)|(?:\s))*?(?:(?:&#40;)|(?:\())*?.*?(?:(?:&#42;)|(?:\)))*?(?:(?:&#32;)|(?:\s))*?$/ig.test(s);
+                const isTemporarilyMovedRow = s => /^\s*?\(\s*?moved\s*?\)\s*?$/ig.test(s);
                 Array.prototype.forEach.call(rowsEl,function(rowEl,i) {
                     const colsEl = rowEl.querySelectorAll('td');
-                    const cols = Array.from(colsEl).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/^\\s*?\\(\\s*?(?:Left|Right)\\s*?MDD\\s*?\\)\\s*/ig,''));
+                    const cols = Array.from(colsEl).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/^\s*?\(\s*?(?:Left|Right)\s*?MDD\s*?\)\s*/ig,''));
                     if( i==0 ) {
                         const colsWithProperties = cols.map((colText,colIndex)=>{if(colIndex<2)return false;if(isAPropertiesColumn(colText))return colIndex;else return false;});
                         colsWithProperties.forEach(e=>{if(!!e)propertiesColIndices.push(e);});
@@ -1000,7 +1000,7 @@ TEMPLATE_HTML_SCRIPTS = """
             const inp1El = bannerContentEl.querySelector('fieldset').querySelectorAll('input')[0];
             const inp2El = bannerContentEl.querySelector('fieldset').querySelectorAll('input')[1];
             const inp3El = bannerContentEl.querySelector('fieldset').querySelectorAll('input')[2];
-            inp1El.addEventListener('change',function(event){ event.preventDefault(); inp2El.value = inp2El.value.replace(/(\\/projects\\/)([\\w\\-]+)(\\/)/,`$1${inp1El.value}$3`); inp2El.dispatchEvent(new Event('change')); inp3El.value = inp3El.value.replace(/(\\bproject\\b\\s*?=\\s*?"\\s*?)([\\w\\-]+)(\\s*?")/,`$1${inp1El.value}$3`); inp3El.dispatchEvent(new Event('change')); return false; });
+            inp1El.addEventListener('change',function(event){ event.preventDefault(); inp2El.value = inp2El.value.replace(/(\/projects\/)([\w\-]+)(\/)/,`$1${inp1El.value}$3`); inp2El.dispatchEvent(new Event('change')); inp3El.value = inp3El.value.replace(/(\bproject\b\s*?=\s*?"\s*?)([\w\-]+)(\s*?")/,`$1${inp1El.value}$3`); inp3El.dispatchEvent(new Event('change')); return false; });
             inp1El.addEventListener('keypress',function(event){  inp1El.dispatchEvent(new Event('change'));});
             inp2El.addEventListener('keypress',function(event){  inp2El.dispatchEvent(new Event('change'));});
             inp3El.addEventListener('keypress',function(event){  inp3El.dispatchEvent(new Event('change'));});
@@ -1017,7 +1017,7 @@ TEMPLATE_HTML_SCRIPTS = """
                     const weGetJobnumberPromise = getJobNumberProperty(Array.from(rowsPotentiallyMDMPropEl),rowBannerEl);
                     weGetJobnumberPromise.then( function(val) {
                         try {
-                            const propertyJobNumber = `P${`${val}`.replace(/^\\s*?(P?)(\\d\\w+)\\s*?$/,'$2')}`;
+                            const propertyJobNumber = `P${`${val}`.replace(/^\s*?(P?)(\d\w+)\s*?$/,'$2')}`;
                             inp1El.value = propertyJobNumber;
                             inp1El.dispatchEvent(new Event('change'));
                         } catch(e) {
@@ -1036,7 +1036,7 @@ TEMPLATE_HTML_SCRIPTS = """
                 try {
                     const val2 = inp2El.value;
                     const val3 = inp3El.value;
-                    const prepJiraString = function(jiraStr,itemName) { let name = itemName; let shortName = itemName; let fullName = itemName; let waName = itemName; if(/^\\s*?(DT_)(\\w+)$/.test(itemName)) { name = itemName.replace(/^\\s*?(DT)_(\\w+)$/,'$2'); shortName = name; waName = `${'DT'}. ${name}`; } else if(/^\\s*?(DV)_(\\w+)$/.test(itemName)) { /* all good */ } else if(/^\\s*?([a-zA-Z]+[0-9]+\\w*?)_(\\w+)$/.test(itemName)) { name = itemName.replace(/^\\s*?([a-zA-Z]+[0-9]+\\w*?)_(\\w+)$/,'$2'); shortName = itemName.replace(/^\\s*?([a-zA-Z]+[0-9]+\\w*?)_(\\w+)$/,'$1'); waName = `${shortName}. ${name}`; }; return jiraStr.replaceAll('<<QUESTIONFULLNAME>>',fullName).replaceAll('<<QUESTIONSHORTNAME>>',shortName).replaceAll('<<QUESTIONWANAME>>',waName).replaceAll('<<QUESTIONNAME>>',name); };
+                    const prepJiraString = function(jiraStr,itemName) { let name = itemName; let shortName = itemName; let fullName = itemName; let waName = itemName; if(/^\s*?(DT_)(\w+)$/.test(itemName)) { name = itemName.replace(/^\s*?(DT)_(\w+)$/,'$2'); shortName = name; waName = `${'DT'}. ${name}`; } else if(/^\s*?(DV)_(\w+)$/.test(itemName)) { /* all good */ } else if(/^\s*?([a-zA-Z]+[0-9]+\w*?)_(\w+)$/.test(itemName)) { name = itemName.replace(/^\s*?([a-zA-Z]+[0-9]+\w*?)_(\w+)$/,'$2'); shortName = itemName.replace(/^\s*?([a-zA-Z]+[0-9]+\w*?)_(\w+)$/,'$1'); waName = `${shortName}. ${name}`; }; return jiraStr.replaceAll('<<QUESTIONFULLNAME>>',fullName).replaceAll('<<QUESTIONSHORTNAME>>',shortName).replaceAll('<<QUESTIONWANAME>>',waName).replaceAll('<<QUESTIONNAME>>',name); };
                     const getJiraUrl = function(itemName) { return `${decodeURIComponent(val2)}${encodeURIComponent(prepJiraString(val3,itemName))}`; };
                     if( !validDomains.map(a=>a.toLowerCase()).includes((new URL(getJiraUrl(''))).hostname.toLowerCase()) )
                         throw new Error(`Not valid jira domain! It has to be in this list: [ ${validDomains.join(', ')} ], or, update the code, it's easy; search for "validDomains"`);
@@ -1104,18 +1104,18 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
             // 1. read data and find the list of sections in the report table
             const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]');
             Array.prototype.forEach.call(sectionElements,function(sectionElement) {
-                var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\\s*?section\\s+/ig,'');
-                const sectionClasses = Array.from(sectionElement.classList).filter(function(name){return /^\\s*?mdmreport-wrapper-section-/ig.test(name)});
+                var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\s*?section\s+/ig,'');
+                const sectionClasses = Array.from(sectionElement.classList).filter(function(name){return /^\s*?mdmreport-wrapper-section-/ig.test(name)});
                 const sectionClassesUnique = sectionClasses.filter(function(className){return document.querySelectorAll('.'+className).length==1});
                 if( !(sectionClassesUnique.length>0) ) return;
                 const sectionClass = sectionClassesUnique[0];
-                var textCss = sectionClass.replace(/^\\s*?mdmreport-wrapper-section-/ig,'');
-                textTitle = textTitle.replace(/^\\s*(.*?)\\s*$/ig,'$1'); // trim
-                textCss = textCss.replace(/^\\s*(.*?)\\s*$/ig,'$1'); // trim
+                var textCss = sectionClass.replace(/^\s*?mdmreport-wrapper-section-/ig,'');
+                textTitle = textTitle.replace(/^\s*(.*?)\s*$/ig,'$1'); // trim
+                textCss = textCss.replace(/^\s*(.*?)\s*$/ig,'$1'); // trim
                 if( !( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) ) return;
                 if( !textTitle || (textTitle.length==0) ) textTitle = textCss;
                 if( !textCss || (textCss.length==0) ) textCss = textTitle;
-                textCss = textCss.replace(/[^\\w\\-\\.]/ig,'-');
+                textCss = textCss.replace(/[^\w\-\.]/ig,'-');
                 const sectionDef = {
                     text:textTitle,
                     id:textCss,
@@ -1245,28 +1245,28 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
 </script>
 """
 
-TEMPLATE_HTML_DIFF_SCRIPTS = ""
+TEMPLATE_HTML_DIFF_SCRIPTS = r""
 
-TEMPLATE_HTML_DIFF_STYLES = """
+TEMPLATE_HTML_DIFF_STYLES = r"""
 <style>
 </style>
     """
 
-TEMPLATE_HTML_COPYBANNER = """
+TEMPLATE_HTML_COPYBANNER = r"""
 AP
     """
 
-TEMPLATE_HTML_TABLE_BEGIN = """
+TEMPLATE_HTML_TABLE_BEGIN = r"""
 <div class="wrapper mdmreport-table-wrapper mdmreport-wrapper-section-{{TABLE_ID}}">
 <h3 class="mdmreport-table-title">Section {{TABLE_NAME}}</h3>
 <table class="mdmreport-table mdmreport-table-section-{{TABLE_ID}}"><tbody>
 """
 
-TEMPLATE_HTML_TABLE_END = """
+TEMPLATE_HTML_TABLE_END = r"""
 </tbody></table></div>
 """
 
-TEMPLATE_HTML_BEGIN = """
+TEMPLATE_HTML_BEGIN = r"""
 
 <!doctype html>
 <html lang="">
@@ -1306,7 +1306,7 @@ TEMPLATE_HTML_BEGIN = """
         # INS_BANNER = ''.join( [ '<p>{content}</p>'.format(content=preptext_html(content)) for content in fields_File_ReportInfo ] )
     )
 
-TEMPLATE_HTML_END = """
+TEMPLATE_HTML_END = r"""
         </div>
     </div>
     <footer class="footer">
