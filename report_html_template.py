@@ -1291,7 +1291,8 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                         throw e;
                     }
                 });});
-                pluginHolderEl.append(bannerEl);
+                // pluginHolderEl.append(bannerEl); // we don't want the user to press "add", we are just adding it, it's so nice to have, it is now added automatically
+                setTimeout(addElementsToTables_TableFilters,400);
             }
             initAddingControlBlock();
             document.removeEventListener('DOMContentLoaded',addControlBlock_TableFilters);
