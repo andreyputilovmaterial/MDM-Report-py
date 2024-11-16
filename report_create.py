@@ -30,8 +30,6 @@ else:
 
 
 
-# TODO:
-# all js code - check that if something is added to an error banner, syntax is always escaped
 
 
 # TODO: when attributes are comvbined into "name" column we need to remove/suppress blank remaining columns

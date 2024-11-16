@@ -355,7 +355,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
             document.removeEventListener('DOMContentLoaded',beautifyDates);
         } catch(e) {
             try {
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                function escapeHtml(s) {
+                    const dummy = document.createElement('div');
+                    dummy.innerText = s.replace(/\n/ig,'\\n');
+                    return dummy.innerHTML;
+                }
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
             } catch(ee) {};
             try {
                 document.removeEventListener('DOMContentLoaded',beautifyDates);
@@ -438,7 +443,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
             document.removeEventListener('DOMContentLoaded',alignColWidths);
         } catch(e) {
             try {
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                function escapeHtml(s) {
+                    const dummy = document.createElement('div');
+                    dummy.innerText = s.replace(/\n/ig,'\\n');
+                    return dummy.innerHTML;
+                }
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
             } catch(ee) {};
             try {
                 document.removeEventListener('DOMContentLoaded',alignColWidths);
@@ -547,7 +557,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
                     });
                 } catch(e) {
                     try {
-                        errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                        function escapeHtml(s) {
+                            const dummy = document.createElement('div');
+                            dummy.innerText = s.replace(/\n/ig,'\\n');
+                            return dummy.innerHTML;
+                        }
+                        errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
                     } catch(ee) {};
                     throw e;
                 }
@@ -600,7 +615,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         controlsDefs.push({id:colClassName,text:colText,controlEl:checkboxEl});
                     } catch(e) {
                         try {
-                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                            function escapeHtml(s) {
+                                const dummy = document.createElement('div');
+                                dummy.innerText = s.replace(/\n/ig,'\\n');
+                                return dummy.innerHTML;
+                            }
+                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
                         } catch(ee) {};
                         throw e;
                     }
@@ -612,7 +632,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
             document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideColumns);
         } catch(e) {
             try {
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                function escapeHtml(s) {
+                    const dummy = document.createElement('div');
+                    dummy.innerText = s.replace(/\n/ig,'\\n');
+                    return dummy.innerHTML;
+                }
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
             } catch(ee) {};
             try {
                 document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideColumns);
@@ -705,7 +730,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         controlsDefs.push({id:sectionDef['id'],text:colText,controlEl:checkboxEl});
                     } catch(e) {
                         try {
-                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                            function escapeHtml(s) {
+                                const dummy = document.createElement('div');
+                                dummy.innerText = s.replace(/\n/ig,'\\n');
+                                return dummy.innerHTML;
+                            }
+                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
                         } catch(ee) {};
                         throw e;
                     }
@@ -717,7 +747,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
             document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
         } catch(e) {
             try {
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                function escapeHtml(s) {
+                    const dummy = document.createElement('div');
+                    dummy.innerText = s.replace(/\n/ig,'\\n');
+                    return dummy.innerHTML;
+                }
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
             } catch(ee) {};
             try {
                 document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
@@ -767,7 +802,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
             throw e;
         }
         try {
-            errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: Jira connection: ${e}<br />`;
+            function escapeHtml(s) {
+                const dummy = document.createElement('div');
+                dummy.innerText = s.replace(/\n/ig,'\\n');
+                return dummy.innerHTML;
+            }
+            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: Jira connection: ${e}<br />`);
         } catch(ee) {};
     }
     function parsePropertiesText(s) {
@@ -1054,7 +1094,10 @@ TEMPLATE_HTML_SCRIPTS = r"""
                 }
                 return false;
             });
-            function jiraPlugin_clearUp() { /* bannerContentEl.remove(); */ bannerContentEl.innerHTML = 'Done, see the right most column in the table'; };
+            function jiraPlugin_clearUp() {
+                /* bannerContentEl.remove(); */
+                bannerContentEl.innerText = 'Done, see the right most column in the table';
+            };
             bannerHolderEl.append(bannerContentEl);
         } catch(e) {
             err(e);
@@ -1103,7 +1146,12 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
         }
         function bubbleException(e) {
             try {
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                function escapeHtml(s) {
+                    const dummy = document.createElement('div');
+                    dummy.innerText = s.replace(/\n/ig,'\\n');
+                    return dummy.innerHTML;
+                }
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
             } catch(ee) {};
             throw e;
         }
@@ -1196,7 +1244,12 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
             });
         } catch(e) {
             try {
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                function escapeHtml(s) {
+                    const dummy = document.createElement('div');
+                    dummy.innerText = s.replace(/\n/ig,'\\n');
+                    return dummy.innerHTML;
+                }
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
             } catch(ee) {};
             throw e;
         }
@@ -1228,7 +1281,12 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                         return false;
                     } catch(e) {
                         try {
-                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                            function escapeHtml(s) {
+                                const dummy = document.createElement('div');
+                                dummy.innerText = s.replace(/\n/ig,'\\n');
+                                return dummy.innerHTML;
+                            }
+                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
                         } catch(ee) {};
                         throw e;
                     }
@@ -1239,7 +1297,12 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
             document.removeEventListener('DOMContentLoaded',addControlBlock_TableFilters);
         } catch(e) {
             try {
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
+                function escapeHtml(s) {
+                    const dummy = document.createElement('div');
+                    dummy.innerText = s.replace(/\n/ig,'\\n');
+                    return dummy.innerHTML;
+                }
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
             } catch(ee) {};
             try {
                 document.removeEventListener('DOMContentLoaded',addControlBlock_TableFilters);
