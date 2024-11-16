@@ -37,6 +37,8 @@ else:
 
 # TODO: double quotes - not working, not escaped
 
+# TODO: when attributes are comvbined into "name" column we need to remove/suppress blank remaining columns
+
 def sanitize_text_normalizelinebreaks(str_output):
     str_output = re.sub(r'\r','\n',re.sub(r'\r?\n','\n',str_output))
     return str_output
@@ -307,7 +309,7 @@ def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
         flags_global = flags
         flags_add = []
         col_type = column_specs[col_index]
-        if (not ('header' in flags_global)) and (not(not(re.match(r'^\s*?script\w*\s*?$',col_type))) or ( ('section-routing' in flags_global) and (not(not(re.match(r'^\s*?label',col_type)))) ) ):
+        if (not ('header' in flags_global)) and (not(not(re.match(r'^\s*?script\w*\s*?$',col_type))) or not(not(re.match(r'^\s*?rawtext\w*\s*?$',col_type))) or ( ('section-routing' in flags_global) and (not(not(re.match(r'^\s*?label',col_type)))) ) ):
             flags_add.append('format_syntax')
         return flags_global + flags_add
     
@@ -418,8 +420,7 @@ def produce_html(inp):
 
 
 
-
-if __name__ == '__main__':
+def entry_point(config={}):
     time_start = datetime.now()
     parser = argparse.ArgumentParser(
         description="Produce a summary of MDD in html (read from json)"
@@ -428,7 +429,12 @@ if __name__ == '__main__':
         '--inpfile',
         help='JSON with Input MDD map'
     )
-    args = parser.parse_args()
+    args = None
+    args_rest = None
+    if( ('arglist_strict' in config) and (not config['arglist_strict']) ):
+        args, args_rest = parser.parse_known_args()
+    else:
+        args = parser.parse_args()
     input_map_filename = None
     if args.inpfile:
         input_map_filename = Path(args.inpfile)
@@ -451,3 +457,6 @@ if __name__ == '__main__':
     time_finish = datetime.now()
     print('MDM report script: finished at {dt} (elapsed {duration})'.format(dt=time_finish,duration=time_finish-time_start))
 
+
+if __name__ == '__main__':
+    entry_point({'arglist_strict':True})

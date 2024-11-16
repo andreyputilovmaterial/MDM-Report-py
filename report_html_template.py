@@ -16,6 +16,7 @@ def preptext_html_needsescaping(s):
 
 
 # TODO: JobNumber in jira - make it possible to read from fields
+# TODO: .mdmdiff-inlineoverlay-added - highlight the whole row
 
 
 TEMPLATE_HTML_CSS_NORMALIZECSS = """
@@ -464,9 +465,15 @@ TEMPLATE_HTML_SCRIPTS = r"""
         const columns_subsetAttributes = new Set(columnIDs.filter(function(id){return /^\s*?attributes\w*\s*?$/.test(id)}));
         const columns_subsetTranslations = new Set(columnIDs.filter(function(id){return /^\s*?langcode.*\s*?$/.test(id)}));
         const columns_subsetScripting = new Set(columnIDs.filter(function(id){return /^\s*?script\w*\s*?$/.test(id)}));
+        const columns_subsetRawText = new Set(columnIDs.filter(function(id){return /^\s*?rawtext\w*\s*?$/.test(id)}));
         if( ( (Array.from(addedData.sectionDefs)).includes('routing') ) && ( Array.from(difference(addedData.sectionDefs,['routing']))==0 ) ) {
             if(Array.from(columns_subsetLabel).length>0) {
                 return Array.from(columns_subsetLabel);
+            }
+        }
+        if( ( Array.from(addedData.sectionDefs).length==1 ) && ( Array.from(columns_subsetRawText).length>0 ) ) {
+            if(Array.from(columns_subsetRawText).length>0) {
+                return Array.from(columns_subsetRawText);
             }
         }
         if( ( (Array.from(columns_subsetName)).length>0 ) && ( (Array.from(columns_subsetLabel)).length>0 ) ) {
