@@ -451,6 +451,37 @@ TEMPLATE_HTML_SCRIPTS = """
 <script>
     /* === show/hide columns js === */
 (function() {
+    function decideColumnsShownAtStartup(columnIDs,addedData) {
+        const columns = new Set(columnIDs);
+        if(Array.from(columns).length==0) {
+            return Array.from(columns);
+        }
+        function difference(a,b){/* something is not working with Sets in my chrome, strange - adding this helper fn to find differences as between arrays */  return new Set(Array.from(a).filter(function(ai){return !Array.from(b).includes(ai);})); }
+        const columns_subsetName = new Set(columnIDs.filter(function(id){return /^\\s*?name\\s*?$/.test(id)}));
+        const columns_subsetFlag = new Set(columnIDs.filter(function(id){return /^\\s*?flag.*\\s*?$/.test(id)}));
+        const columns_subsetLabel = new Set(columnIDs.filter(function(id){return /^\\s*?label\\w*\\s*?$/.test(id)}));
+        const columns_subsetProperties = new Set(columnIDs.filter(function(id){return /^\\s*?properties\\w*\\s*?$/.test(id)}));
+        const columns_subsetAttributes = new Set(columnIDs.filter(function(id){return /^\\s*?attributes\\w*\\s*?$/.test(id)}));
+        const columns_subsetTranslations = new Set(columnIDs.filter(function(id){return /^\\s*?langcode.*\\s*?$/.test(id)}));
+        const columns_subsetScripting = new Set(columnIDs.filter(function(id){return /^\\s*?script\\w*\\s*?$/.test(id)}));
+        if( ( (Array.from(addedData.sectionDefs)).includes('routing') ) && ( Array.from(difference(addedData.sectionDefs,['routing']))==0 ) ) {
+            if(Array.from(columns_subsetLabel).length>0) {
+                return Array.from(columns_subsetLabel);
+            }
+        }
+        if( ( (Array.from(columns_subsetName)).length>0 ) && ( (Array.from(columns_subsetLabel)).length>0 ) ) {
+            const result_TranslationsExcluded = difference( columns, columns_subsetTranslations )
+            if(Array.from(result_TranslationsExcluded).length>0) {
+                const result_ScriptingTranslationsExcluded = difference( result_TranslationsExcluded, columns_subsetScripting )
+                if(Array.from(result_ScriptingTranslationsExcluded).length>0) {
+                    return Array.from(result_ScriptingTranslationsExcluded);
+                } else {
+                    return Array.from(result_TranslationsExcluded);
+                }
+            }
+        }
+        return Array.from(columns);
+    }
     function addControlBlock_ShowHideColumns() {
         let errorBannerEl = null;
         try {
@@ -486,22 +517,27 @@ TEMPLATE_HTML_SCRIPTS = """
             };
             // 2. add a control block
             function applyDefaultSetup(listOfControls) {
+                // input: array of {id:colClassName,text:colText,controlEl:checkboxEl}
+                // expected behaviour: check/uncheck listOfControls[..].controlEl
+                // not a clean fn
                 try {
-                    var listOfControlsShown = listOfControls;
-                    const listOfControls_IncludesScripting = listOfControlsShown.filter(a=>a.id=='scripting');
-                    const listOfControls_DoesNotIncludeScripting = listOfControlsShown.filter(a=>a.id!='scripting');
-                    if( (listOfControls_IncludesScripting.length>0) && (listOfControls_DoesNotIncludeScripting.length>0) ) {
-                        listOfControls_IncludesScripting.forEach(function(d){d.controlEl.checked=false;d.controlEl.dispatchEvent(new Event('change'));});
-                        listOfControls_DoesNotIncludeScripting.forEach(function(d){d.controlEl.checked=true;d.controlEl.dispatchEvent(new Event('change'));});
-                        listOfControlsShown = listOfControls_DoesNotIncludeScripting;
+                    columnsAll = listOfControls.map(function(a){return a.id});
+                    addedData = {
+                        columnDefs: listOfControls,
+                        sectionDefs: (function() { sectionDefs = []; const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]'); Array.prototype.forEach.call(sectionElements,function(sectionElement) { var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\\s*?section\\s+/ig,''); var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\\s*?mdmreport-wrapper-section-/ig,''); textTitle = textTitle.replace(/^\\s*(.*?)\\s*$/ig,'$1'); /* trim */ textCss = textCss.replace(/^\\s*(.*?)\\s*$/ig,'$1'); /* trim */ if( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) { if( !textTitle || (textTitle.length==0) ) textTitle = textCss; if( !textCss || (textCss.length==0) ) textCss = textTitle; textCss = textCss.replace(/[^\\w\\-\\.]/ig,'-'); sectionDefs.push({text:textTitle,id:textCss}); } }); return sectionDefs.map(function(d){return d.id}); })()
                     };
-                    const listOfControls_IncludesLangcode = listOfControlsShown.filter(a=>/^\\s*?langcode.*?/ig.test(a.id));
-                    const listOfControls_DoesNotIncludeLangcode = listOfControlsShown.filter(a=>!(/^\\s*?langcode.*?/ig.test(a.id)));
-                    if( (listOfControls_IncludesLangcode.length>0) && (listOfControls_DoesNotIncludeLangcode.length>0) ) {
-                        listOfControls_IncludesLangcode.forEach(function(d){d.controlEl.checked=false;d.controlEl.dispatchEvent(new Event('change'));});
-                        listOfControls_DoesNotIncludeLangcode.forEach(function(d){d.controlEl.checked=true;d.controlEl.dispatchEvent(new Event('change'));});
-                        listOfControlsShown = listOfControls_DoesNotIncludeLangcode;
-                    };
+                    columnsShown = decideColumnsShownAtStartup(columnsAll,addedData);
+                    columnsAll.forEach(function(columnId){
+                        const d = listOfControls.filter(function(def){ return def.id==columnId; })[0];
+                        const isShown = columnsShown.includes(columnId);
+                        if( isShown ) {
+                            d.controlEl.checked = true;
+                            d.controlEl.dispatchEvent(new Event('change'));
+                        } else {
+                            d.controlEl.checked = false;
+                            d.controlEl.dispatchEvent(new Event('change'));
+                        }
+                    });
                 } catch(e) {
                     try {
                         errorBannerEl.innerHTML = errorBannerEl.innerHTML + `Error: ${e}<br />`;
@@ -599,8 +635,8 @@ TEMPLATE_HTML_SCRIPTS = """
             Array.prototype.forEach.call(sectionElements,function(sectionElement) {
                 var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\\s*?section\\s+/ig,'');
                 var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\\s*?mdmreport-wrapper-section-/ig,'');
-                textTitle = textTitle.replace(/^\\s*(.*?)\\s*$/ig,'$1'); // trim
-                textCss = textCss.replace(/^\\s*(.*?)\\s*$/ig,'$1'); // trim
+                textTitle = textTitle.replace(/^\\s*(.*?)\\s*$/ig,'$1'); /* trim */
+                textCss = textCss.replace(/^\\s*(.*?)\\s*$/ig,'$1'); /* trim */
                 if( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) {
                     if( !textTitle || (textTitle.length==0) ) textTitle = textCss;
                     if( !textCss || (textCss.length==0) ) textCss = textTitle;
