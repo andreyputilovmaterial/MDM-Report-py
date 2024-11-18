@@ -418,7 +418,7 @@ def produce_html(inp):
 
     result_template = '{begin}{report_contents}{end}'.format(
         begin = report_html_template.TEMPLATE_HTML_BEGIN,
-        report_contents = report_htmlmarkup_mainpart_with_tables,
+        report_contents = '{{INS_MAIN_PART}}',
         end = report_html_template.TEMPLATE_HTML_END
     )
 
@@ -428,17 +428,31 @@ def produce_html(inp):
     #     ...
     # )
     ## unfortunately, I won't use format(), as the text includes css formatting with curly brackets - escaping it nnn times is not looking fine
-    result = result_template.replace(
+    # also, previously I had result.replace().replace().replace().replace()... all in one line - it was causing memory issues; now I have these steps on separate lines
+    result = result_template
+    result = result.replace(
         '{{INS_TITLE}}', result_ins_htmlmarkup_title
-    ).replace(
+    )
+    result = result.replace(
         '{{INS_PAGEHEADER}}', result_ins_htmlmarkup_headertext
-    ).replace(
+    )
+    result = result.replace(
         '{{INS_REPORTTYPE}}', sanitize_idfield(result_ins_htmlmarkup_reporttype)
-    ).replace(
+    )
+    result = result.replace(
         '{{INS_HEADING}}', result_ins_htmlmarkup_heading
-    ).replace(
+    )
+    result = result.replace(
         '{{INS_BANNER}}', result_ins_htmlmarkup_banner
     )
+    # result = result.replace(
+    #     '{{INS_MAIN_PART}}', report_htmlmarkup_mainpart_with_tables
+    # )
+    # more memory efficient than text replacements
+    prefix_replacement = '{{INS_MAIN_PART}}'
+    prefix_end = result.index(prefix_replacement)
+    postfix_begin = prefix_end + len(prefix_replacement)
+    result = result[:prefix_end] + report_htmlmarkup_mainpart_with_tables + result[postfix_begin:]
 
     return result
 
@@ -449,15 +463,19 @@ def produce_html(inp):
 def entry_point(config={}):
     time_start = datetime.now()
     parser = argparse.ArgumentParser(
-        description="Produce a summary of MDD in html (read from json)"
+        description="Produce a summary of MDD in html (read from json)",
+        prog='mdmtoolsap --program report'
     )
     parser.add_argument(
         '--inpfile',
-        help='JSON with Input MDD map'
+        help='JSON with Input MDD map',
+        type=str,
+        required=True
     )
     parser.add_argument(
         '--output-format',
         help='Set output format: html or excel',
+        type=str,
         required=False
     )
     args = None
@@ -469,7 +487,7 @@ def entry_point(config={}):
     input_map_filename = None
     if args.inpfile:
         input_map_filename = Path(args.inpfile)
-        input_map_filename = '{input_map_filename}'.format(input_map_filename=input_map_filename.resolve())
+        # input_map_filename = '{input_map_filename}'.format(input_map_filename=input_map_filename.resolve())
     # input_map_filename_specs = open(input_map_filename_specs_name, encoding="utf8")
     config_output_format = 'html'
     if args.output_format:
@@ -477,6 +495,10 @@ def entry_point(config={}):
 
     print('MDM report script: script started at {dt}'.format(dt=time_start))
 
+    print('MDM report script: reading {fname}'.format(fname=input_map_filename))
+    if not(Path(input_map_filename).is_file()):
+        raise FileNotFoundError('file not found: {fname}'.format(fname=input_map_filename))
+    
     mdd_map_in_json = None
     with open(input_map_filename, encoding="utf8") as input_map_file:
         mdd_map_in_json = json.load(input_map_file)
