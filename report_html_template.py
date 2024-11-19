@@ -118,6 +118,13 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
 
 .mdmreport-table { width: 100%; min-width: 100%; max-width: 100%; }
 
+.mdmreport-table-wrapper .mdmreport-banner {
+    color: #555;
+}
+.mdmreport-table-wrapper .mdmreport-banner p {
+    margin: 0.1em 0;
+}
+
 .mdmreport-table tr td {
     vertical-align: top;
 }
@@ -125,6 +132,7 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
 .mdmreport-contentcell, .mdmreport-contentcell pre {
     font-family: monospace, monospace;
     font-size: 100%;
+    margin: 0;
 }
 .mdmreport-contentcell pre {
     white-space: pre;
@@ -152,7 +160,7 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
 }
 
 /* all regular cells */ .mdmreport-table .mdmreport-record td {
-    padding: 0.25em 0.5em;
+    padding: 0.15em 0.35em;
     max-width: 15em;
     overflow: hidden;
     overflow-wrap: anywhere;
@@ -220,6 +228,9 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
     background: #fff5da;
     color: #444444;
 }
+.mdmreport-table .mdmreport-record.mdmdiff-ghost.mdmdiff-movedfrom {
+    background: repeating-linear-gradient(45deg, #e5e5e5, #e5e5e5 20px, #eaeaea 21px, #eaeaea 40px);
+}
 .mdmreport-table .mdmreport-record.mdmdiff-diff {
     background: #ffe49c;
 }
@@ -265,6 +276,19 @@ td.mdmreport-contentcell label {
     overflow: hidden;
     clip: rect(0,0,0,0);
     border: 0;
+}
+.mdmreport-label-pseudo[data-added] {
+    position: relative;
+}
+.mdmreport-label-pseudo[data-added]:after, .mdmreport-label-pseudo[data-added]::after {
+    content: attr(data-added);
+    white-space: pre;
+    display: block;
+    font-weight: 400;
+    color: #666;
+    font-size: 90%;
+    padding: 0.25em 0 0.25em 1em;
+    position: relative;
 }
 
 /* controls */
@@ -1329,7 +1353,7 @@ AP
 
 TEMPLATE_HTML_TABLE_BEGIN = r"""
 <div class="wrapper mdmreport-table-wrapper mdmreport-wrapper-section-{{TABLE_ID}}">
-<h3 class="mdmreport-table-title">Section {{TABLE_NAME}}</h3>
+<h3 class="mdmreport-table-title">Section {{TABLE_NAME}}</h3>{{INS_TABBANNER}}
 <table class="mdmreport-table mdmreport-table-section-{{TABLE_ID}}"><tbody>
 """
 
