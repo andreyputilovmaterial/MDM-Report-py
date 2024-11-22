@@ -33,23 +33,33 @@ def sanitize_text_normalizelinebreaks(str_output):
     str_output = re.sub(r'\r','\n',re.sub(r'\r?\n','\n',str_output))
     return str_output
 
-def html_sanitize_text(str_output,flags=[]):
-    str_output = sanitize_text_normalizelinebreaks(str_output)
+def html_sanitize_text(inp_value,flags=[]):
+    result = inp_value
+    if not isinstance(result,str):
+        raise Exception('when html_sanitize_text() called input must be of str type')
+    if 'format-escapequotes-vbsstyle' in flags:
+        inp_value = inp_value.replace('"','""')
+    result = sanitize_text_normalizelinebreaks(result)
     # basic clean up - basic conversion escaping all tags
-    str_output =  html.escape('{str_output}'.format(str_output=str_output))
+    result =  html.escape('{result}'.format(result=result))
+
     special_pattern = '<<KEYWORD>>'
     special_pattern = html.escape(special_pattern)
     # TODO: finding injected markers should be depricated in future versions
-    str_output = str_output.replace(special_pattern.replace('KEYWORD','ADDED'),'<span class="mdmdiff-inlineoverlay-added">').replace(special_pattern.replace('KEYWORD','REMOVED'),'<span class="mdmdiff-inlineoverlay-removed">').replace(special_pattern.replace('KEYWORD','ENDADDED'),'</span>').replace(special_pattern.replace('KEYWORD','ENDREMOVED'),'</span>')
-    # some replacement to add syntax so that dates are formatted
-    # if there'str_output some certain markup - that shouln't be escape
-    # it should be printed as markup so that js works and converts UTC dates to local time
-    str_output = re.sub(r'&lt;&lt;DATE:(.*?)&gt;&gt;',lambda m:'<span class="mdmreport-role-date" data-role="date">{d}</span>'.format(d=m[1]),str_output)
+    result = result.replace(special_pattern.replace('KEYWORD','ADDED'),'<span class="mdmdiff-inlineoverlay-added">').replace(special_pattern.replace('KEYWORD','REMOVED'),'<span class="mdmdiff-inlineoverlay-removed">').replace(special_pattern.replace('KEYWORD','ENDADDED'),'</span>').replace(special_pattern.replace('KEYWORD','ENDREMOVED'),'</span>')
+    for keyword in ['ADDED','REMOVED','ENDADDED','ENDREMOVED']:
+        if special_pattern.replace('KEYWORD',keyword) in result:
+            raise Exception('Text insert markers found: should deprecated (found: "{aaa}" in "{bbb}")'.format(aaa=special_pattern.replace('KEYWORD',keyword),bbb=result))
+    # # some replacement to add syntax so that dates are formatted
+    # # if there'result some certain markup - that shouln't be escape
+    # # it should be printed as markup so that js works and converts UTC dates to local time
+    # result = re.sub(r'&lt;&lt;DATE:(.*?)&gt;&gt;',lambda m:'<span class="mdmreport-role-date" data-role="date">{d}</span>'.format(d=m[1]),result)
     # and one more transformation - some parts
     # (called "scripting" - including MDD syntax for all MDD items and routing syntax)
     # so these parts include raw multi-line text - we'll normalize line breaks
-    str_output = re.sub('([^\t\r\n\x20-\x7E])',lambda m: '&#{n};'.format(n=ord(m[1])),str_output)
-    return str_output
+    
+    result = re.sub('([^\t\r\n\x20-\x7E])',lambda m: '&#{n};'.format(n=ord(m[1])),result)
+    return result
 
 def html_sanitize_text_date(s):
     #return '<<DATE:{d}>>'.format(d=s)
@@ -64,9 +74,7 @@ def sanitize_text_extract_filename(s):
 
 
 def html_sanitize_value_astext(inp_value,flags=[]):
-    if 'format-escapequotes-vbsstyle' in flags:
-        inp_value = inp_value.replace('"','""')
-    return html_sanitize_text(inp_value,flags=list(set(flags)-set(['format-escapequotes-vbsstyle'])))
+    return html_sanitize_text(inp_value,flags)
 
 def html_sanitize_value_asproperties(inp_value,flags=[]):
     # removing css classes for property coloring - reduced memory consumption a lot; AP 10/12/2024
@@ -83,7 +91,7 @@ def html_sanitize_value_asproperties(inp_value,flags=[]):
         ins_partend = ''
     result = '{part_begin}{part_iterate}{part_end}'.format(
         part_begin = '<p class="mdmreport-prop-row">',
-        part_iterate = ',</p><p class="mdmreport-prop-row">'.join([
+        part_iterate = ', </p><p class="mdmreport-prop-row">'.join([
             '{ins_partbegin}{fieldname}{ins_partconjunction}{fieldvalue}{ins_partend}'.format(
                 fieldname = html_sanitize_text(row['name']),
                 fieldvalue = html_sanitize_value_general(row['value'],[]+flags+['format-escapequotes-vbsstyle']),
@@ -498,7 +506,7 @@ def prep_htmlmarkup_section(section_data,column_specs_global,column_titles,flags
 
         ins_banner = ''
         if 'statistics' in section_data:
-                ins_banner = '<div class="mdmreport-banner mdmreport-banner-table-details mdmreport-banner-table-details-statistics"><p>Statistics:</p>{body}</div>'.format( body = html_sanitize_tablecellcontents( section_data['statistics'], flags=['format_semicolon'] ) )
+                ins_banner = '<div class="mdmreport-banner mdmreport-banner-table-details mdmreport-banner-table-details-statistics"><p>Statistics: </p>{body}</div>'.format( body = html_sanitize_tablecellcontents( section_data['statistics'], flags=['format_semicolon'] ) )
 
         if not('skip_plugin_enchancement' in flags):
             for plugin in enchancement_plugins:
