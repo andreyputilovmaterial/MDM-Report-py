@@ -508,11 +508,15 @@ TEMPLATE_HTML_SCRIPTS = r"""
     /* === show/hide columns js === */
 (function() {
     function decideColumnsShownAtStartup(columnIDs,addedData) {
+        function normalizeSectionId(id) {
+            return id.replace(/_/ig,' ').replace(/\s/ig,' ').replace(/\bx\d+\b/ig,' ').replace(/\s+/ig,' ').replace(/^\s*/ig,'').replace(/\s*$/ig,'');
+        }
         const columns = new Set(columnIDs);
         if(Array.from(columns).length==0) {
             return Array.from(columns);
         }
-        function difference(a,b){/* something is not working with Sets in my chrome, strange - adding this helper fn to find differences as between arrays */  return new Set(Array.from(a).filter(function(ai){return !Array.from(b).includes(ai);})); }
+        const sectionNames = addedData.sectionNames.map(normalizeSectionId)
+        function setDifference(a,b){/* something is not working with Sets in my chrome, strange - adding this helper fn to find differences as between arrays */  return new Set(Array.from(a).filter(function(ai){return !Array.from(b).includes(ai);})); }
         const columns_subsetName = new Set(columnIDs.filter(function(id){return /^\s*?name\s*?$/.test(id)}));
         const columns_subsetFlag = new Set(columnIDs.filter(function(id){return /^\s*?flag.*\s*?$/.test(id)}));
         const columns_subsetLabel = new Set(columnIDs.filter(function(id){return /^\s*?label\w*\s*?$/.test(id)}));
@@ -521,20 +525,20 @@ TEMPLATE_HTML_SCRIPTS = r"""
         const columns_subsetTranslations = new Set(columnIDs.filter(function(id){return /^\s*?langcode.*\s*?$/.test(id)}));
         const columns_subsetScripting = new Set(columnIDs.filter(function(id){return /^\s*?script\w*\s*?$/.test(id)}));
         const columns_subsetRawText = new Set(columnIDs.filter(function(id){return /^\s*?rawtext\w*\s*?$/.test(id)}));
-        if( ( (Array.from(addedData.sectionDefs)).includes('routing') ) && ( Array.from(difference(addedData.sectionDefs,['routing']))==0 ) ) {
+        if( ( (Array.from(sectionNames)).includes('routing') ) && ( Array.from(setDifference(sectionNames,['routing']))==0 ) ) {
             if(Array.from(columns_subsetLabel).length>0) {
                 return Array.from(columns_subsetLabel);
             }
         }
-        if( ( Array.from(addedData.sectionDefs).length==1 ) && ( Array.from(columns_subsetRawText).length>0 ) ) {
+        if( ( Array.from(sectionNames).length==1 ) && ( Array.from(columns_subsetRawText).length>0 ) ) {
             if(Array.from(columns_subsetRawText).length>0) {
                 return Array.from(columns_subsetRawText);
             }
         }
         if( ( (Array.from(columns_subsetName)).length>0 ) && ( (Array.from(columns_subsetLabel)).length>0 ) ) {
-            const result_TranslationsExcluded = difference( columns, columns_subsetTranslations )
+            const result_TranslationsExcluded = setDifference( columns, columns_subsetTranslations )
             if(Array.from(result_TranslationsExcluded).length>0) {
-                const result_ScriptingTranslationsExcluded = difference( result_TranslationsExcluded, columns_subsetScripting )
+                const result_ScriptingTranslationsExcluded = setDifference( result_TranslationsExcluded, columns_subsetScripting )
                 if(Array.from(result_ScriptingTranslationsExcluded).length>0) {
                     return Array.from(result_ScriptingTranslationsExcluded);
                 } else {
@@ -559,24 +563,30 @@ TEMPLATE_HTML_SCRIPTS = r"""
             // so, if 2 classes are added to a cell, there would be 2 checkboxes, and if there is a column missing necessary class, there would be no check box
             const columns = [];
             const columnTitles = {};
-            const rowContainingColsElements = document.querySelectorAll('table.mdmreport-table tr.mdmreport-record');
-            if(rowContainingColsElements.length>0) {
-                const rowRefEl = rowContainingColsElements[0];
-                const colElements = rowRefEl.querySelectorAll('td.mdmreport-contentcell');
-                Array.prototype.forEach.call(colElements,function(colEl) {
-                    const cssClasses = Array.from(colEl.classList);
-                    const cssClassesMatching = cssClasses.filter(function(n) {return /^\s*?(mdmreport-col-)(.*?)\s*?$/ig.test(n);});
-                    cssClassesMatching.map(function(n) {return n.replace(/^\s*?(mdmreport-col-)(.*?)\s*?$/ig,'$2');}).forEach(function(colNameFromCSS) {
-                        const colName = colNameFromCSS;
-                        //colName = colName.replace(/^\s*/,'').replace(/\s*$/,'');
-                        const colTitlesAllOfThisCssClass = Array.from(rowRefEl.querySelectorAll(`.mdmreport-col-${colName}`)).map(el=>el.textContent);
-                        const colTitlesNoDuplicates = colTitlesAllOfThisCssClass.reduce(function(acc,val){if(acc.includes(val))return acc; else return [...acc,val];},[]);
-                        const colTitle = colTitlesNoDuplicates.length==1 ? colTitlesNoDuplicates[0] : `${colEl.textContent} (${colName})`;
-                        columnTitles[colName] = colTitle;
-                        columns.push(colName);
+            const sectionEls = document.querySelectorAll('table.mdmreport-table');
+            Array.from(sectionEls).forEach(function(sectionEl){
+                const rowContainingColsElements = sectionEl.querySelectorAll('tr.mdmreport-record');
+                Array.from(rowContainingColsElements).filter(function(e,i){return i==0;}).forEach(function(rowRefEl){
+                    const colElements = rowRefEl.querySelectorAll('td.mdmreport-contentcell');
+                    Array.prototype.forEach.call(colElements,function(colEl) {
+                        const cssClasses = Array.from(colEl.classList);
+                        const cssClassesMatching = cssClasses.filter(function(n) {return /^\s*?(mdmreport-col-)(.*?)\s*?$/ig.test(n);});
+                        cssClassesMatching.map(function(n) {return n.replace(/^\s*?(mdmreport-col-)(.*?)\s*?$/ig,'$2');}).forEach(function(colNameFromCSS) {
+                            const colName = colNameFromCSS;
+                            //colName = colName.replace(/^\s*/,'').replace(/\s*$/,'');
+                            const colTitlesAllOfThisCssClass = Array.from(rowRefEl.querySelectorAll(`.mdmreport-col-${colName}`)).map(el=>el.textContent);
+                            const colTitlesNoDuplicates = colTitlesAllOfThisCssClass.reduce(function(acc,val){if(acc.includes(val))return acc; else return [...acc,val];},[]);
+                            const colTitle = colTitlesNoDuplicates.length==1 ? colTitlesNoDuplicates[0] : `${colEl.textContent} (${colName})`;
+                            if( columns.includes(colName) ) {
+                                /* skip - already on the list */
+                            } else {
+                                columnTitles[colName] = colTitle;
+                                columns.push(colName);
+                            }
+                        });
                     });
                 });
-            };
+            });
             // 2. add a control block
             function applyDefaultSetup(listOfControls) {
                 // input: array of {id:colClassName,text:colText,controlEl:checkboxEl}
@@ -586,7 +596,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                     columnsAll = listOfControls.map(function(a){return a.id});
                     addedData = {
                         columnDefs: listOfControls,
-                        sectionDefs: (function() { sectionDefs = []; const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]'); Array.prototype.forEach.call(sectionElements,function(sectionElement) { var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\s*?section\s+/ig,''); var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\s*?mdmreport-wrapper-section-/ig,''); textTitle = textTitle.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */ textCss = textCss.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */ if( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) { if( !textTitle || (textTitle.length==0) ) textTitle = textCss; if( !textCss || (textCss.length==0) ) textCss = textTitle; textCss = textCss.replace(/[^\w\-\.]/ig,'-'); sectionDefs.push({text:textTitle,id:textCss}); } }); return sectionDefs.map(function(d){return d.id}); })()
+                        sectionNames: (function() { sectionDefs = []; const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]'); Array.prototype.forEach.call(sectionElements,function(sectionElement) { var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\s*?section\s+/ig,''); var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\s*?mdmreport-wrapper-section-/ig,''); textTitle = textTitle.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */ textCss = textCss.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */ if( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) { if( !textTitle || (textTitle.length==0) ) textTitle = textCss; if( !textCss || (textCss.length==0) ) textCss = textTitle; textCss = textCss.replace(/[^\w\-\.]/ig,'-'); sectionDefs.push({text:textTitle,id:textCss}); } }); return sectionDefs.map(function(d){return d.id}); })()
                     };
                     columnsShown = decideColumnsShownAtStartup(columnsAll,addedData);
                     columnsAll.forEach(function(columnId){
@@ -761,15 +771,21 @@ TEMPLATE_HTML_SCRIPTS = r"""
         }
     }
     function itemNameLookup(itemName,propertiesData,sectionName) {
+        function normalizeSectionId(id) {
+            return id.replace(/_/ig,' ').replace(/\s/ig,' ').replace(/\bx\d+\b/ig,' ').replace(/\s+/ig,' ').replace(/^\s*/ig,'').replace(/\s*$/ig,'');
+        }
         try {
-            const extractProperties = () => {};
-            if(false) { // ( /^\s*?Info\s*?\:/.test(itemName) ) {
+            if(false) { /* ( /^\s*?Info\s*?\:/.test(itemName) ) { */
                 // info item - skip
                 return null;
-            } else if( (sectionName=='shared_lists') && (/^\s*?\w+/.test(itemName)) ) {
+            /* } else if(normalizeSectionId(sectionName)=='') { */
+                /* show we search for jira for '' (root) item? I think yes, I will not skip */
+                /* return null; */
+            } else if( (/\bshared\b\s*?\blist(?:s)?\b/ig.test(normalizeSectionId(sectionName))) && (/^\s*?\w+/.test(itemName)) ) {
+                /* ah it's now "shared_x95_lists" */
                 // is a shared list
                 return itemName.replace(/^\s*?(\w+)\b.*?$/ig,'$1').replace(/^\s*?SL_/ig,'');
-            } else if( (sectionName=='fields') ) {
+            } else if( (normalizeSectionId(sectionName)=='fields') ) {
                 // "fields" (normal questions) - let's look up the FullName property
                 const properties = propertiesData[itemName];
                 const propertyListLcase = properties.map(a=>a.name.toLowerCase());
@@ -795,7 +811,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                     }
                 }
                 return null
-            } else if( (sectionName=='pages') ) {
+            } else if( (normalizeSectionId(sectionName)=='pages') ) {
                 // "pages" - usually tickets are not issued for pages, skip
                 return null
             } else
@@ -811,14 +827,66 @@ TEMPLATE_HTML_SCRIPTS = r"""
                 try {
                     const rowsWithHdataEl = rowsEl; // rowsEl.filter(function(tr){ const cols = Array.from(tr.querySelectorAll('td')); if(cols.length>1) { return /^(?:\s*?(?:(?:mdd|mdm|hdata)\.)?Properties\s*?)|(?:\s*.*?\bMDM\b.*?\s*)$/ig.test(sanitizeCellText(cols[1].textContent)); } else return false; });
                     Array.from(rowsEl).forEach(function(row){
-                        const propertiesColIndices = [];
-                        const isAPropertiesColumn = s => /^(?:(?:&#32;)|(?:\s))*?(?:Custom)\s*?properties(?:(?:&#32;)|(?:\s))*?(?:(?:&#40;)|(?:\())*?.*?(?:(?:&#42;)|(?:\)))*?(?:(?:&#32;)|(?:\s))*?$/ig.test(s);
-                        Array.from(rowBannerEl.querySelectorAll('td')).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/\s*?\(\s*?(?:Left|Right)\s*?MDD\s*?\)\s*/ig,'')).map((colText,colIndex)=>{if(colIndex<2)return false;if(isAPropertiesColumn(colText))return colIndex;else return false;}).forEach(e=>{if(!!e)propertiesColIndices.push(e);});
+                        function detectNameColumnsIndex(rowsEl) {
+                            const resultColIndices = [];
+                            if(rowsEl.length>0) {
+                                const rowEl = rowsEl[0];
+                                const colsEl = rowEl.querySelectorAll('td');
+                                Array.from(colsEl).forEach(function(colEl,i){
+                                    colIds = Array.from(colEl.classList).filter(a=>/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig.test(a)).map(a=>a.replace(/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig,'$1'));
+                                    colIdsMatching = colIds.filter(a=>/^\s*?name\b.*?/ig.test(a.replace(/_/ig,' ')));
+                                    if(colIdsMatching.length>0)
+                                        resultColIndices.push(i);
+                                });
+                            }
+                            if( resultColIndices.length>0 ) {
+                                return resultColIndices[0];
+                            } else {
+                                return -1;
+                            }
+                        }
+                        function detectDiffColumnsIndices(rowsEl) {
+                            const resultColIndices = [];
+                            if(rowsEl.length>0) {
+                                const rowEl = rowsEl[0];
+                                const colsEl = rowEl.querySelectorAll('td');
+                                Array.from(colsEl).forEach(function(colEl,i){
+                                    colIds = Array.from(colEl.classList).filter(a=>/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig.test(a)).map(a=>a.replace(/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig,'$1'));
+                                    colIdsMatching = colIds.filter(a=>/^\s*?flagdiff\b.*?/ig.test(a.replace(/_/ig,' ')));
+                                    if(colIdsMatching.length>0)
+                                        resultColIndices.push(i);
+                                });
+                            }
+                            if( resultColIndices.length>0 ) {
+                                return resultColIndices[0];
+                            } else {
+                                return -1;
+                            }
+                        }
+                        function detectPropertiesColumnsIndices(rowsEl) {
+                            const resultColIndices = [];
+                            if(rowsEl.length>0) {
+                                const rowEl = rowsEl[0];
+                                const colsEl = rowEl.querySelectorAll('td');
+                                Array.from(colsEl).forEach(function(colEl,i){
+                                    colIds = Array.from(colEl.classList).filter(a=>/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig.test(a)).map(a=>a.replace(/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig,'$1'));
+                                    colIdsMatching = colIds.filter(a=>/^\s*?properties.*?/ig.test(a));
+                                    if(colIdsMatching.length>0)
+                                        resultColIndices.push(i);
+                                });
+                                //const isAPropertiesColumn = s => /^(?:(?:&#32;)|(?:\s))*?(?:Custom)\s*?properties(?:(?:&#32;)|(?:\s))*?(?:(?:&#40;)|(?:\())*?.*?(?:(?:&#42;)|(?:\)))*?(?:(?:&#32;)|(?:\s))*?$/ig.test(s);
+                                //const cols = Array.from(colsEl).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/^\s*?\(\s*?(?:Left|Right)\s*?MDD\s*?\)\s*/ig,''));
+                                //const colsWithProperties = cols.map((colText,colIndex)=>{if(colIndex<2)return false;if(isAPropertiesColumn(colText))return colIndex;else return false;});
+                                //colsWithProperties.forEach(e=>{if(!!e)propertiesColIndices.push(e);});
+                            }
+                            return resultColIndices;
+                        }
+                        const propertiesColIndices = detectPropertiesColumnsIndices(rowsEl);
                         const colsEl = Array.from(row.querySelectorAll('td'));
                         const propertiesData = {};
-                        const itemNameColIndex = 1;
+                        const itemNameColIndex = detectNameColumnsIndex(rowsEl);
                         const cols = Array.from(colsEl).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/^\s*?\(\s*?(?:Left|Right)\s*?MDD\s*?\)\s*/ig,''));
-                        const itemName = cols[itemNameColIndex];
+                        const itemName = itemNameColIndex>=0 ? cols[itemNameColIndex] : '';
                         const properties = [];
                         const parsePropertiesTextFailSafe = function(s){
                             try {
@@ -902,21 +970,73 @@ TEMPLATE_HTML_SCRIPTS = r"""
                 })(tableEl);
                 const rowsEl = tableEl.querySelectorAll('tr');
                 jiraPlugin_clearUp();
+                function detectNameColumnsIndex(rowsEl) {
+                    const resultColIndices = [];
+                    if(rowsEl.length>0) {
+                        const rowEl = rowsEl[0];
+                        const colsEl = rowEl.querySelectorAll('td');
+                        Array.from(colsEl).forEach(function(colEl,i){
+                            colIds = Array.from(colEl.classList).filter(a=>/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig.test(a)).map(a=>a.replace(/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig,'$1'));
+                            colIdsMatching = colIds.filter(a=>/^\s*?name\b.*?/ig.test(a.replace(/_/ig,' ')));
+                            if(colIdsMatching.length>0)
+                                resultColIndices.push(i);
+                        });
+                    }
+                    if( resultColIndices.length>0 ) {
+                        return resultColIndices[0];
+                    } else {
+                        return -1;
+                    }
+                }
+                function detectDiffColumnsIndices(rowsEl) {
+                    const resultColIndices = [];
+                    if(rowsEl.length>0) {
+                        const rowEl = rowsEl[0];
+                        const colsEl = rowEl.querySelectorAll('td');
+                        Array.from(colsEl).forEach(function(colEl,i){
+                            colIds = Array.from(colEl.classList).filter(a=>/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig.test(a)).map(a=>a.replace(/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig,'$1'));
+                            colIdsMatching = colIds.filter(a=>/^\s*?flagdiff\b.*?/ig.test(a.replace(/_/ig,' ')));
+                            if(colIdsMatching.length>0)
+                                resultColIndices.push(i);
+                        });
+                    }
+                    if( resultColIndices.length>0 ) {
+                        return resultColIndices[0];
+                    } else {
+                        return -1;
+                    }
+                }
+                function detectPropertiesColumnsIndices(rowsEl) {
+                    const resultColIndices = [];
+                    if(rowsEl.length>0) {
+                        const rowEl = rowsEl[0];
+                        const colsEl = rowEl.querySelectorAll('td');
+                        Array.from(colsEl).forEach(function(colEl,i){
+                            colIds = Array.from(colEl.classList).filter(a=>/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig.test(a)).map(a=>a.replace(/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig,'$1'));
+                            colIdsMatching = colIds.filter(a=>/^\s*?properties.*?/ig.test(a));
+                            if(colIdsMatching.length>0)
+                                resultColIndices.push(i);
+                        });
+                        //const isAPropertiesColumn = s => /^(?:(?:&#32;)|(?:\s))*?(?:Custom)\s*?properties(?:(?:&#32;)|(?:\s))*?(?:(?:&#40;)|(?:\())*?.*?(?:(?:&#42;)|(?:\)))*?(?:(?:&#32;)|(?:\s))*?$/ig.test(s);
+                        //const cols = Array.from(colsEl).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/^\s*?\(\s*?(?:Left|Right)\s*?MDD\s*?\)\s*/ig,''));
+                        //const colsWithProperties = cols.map((colText,colIndex)=>{if(colIndex<2)return false;if(isAPropertiesColumn(colText))return colIndex;else return false;});
+                        //colsWithProperties.forEach(e=>{if(!!e)propertiesColIndices.push(e);});
+                    }
+                    return resultColIndices;
+                }
                 const propertiesData = {};
-                const itemNameColIndex = 1;
-                const diffFlagColIndex = 0;
-                const propertiesColIndices = [];
-                const isAPropertiesColumn = s => /^(?:(?:&#32;)|(?:\s))*?(?:Custom)\s*?properties(?:(?:&#32;)|(?:\s))*?(?:(?:&#40;)|(?:\())*?.*?(?:(?:&#42;)|(?:\)))*?(?:(?:&#32;)|(?:\s))*?$/ig.test(s);
+                const itemNameColIndex = detectNameColumnsIndex(rowsEl);
+                const diffFlagColIndex = detectDiffColumnsIndices(rowsEl);
+                const propertiesColIndices = detectPropertiesColumnsIndices(rowsEl);
                 const isTemporarilyMovedRow = s => /^\s*?\(\s*?moved\s*?\)\s*?$/ig.test(s);
                 Array.prototype.forEach.call(rowsEl,function(rowEl,i) {
                     const colsEl = rowEl.querySelectorAll('td');
                     const cols = Array.from(colsEl).map(cellEl=>sanitizeCellText(cellEl.innerText||cellEl.textContent).replace(/^\s*?\(\s*?(?:Left|Right)\s*?MDD\s*?\)\s*/ig,''));
                     if( i==0 ) {
-                        const colsWithProperties = cols.map((colText,colIndex)=>{if(colIndex<2)return false;if(isAPropertiesColumn(colText))return colIndex;else return false;});
-                        colsWithProperties.forEach(e=>{if(!!e)propertiesColIndices.push(e);});
+                        /* not adding jira link in zero (banner) row */
                     } else {
-                        const itemName = cols[itemNameColIndex];
-                        const diffFlag = cols[diffFlagColIndex];
+                        const itemName = itemNameColIndex>=0 ? cols[itemNameColIndex] : '';
+                        const diffFlag = diffFlagColIndex>=0 ? cols[diffFlagColIndex] : '';
                         if( isTemporarilyMovedRow(diffFlag) )
                             return;
                         const properties = [];
@@ -947,8 +1067,28 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         /* header row */
                         colAddEl.textContent = "Jira - possible ticket lookup link"
                     } else {
-                        if( (colsEl.length>=2) ) {
-                            const possibleItemName = itemNameLookup(sanitizeCellText(colsEl[1].textContent),propertiesData,sectionName);
+                        function detectNameColumnsIndex(rowsEl) {
+                            const resultColIndices = [];
+                            if(rowsEl.length>0) {
+                                const rowEl = rowsEl[0];
+                                const colsEl = rowEl.querySelectorAll('td');
+                                Array.from(colsEl).forEach(function(colEl,i){
+                                    colIds = Array.from(colEl.classList).filter(a=>/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig.test(a)).map(a=>a.replace(/^\s*?mdmreport-col-(\w[^\s]*?)\s*?$/ig,'$1'));
+                                    colIdsMatching = colIds.filter(a=>/^\s*?name\b.*?/ig.test(a.replace(/_/ig,' ')));
+                                    if(colIdsMatching.length>0)
+                                        resultColIndices.push(i);
+                                });
+                            }
+                            if( resultColIndices.length>0 ) {
+                                return resultColIndices[0];
+                            } else {
+                                return -1;
+                            }
+                        }
+                        const itemNameColIndex = detectNameColumnsIndex(rowsEl);
+                        if( (itemNameColIndex>=0) ) {
+                            const itemName = colsEl[itemNameColIndex].textContent;
+                            const possibleItemName = itemNameLookup(sanitizeCellText(itemName),propertiesData,sectionName);
                             if( !!possibleItemName && (typeof possibleItemName==='string') && (possibleItemName.length>0) ) {
                                 const linkurl = getJiraUrl(possibleItemName);
                                 const linkEl = document.createElement('a');

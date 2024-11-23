@@ -29,16 +29,15 @@ else:
 
 # helper text prep functions first
 
-def sanitize_text_normalizelinebreaks(str_output):
-    str_output = re.sub(r'\r','\n',re.sub(r'\r?\n','\n',str_output))
-    return str_output
+def sanitize_text_normalizelinebreaks(inp_value):
+    return re.sub(r'\r','\n',re.sub(r'\r?\n','\n',inp_value))
 
 def html_sanitize_text(inp_value,flags=[]):
     result = inp_value
     if not isinstance(result,str):
         raise Exception('when html_sanitize_text() called input must be of str type')
     if 'format-escapequotes-vbsstyle' in flags:
-        inp_value = inp_value.replace('"','""')
+        result = result.replace('"','""')
     result = sanitize_text_normalizelinebreaks(result)
     # basic clean up - basic conversion escaping all tags
     result =  html.escape('{result}'.format(result=result))
