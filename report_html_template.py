@@ -168,7 +168,9 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
 
 /* all regular cells */ .mdmreport-table .mdmreport-record td {
     padding: 0.15em 0.35em;
-    max-width: 15em;
+    /* max-width: 15em; */
+    max-width: 100%;
+    min-width: 60px;
     overflow: hidden;
     overflow-wrap: anywhere;
 }
@@ -1250,7 +1252,15 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                 if(!sectionDef.tableElement) return;
                 const headerRowEls = sectionDef.tableElement.querySelectorAll('tr.mdmreport-record-header');
                 const allRows = Array.from(sectionDef.tableElement.querySelectorAll('tr.mdmreport-record:not(.mdmreport-record-header)')).map(function(element,index) {
-                    const texts = Array.from(element.querySelectorAll('td.mdmreport-contentcell')).map(function(el){return  el.innerText||el.textContent});
+                    const texts = Array.from(element.querySelectorAll('td.mdmreport-contentcell')).map(function(el){
+                        var result = el.innerText||el.textContent;
+                        if( el.hasAttribute('data-added') )
+                            result = result + ' ' + el.getAttribute('data-added');
+                        Array.from(el.querySelectorAll('[data-added]')).forEach(function(el){
+                            result = result + ' ' + el.getAttribute('data-added');
+                        });
+                        return result;
+                    });
                     return {element,texts,index};
                 });
                 if(!(headerRowEls.length>0)) return;
@@ -1264,8 +1274,11 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                     function doFilter() {
                         const checkStr = controlEl.value;
                         allRows.forEach(function(rowDef) {
+                            function doesCellMatchFilter(cellContents,checkStr){
+                                return cellContents.toLowerCase().includes(checkStr.toLowerCase());
+                            }
                             const cellContents = rowDef.texts[colIndex];
-                            const isMatching = (checkStr.length==0) || cellContents.toLowerCase().includes(checkStr.toLowerCase());
+                            const isMatching = (checkStr.length==0) || doesCellMatchFilter(cellContents,checkStr);
                             const cssControlClass = `mdmreport-tablefilterplugin-hide-${colIndex}`;
                             if(isMatching)
                                 rowDef.element.classList.remove(cssControlClass);
