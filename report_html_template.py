@@ -111,9 +111,12 @@ TEMPLATE_HTML_STYLES = """
 """
 
 TEMPLATE_HTML_STYLES_TABLE = r"""
-.mdmreport-table-wrapper {
+.mdmreport-section-wrapper {
     /* font-size: 12px; */
     font-size: 13px;
+}
+.mdmreport-table-wrapper {
+    overflow-x: scroll;
 }
 .mdmreport-table, mdmreport-table tbody, .mdmreport-table thead, .mdmreport-table tr, .mdmreport-table td {
     margin: 0;
@@ -123,12 +126,12 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
     border: 1px #ddd solid;
 }
 
-.mdmreport-table { width: 100%; min-width: 100%; max-width: 100%; }
+.mdmreport-table { width: 100%; min-width: 100%; max-width: 100%; display: block; }
 
-.mdmreport-table-wrapper .mdmreport-banner {
+.mdmreport-section-wrapper .mdmreport-banner {
     color: #555;
 }
-.mdmreport-table-wrapper .mdmreport-banner p {
+.mdmreport-section-wrapper .mdmreport-banner p {
     margin: 0.1em 0;
 }
 
@@ -169,7 +172,7 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
 /* all regular cells */ .mdmreport-table .mdmreport-record td {
     padding: 0.15em 0.35em;
     /* max-width: 15em; */
-    max-width: 100%;
+    /* max-width: 100%; */
     min-width: 60px;
     overflow: hidden;
     overflow-wrap: anywhere;
@@ -407,7 +410,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                     dummy.innerText = s.replace(/\n/ig,'\\n');
                     return dummy.innerHTML;
                 }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
             } catch(ee) {};
             try {
                 document.removeEventListener('DOMContentLoaded',beautifyDates);
@@ -435,57 +438,136 @@ TEMPLATE_HTML_SCRIPTS = r"""
             const cssSheet = new CSSStyleSheet();
             document.adoptedStyleSheets = [...document.adoptedStyleSheets,cssSheet];
             function process() {
-                // first, clear out previous formatting
-                Array.prototype.forEach.call(tables_all,function(tableEl) {
-                    tableEl.classList.remove('mdmreport-table-formatting-fixeddimensions');
-                });
-                cssSheet.replaceSync('');
-                // now find new width values
-                const colWidthsData = [];
-                var colMaxIndex = 0;
-                Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
-                    const rowElements = tableEl.querySelectorAll('tr.mdmreport-record');
-                    if( rowElements.length>0 ) {
-                        colElements = rowElements[0].querySelectorAll('tr.mdmreport-record>td');
-                        Array.prototype.forEach.call(colElements,function(colEl,colIndex) {
-                            if(!colWidthsData[colIndex]) colWidthsData[colIndex] = [];
-                            colWidthsData[colIndex][tableIndex] = colEl.getBoundingClientRect().width;
-                            if(colIndex>colMaxIndex) colMaxIndex = colIndex;
-                        });
-                    }
-                });
-                colWidthsAverage = [];
-                for(let colIndex=0;colIndex<=colMaxIndex;++colIndex) {
-                    var numCounted = 0;
-                    Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
-                        const val = colWidthsData[colIndex][tableIndex];
-                        const isValValid = isFinite(val) && (val>0);
-                        if(isValValid) {
-                            if(!colWidthsAverage[colIndex]) colWidthsAverage[colIndex] = 0;
-                            colWidthsAverage[colIndex] += val;
-                            numCounted++;
-                        }
+                try {
+                    const widthDefault = 300;
+                    // first, clear out previous formatting
+                    Array.prototype.forEach.call(tables_all,function(tableEl) {
+                        tableEl.classList.remove('mdmreport-table-formatting-fixeddimensions');
                     });
-                    colWidthsAverage[colIndex] = colWidthsAverage[colIndex] / numCounted;
-                    if(!(numCounted>0)) colWidthsAverage[colIndex] = 0;
+                    cssSheet.replaceSync('');
+                    (function() {
+                        const widthRaw = widthDefault;
+                        const widthVal = `${widthRaw}px`;
+                        const cssSyntax = `.mdmreport-table .mdmreport-record td { max-width: ${widthVal}; }`
+                        cssSheet.replaceSync(cssSyntax);
+                    })();
+                    // now find new width values
+                    const colWidthsData = (function(){
+                        const result = [];
+                        Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
+                            const rowElements = tableEl.querySelectorAll('tr.mdmreport-record');
+                            if( rowElements.length>0 ) {
+                                colElements = rowElements[0].querySelectorAll('tr.mdmreport-record>td');
+                                Array.prototype.forEach.call(colElements,function(colEl,colIndex) {
+                                    if(!result[colIndex]) result[colIndex] = [];
+                                    result[colIndex][tableIndex] = colEl.getBoundingClientRect().width;
+                                });
+                            }
+                        });
+                        return result;
+                    })();
+                    const colMaxIndex = colWidthsData.length-1;
+                    const colParentWidth = (function(){
+                        var result = 0;
+                        Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
+                            if(!(result>0)) {
+                                if(!!tableEl.parentElement) {
+                                    result = tableEl.parentElement.getBoundingClientRect().width;
+                                }
+                            }
+                        });
+                        return result;
+                    })();
+                    const numColsCounted = (function(){
+                        const isValValid = val => isFinite(val) && (val>0);
+                        var result = [];
+                        for(let colIndex=0;colIndex<=colMaxIndex;++colIndex) {
+                            Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
+                                const val = colWidthsData[colIndex][tableIndex];
+                                if(isValValid(val)) {
+                                    result[colIndex] = 1;
+                                }
+                            });
+                        }
+                        return result.reduce((acc,e)=>acc+(e>0?1:0),0);
+                    })();
+                    const colMinWidth = 60;
+                    const colMaxAllowedWidth = (function(){
+                        var result = document.querySelector('body').getBoundingClientRect().width;
+                        if( numColsCounted==1 ) {
+                            result = colParentWidth;
+                        } else {
+                            const resultVerA = colParentWidth - colMinWidth * 1.19 >= colMinWidth ? colParentWidth - colMinWidth * 1.19 : colMinWidth;
+                            const resultVerB = (colParentWidth>(numColsCounted+.24)*colMinWidth?colParentWidth:(numColsCounted+.24)*colMinWidth) / numColsCounted;
+                            result = (resultVerA * resultVerB) ** .5;
+                        }
+                        return result;
+                    })();
+                    const colWidthsAverage = (function(){
+                        const isValValid = val => isFinite(val) && (val>0);
+                        var result = [];
+                        for(let colIndex=0;colIndex<=colMaxIndex;++colIndex) {
+                            var numSectionsCounted = 0;
+                            if(!result[colIndex]) result[colIndex] = 0;
+                            Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
+                                const val = colWidthsData[colIndex][tableIndex];
+                                if(isValValid(val)) {
+                                    if(!result[colIndex]) result[colIndex] = 0;
+                                    result[colIndex] += val;
+                                    numSectionsCounted++;
+                                }
+                            });
+                            result[colIndex] = numSectionsCounted>0 ? result[colIndex] / numSectionsCounted : 0;
+                        }
+                        const sum = result.reduce((acc,val)=>isValValid(val)?(acc+val):acc,0);
+                        if( sum<colParentWidth ) {
+                            /* const multiplier = (colParentWidth-0.00001) / sum; */
+                            /* result = result.map(a=>a*multiplier); */
+                            const isBig = a => a>widthDefault*.99;
+                            const addPart = result.map(a=>({width:a,addCount:a>0?(isBig(a)?3:1):0}));
+                            const multiplier = ( colParentWidth-0.00001 + addPart.reduce((acc,e)=>acc+colMinWidth*e.addCount,0) ) / addPart.reduce((acc,e)=>acc+e.width+colMinWidth*e.addCount,0);
+                            if(!(multiplier>=1)) throw new Error('resizing columns: wrong multiplier');
+                            result = addPart.map(a=>a.width*multiplier+colMinWidth*a.addCount*(multiplier-1));
+                        }
+                        result = result.map( a => a>=colMinWidth ? a : colMinWidth );
+                        return result;
+                    })();
+                    (function(){
+                        var cssSyntax = '';
+                        for(colIndex=0;colIndex<=colMaxIndex;colIndex++) {
+                            const colClass = `mdmreport-colindex-${colIndex}`;
+                            const widthRaw = `${( isFinite(colWidthsAverage[colIndex]) && (colWidthsAverage[colIndex]>colMaxAllowedWidth) ? colMaxAllowedWidth : colWidthsAverage[colIndex] )}`;
+                            const widthVal = `${widthRaw}px`;
+                            cssSyntax = cssSyntax + ` .${colClass} { width: ${widthVal}; max-width: ${widthVal}; } `;
+                        }
+                        cssSheet.replaceSync(cssSyntax);
+                    })();
+                    Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
+                        //const rowElements = tableEl.querySelectorAll('tr.mdmreport-record');
+                        //Array.prototype.forEach.call(rowElements,function(rowElement,tableIndex) {
+                        //    colElements = rowElement.querySelectorAll('tr.mdmreport-record>td');
+                        //    Array.prototype.forEach.call(colElements,function(colEl,colIndex) {
+                        //        colEl.width = colWidthsAverage[colIndex];
+                        //    });
+                        //});
+                        tableEl.classList.add('mdmreport-table-formatting-fixeddimensions');
+                    });
+                } catch(e) {
+                    try {
+                        function escapeHtml(s) {
+                            const dummy = document.createElement('div');
+                            dummy.innerText = s.replace(/\n/ig,'\\n');
+                            return dummy.innerHTML;
+                        }
+                        errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: Error when resizing columns: ${e}`)+'<br />';
+                    } catch(ee) {};
+                    try {
+                        document.removeEventListener('DOMContentLoaded',alignColWidths);
+                    } catch(ee) {}
+                    throw e;
                 }
-                var cssSyntax = '';
-                for(colIndex=0;colIndex<=colMaxIndex;colIndex++) {
-                    cssSyntax = cssSyntax + ' .mdmreport-colindex-'+colIndex+' { width: '+colWidthsAverage[colIndex]+'px; } ';
-                }
-                cssSheet.replaceSync(cssSyntax);
-                Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
-                    //const rowElements = tableEl.querySelectorAll('tr.mdmreport-record');
-                    //Array.prototype.forEach.call(rowElements,function(rowElement,tableIndex) {
-                    //    colElements = rowElement.querySelectorAll('tr.mdmreport-record>td');
-                    //    Array.prototype.forEach.call(colElements,function(colEl,colIndex) {
-                    //        colEl.width = colWidthsAverage[colIndex];
-                    //    });
-                    //});
-                    tableEl.classList.add('mdmreport-table-formatting-fixeddimensions');
-                });
             };
-            process();
+            Promise.resolve().then(process);
             window.addEventListener('resize',process);
             document.removeEventListener('DOMContentLoaded',alignColWidths);
         } catch(e) {
@@ -495,7 +577,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                     dummy.innerText = s.replace(/\n/ig,'\\n');
                     return dummy.innerHTML;
                 }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
             } catch(ee) {};
             try {
                 document.removeEventListener('DOMContentLoaded',alignColWidths);
@@ -534,7 +616,26 @@ TEMPLATE_HTML_SCRIPTS = r"""
         }
         if( ( Array.from(sectionNames).length==1 ) && ( Array.from(columns_subsetRawText).length>0 ) ) {
             if(Array.from(columns_subsetRawText).length>0) {
-                return Array.from(columns_subsetRawText);
+                const statisticsNumRows = (function(){
+                    const sectionsMatching = addedData.sectionDefs.filter(()=>true);
+                    if(sectionsMatching.length==1) {
+                        const section = sectionsMatching[0];
+                        const statisticsText = !!section.statisticsText ? section.statisticsText : '';
+                        if(!!statisticsText && statisticsText.trim().length>0 ) {
+                            const matches = Array.from(statisticsText.matchAll( /\brows\b\s*?\btotal\s*?:\s*?(\d+)\b,/ig ));
+                            if( matches.length>0 ) {
+                                const resultTxt = matches[0][1];
+                                return +resultTxt;
+                            }
+                        }
+                    } /* else return NaN */;
+                    return NaN;
+                })();
+                if( isFinite(statisticsNumRows) && statisticsNumRows==1 ) {
+                    return Array.from(columns_subsetRawText);
+                } else {
+                    return [...columns_subsetFlag,...columns_subsetRawText];
+                }
             }
         }
         if( ( (Array.from(columns_subsetName)).length>0 ) && ( (Array.from(columns_subsetLabel)).length>0 ) ) {
@@ -596,9 +697,30 @@ TEMPLATE_HTML_SCRIPTS = r"""
                 // not a clean fn
                 try {
                     columnsAll = listOfControls.map(function(a){return a.id});
+                    const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]');
+                    const sectionDefs = Array.from(sectionElements).map(function(sectionElement){
+                        var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\s*?section\s+/ig,'');
+                        var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\s*?mdmreport-wrapper-section-/ig,'');
+                        textTitle = textTitle.replace(/^\s*(.*?)\s*$/ig,'$1');
+                        /* trim */ textCss = textCss.replace(/^\s*(.*?)\s*$/ig,'$1');
+                        /* trim */ if( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) {
+                            if( !textTitle || (textTitle.length==0) ) textTitle = textCss;
+                            if( !textCss || (textCss.length==0) ) textCss = textTitle; textCss = textCss.replace(/[^\w\-\.]/ig,'-');
+                        }
+                        const statisticsEl = sectionElement.querySelector('.mdmreport-banner-table-details-statistics');
+                        const statisticsText = !!statisticsEl && (`${statisticsEl.innerText}`.trim().length>0) ? `${statisticsEl.innerText}`.trim() : null;
+                        return {
+                            text: textTitle,
+                            id: textCss,
+                            name: textCss,
+                            statisticsText: statisticsText,
+                            el: sectionElement
+                        };
+                    });
                     addedData = {
                         columnDefs: listOfControls,
-                        sectionNames: (function() { sectionDefs = []; const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]'); Array.prototype.forEach.call(sectionElements,function(sectionElement) { var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\s*?section\s+/ig,''); var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\s*?mdmreport-wrapper-section-/ig,''); textTitle = textTitle.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */ textCss = textCss.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */ if( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) { if( !textTitle || (textTitle.length==0) ) textTitle = textCss; if( !textCss || (textCss.length==0) ) textCss = textTitle; textCss = textCss.replace(/[^\w\-\.]/ig,'-'); sectionDefs.push({text:textTitle,id:textCss}); } }); return sectionDefs.map(function(d){return d.id}); })()
+                        sectionNames: sectionDefs.map(a=>a.name),
+                        sectionDefs: sectionDefs
                     };
                     columnsShown = decideColumnsShownAtStartup(columnsAll,addedData);
                     columnsAll.forEach(function(columnId){
@@ -619,7 +741,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                             dummy.innerText = s.replace(/\n/ig,'\\n');
                             return dummy.innerHTML;
                         }
-                        errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
+                        errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
                     } catch(ee) {};
                     throw e;
                 }
@@ -633,6 +755,22 @@ TEMPLATE_HTML_SCRIPTS = r"""
                 }).join('');
                 cssSheet.replaceSync(cssSyntax);
                 document.adoptedStyleSheets = [...document.adoptedStyleSheets,cssSheet];
+            }
+            const dispatchResizeEventData = {
+                promise: null
+            };
+            function dispatchResizeEvent() {
+                if(!!dispatchResizeEventData.promise) {
+                    /* setTimeout(resolve,40); */
+                } else {
+                    dispatchResizeEventData.promise = new Promise((resolve,reject)=>{
+                        setTimeout(resolve,40);
+                    });
+                    dispatchResizeEventData.promise.then(()=>{
+                        window.dispatchEvent(new Event('resize'));
+                        dispatchResizeEventData.promise = null;
+                    });
+                }
             }
             function initAddingControlBlock() {
                 const pluginHolderEl = document.querySelector('#mdmreport_plugin_placeholder');
@@ -666,6 +804,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                                     tableEl.classList.add(className);
                                 });
                             };
+                            dispatchResizeEvent();
                         });
                         labelEl.prepend(checkboxEl);
                         bannerEl.querySelector('fieldset').append(labelEl);
@@ -677,7 +816,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                                 dummy.innerText = s.replace(/\n/ig,'\\n');
                                 return dummy.innerHTML;
                             }
-                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
+                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
                         } catch(ee) {};
                         throw e;
                     }
@@ -694,7 +833,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                     dummy.innerText = s.replace(/\n/ig,'\\n');
                     return dummy.innerHTML;
                 }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
             } catch(ee) {};
             try {
                 document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideColumns);
@@ -714,6 +853,9 @@ TEMPLATE_HTML_SCRIPTS = r"""
     overflow: hidden;
     line-height: 1.1em;
     white-space: nowrap;
+}
+.mdmrep-diff-jiraaddon-col {
+    max-width: 120px!important;
 }
     /* === end of jira connection css === */
 </style>
@@ -1061,10 +1203,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
                 });
                 Array.prototype.forEach.call(rowsEl,function(rowEl,i) {
                     const colsEl = Array.from(rowEl.querySelectorAll('td'));
+                    const colAddIndex = colsEl.length;
                     const colAddEl = document.createElement('td');
                     colAddEl.classList.add('mdmreport-contentcell');
                     colAddEl.classList.add('mdmreport-col--jiraplugin');
                     colAddEl.classList.add('mdmrep-diff-jiraaddon-col');
+                    colAddEl.classList.add(`mdmreport-colindex-${colAddIndex}`);
                     if(i===0) {
                         /* header row */
                         colAddEl.textContent = "Jira - possible ticket lookup link"
@@ -1180,6 +1324,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
         }
     }
     runPromise.then(jiraPlugin_workaddelementstotables);
+    runPromise.then(function(){window.dispatchEvent(new Event('resize'));});
     bannerHolderPromise.then(jiraPlugin_pluginpanelunhidden);
     window.addEventListener('DOMContentLoaded',jiraPlugin_init);
 })()
@@ -1223,7 +1368,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                     dummy.innerText = s.replace(/\n/ig,'\\n');
                     return dummy.innerHTML;
                 }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
             } catch(ee) {};
             throw e;
         }
@@ -1332,7 +1477,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                     dummy.innerText = s.replace(/\n/ig,'\\n');
                     return dummy.innerHTML;
                 }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
             } catch(ee) {};
             throw e;
         }
@@ -1369,7 +1514,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                                 dummy.innerText = s.replace(/\n/ig,'\\n');
                                 return dummy.innerHTML;
                             }
-                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
+                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
                         } catch(ee) {};
                         throw e;
                     }
@@ -1386,7 +1531,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                     dummy.innerText = s.replace(/\n/ig,'\\n');
                     return dummy.innerHTML;
                 }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
             } catch(ee) {};
             try {
                 document.removeEventListener('DOMContentLoaded',addControlBlock_TableFilters);
@@ -1611,7 +1756,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                                 dummy.innerText = s.replace(/\n/ig,'\\n');
                                 return dummy.innerHTML;
                             }
-                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
+                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
                         } catch(ee) {};
                         throw e;
                     }
@@ -1628,7 +1773,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                     dummy.innerText = s.replace(/\n/ig,'\\n');
                     return dummy.innerHTML;
                 }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}<br />`);
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
             } catch(ee) {};
             try {
                 document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
@@ -1653,13 +1798,13 @@ AP
     """
 
 TEMPLATE_HTML_TABLE_BEGIN = r"""
-<div class="wrapper mdmreport-table-wrapper mdmreport-wrapper-section-{{TABLE_ID}}">
+<div class="wrapper mdmreport-section-wrapper mdmreport-wrapper-section-{{TABLE_ID}}">
 <h3 class="mdmreport-table-title">Section {{TABLE_NAME}}</h3>{{INS_TABBANNER}}
-<table class="mdmreport-table mdmreport-table-section-{{TABLE_ID}}"><tbody>
+<div class="mdmreport-table-wrapper"><table class="mdmreport-table mdmreport-table-section-{{TABLE_ID}}"><tbody>
 """
 
 TEMPLATE_HTML_TABLE_END = r"""
-</tbody></table></div>
+</tbody></table></div></div>
 """
 
 TEMPLATE_HTML_BEGIN = r"""

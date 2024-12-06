@@ -22,8 +22,13 @@ else:
 
 
 
-# TODO: Excel Provider!!!
-
+# TODO: (done) detect columns to show in "routing" type reports better
+# TODO: (what? I do not understand lol sad and funny) column widths in "routing" type reports should be fixed
+# TODO: (too complicated - our diffed text is an array of "parts" and they do not correspond to lines; searching for "\n" within within all these {"parts":[{"text":... is complicated) introduce a class when something changed within a row - useful for "routing" type rreports with long lines where something changed far to the right and we can't quickly see it
+# TODO: (declined, unnecessary complications) empty rows with name="" are looking strange - maybe add some "attribute" (hidden text to show, same as we are doing with attributes), and show something like "(root element)" so that it is less confusing
+# TODO: a failed to save a file with diff when comparing html results with diffs - investigate
+# TODO: (done) rename find-mdm_diff to just diff
+# TODO: (should be good, why would I change this; declined) col widths js code - .mdmreport-colindex-xxx classes - change it to some more general way of accessing columns by numbers - not working with added col with jira links
 
 
 
@@ -285,7 +290,7 @@ def enchancement_plugin__combine_attributes_into_master_name_col__on_table(rows,
 
 
 def enchancement_plugin__add_diff_classes_per_row__on_row(row,flags,column_specs,other_cols_ref=[]):
-    def did_col_change(data):
+    def did_col_change_deep_inspect(data):
         if isinstance(data,str):
             if '<<ADDED>>' in data:
                 return True
@@ -295,19 +300,19 @@ def enchancement_plugin__add_diff_classes_per_row__on_row(row,flags,column_specs
         elif isinstance(data,list):
             result = False
             for slice in data:
-                result = result or did_col_change(slice)
+                result = result or did_col_change_deep_inspect(slice)
             return result
         elif isinstance(data,dict) and 'text' in data:
             if 'role' in data:
                 if re.match(r'^\s*?(?:role-)?(?:added|removed).*?',data['role'],flags=re.I):
                     return True
-            return did_col_change(data['text'])
+            return did_col_change_deep_inspect(data['text'])
         elif isinstance(data,dict) and 'parts' in data:
-            return did_col_change(data['parts'])
+            return did_col_change_deep_inspect(data['parts'])
         elif isinstance(data,dict) and 'name' in data and 'value' in data:
-            return did_col_change(data['value'])
+            return did_col_change_deep_inspect(data['value'])
         else:
-            return did_col_change('{f}'.format(f=data))
+            return did_col_change_deep_inspect('{f}'.format(f=data))
     is_active = ( not ('plugin_add_diff_classes_per_row_already_called' in flags) ) and ( ('flagdiff' in column_specs) )
     flags_added = []
     if is_active:
@@ -324,7 +329,7 @@ def enchancement_plugin__add_diff_classes_per_row__on_row(row,flags,column_specs
             # TODO: same comment as in "on_col" event
             # do we really need such inspections?
             # this might be complicted
-            was_row_changed = was_row_changed or did_col_change(col)
+            was_row_changed = was_row_changed or did_col_change_deep_inspect(col)
         if was_row_added:
             flags_added.append('format-cssclass-mdmdiff-added')
         if was_row_removed:
@@ -339,7 +344,7 @@ def enchancement_plugin__add_diff_classes_per_row__on_row(row,flags,column_specs
     return row,flags+flags_added
 
 def enchancement_plugin__add_diff_classes_per_row__on_col(col_data,col_index=None,flags=[],column_specs=[],other_cols_ref=[]):
-    def did_col_change(data):
+    def did_col_change_deep_inspect(data):
         if isinstance(data,str):
             if '<<ADDED>>' in data:
                 return True
@@ -349,19 +354,19 @@ def enchancement_plugin__add_diff_classes_per_row__on_col(col_data,col_index=Non
         elif isinstance(data,list):
             result = False
             for slice in data:
-                result = result or did_col_change(slice)
+                result = result or did_col_change_deep_inspect(slice)
             return result
         elif isinstance(data,dict) and 'text' in data:
             if 'role' in data:
                 if re.match(r'^\s*?(?:role-)?(?:added|removed).*?',data['role'],flags=re.I):
                     return True
-            return did_col_change(data['text'])
+            return did_col_change_deep_inspect(data['text'])
         elif isinstance(data,dict) and 'parts' in data:
-            return did_col_change(data['parts'])
+            return did_col_change_deep_inspect(data['parts'])
         elif isinstance(data,dict) and 'name' in data and 'value' in data:
-            return did_col_change(data['value'])
+            return did_col_change_deep_inspect(data['value'])
         else:
-            return did_col_change('{f}'.format(f=data))
+            return did_col_change_deep_inspect('{f}'.format(f=data))
     is_active = ( not ('plugin_add_diff_classes_per_row_already_called' in flags) ) and ( ('flagdiff' in column_specs) )
     if is_active:
         if column_specs[col_index] == 'flagdiff':
@@ -380,7 +385,7 @@ def enchancement_plugin__add_diff_classes_per_row__on_col(col_data,col_index=Non
                 # and checking this iteratively... uuufffhhh no
                 # inspecting {'parts':[...,{'text':'...','role':'added|removed|role-added...'}]}
                 # super complicated
-                was_row_changed = was_row_changed or did_col_change(col)
+                was_row_changed = was_row_changed or did_col_change_deep_inspect(col)
             was_row_changed = was_row_changed or was_row_moved # changing position is a change too
             if was_row_added or was_row_removed or was_row_changed:
                 col_data = {'parts':[col_data,' (changed)']}
