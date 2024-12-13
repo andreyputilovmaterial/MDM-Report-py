@@ -27,7 +27,6 @@ else:
 # TODO: (too complicated - our diffed text is an array of "parts" and they do not correspond to lines; searching for "\n" within within all these {"parts":[{"text":... is complicated) introduce a class when something changed within a row - useful for "routing" type rreports with long lines where something changed far to the right and we can't quickly see it
 # TODO: (declined, unnecessary complications) empty rows with name="" are looking strange - maybe add some "attribute" (hidden text to show, same as we are doing with attributes), and show something like "(root element)" so that it is less confusing
 # TODO: a failed to save a file with diff when comparing html results with diffs - investigate
-# TODO: (done) rename find-mdm_diff to just diff
 # TODO: (should be good, why would I change this; declined) col widths js code - .mdmreport-colindex-xxx classes - change it to some more general way of accessing columns by numbers - not working with added col with jira links
 
 
@@ -53,7 +52,7 @@ def html_sanitize_text(inp_value,flags=[]):
     result = result.replace(special_pattern.replace('KEYWORD','ADDED'),'<span class="mdmdiff-inlineoverlay-added">').replace(special_pattern.replace('KEYWORD','REMOVED'),'<span class="mdmdiff-inlineoverlay-removed">').replace(special_pattern.replace('KEYWORD','ENDADDED'),'</span>').replace(special_pattern.replace('KEYWORD','ENDREMOVED'),'</span>')
     for keyword in ['ADDED','REMOVED','ENDADDED','ENDREMOVED']:
         if special_pattern.replace('KEYWORD',keyword) in result:
-            raise Exception('Text insert markers found: should deprecated (found: "{aaa}" in "{bbb}")'.format(aaa=special_pattern.replace('KEYWORD',keyword),bbb=result))
+            raise Exception('Text insert markers found: should be deprecated (found: "{aaa}" in "{bbb}")'.format(aaa=special_pattern.replace('KEYWORD',keyword),bbb=result))
     # # some replacement to add syntax so that dates are formatted
     # # if there'result some certain markup - that shouln't be escape
     # # it should be printed as markup so that js works and converts UTC dates to local time
@@ -553,8 +552,17 @@ def produce_html(inp):
         result_ins_htmlmarkup_title = 'Diff: {MDD_A} vs {MDD_B}'.format(MDD_A=html_sanitize_text(sanitize_text_extract_filename(inp['source_left'])),MDD_B=html_sanitize_text(sanitize_text_extract_filename(inp['source_right'])))
         result_ins_htmlmarkup_heading = 'Diff'
     else:
-        result_ins_htmlmarkup_title = '???'
-        result_ins_htmlmarkup_heading = '???'
+        if( result_ins_htmlmarkup_reporttype and (len(result_ins_htmlmarkup_reporttype)>0) and not (result_ins_htmlmarkup_reporttype=='???') ):
+            result_ins_htmlmarkup_title = '{report_desc}: {filepath}'.format(filepath=html_sanitize_text(sanitize_text_extract_filename(inp['source_file'])),report_desc=result_ins_htmlmarkup_reporttype)
+            result_ins_htmlmarkup_heading = '{report_desc}: {filepath}'.format(filepath=html_sanitize_text(sanitize_text_extract_filename(inp['source_file'])),report_desc=result_ins_htmlmarkup_reporttype)
+        elif len([flag for flag in ( (inp['report_scheme']['flags'] if 'flags' in inp['report_scheme'] else []) if 'report_scheme' in inp else []) if re.match(r'^\s*?data-type\s*?:',flag)])>0:
+            flags_indicating_data_type = [flag for flag in ( (inp['report_scheme']['flags'] if 'flags' in inp['report_scheme'] else []) if 'report_scheme' in inp else []) if re.match(r'^\s*?data-type\s*?:',flag)]
+            data_type_str = '/'.join([re.sub(r'^\s*?data-type\s*?:\s*?(.*?)\s*?$',lambda m: m[1],flag) for flag in flags_indicating_data_type])
+            result_ins_htmlmarkup_title = '{report_desc}: {filepath}'.format(filepath=html_sanitize_text(sanitize_text_extract_filename(inp['source_file'])),report_desc=data_type_str)
+            result_ins_htmlmarkup_heading = '{report_desc}: {filepath}'.format(filepath=html_sanitize_text(sanitize_text_extract_filename(inp['source_file'])),report_desc=data_type_str)
+        else:
+            result_ins_htmlmarkup_title = '{report_desc}: {filepath}'.format(filepath=html_sanitize_text(sanitize_text_extract_filename(inp['source_file'])),report_desc='File')
+            result_ins_htmlmarkup_heading = '{report_desc}: {filepath}'.format(filepath=html_sanitize_text(sanitize_text_extract_filename(inp['source_file'])),report_desc='File')
     result_ins_htmlmarkup_banner = html_sanitize_tablecellcontents( []+[{'name':'datetime','value':html_sanitize_text_date(inp['report_datetime_utc'])}]+inp['source_file_metadata'], flags=['format_semicolon'] )
     
 
@@ -649,13 +657,15 @@ def produce_html(inp):
 
 def entry_point(config={}):
     time_start = datetime.now()
+    script_name = 'mdmtoolsap html report script'
+
     parser = argparse.ArgumentParser(
-        description="Produce a summary of MDD in html (read from json)",
+        description="Produce a summary of input file in html (read from json)",
         prog='mdmtoolsap --program report'
     )
     parser.add_argument(
         '--inpfile',
-        help='JSON with Input MDD map',
+        help='JSON with File Data',
         type=str,
         required=True
     )
@@ -680,29 +690,34 @@ def entry_point(config={}):
     if args.output_format:
         config_output_format = args.output_format
 
-    print('MDM report script: script started at {dt}'.format(dt=time_start))
+    print('{script_name}: script started at {dt}'.format(dt=time_start,script_name=script_name))
 
-    #print('MDM report script: reading {fname}'.format(fname=input_map_filename))
+    #print('{script_name}: reading {fname}'.format(fname=input_map_filename,script_name=script_name))
     if not(Path(input_map_filename).is_file()):
         raise FileNotFoundError('file not found: {fname}'.format(fname=input_map_filename))
     
-    mdd_map_in_json = None
+    inpfile_map_in_json = None
     with open(input_map_filename, encoding="utf8") as input_map_file:
-        mdd_map_in_json = json.load(input_map_file)
+        try:
+            inpfile_map_in_json = json.load(input_map_file)
+        except json.JSONDecodeError as e:
+            # just a more descriptive message to the end user
+            # can happen if the tool is started two times in parallel and it is writing to the same json simultaneously
+            raise TypeError('Diff: Can\'t read input file as JSON: {msg}'.format(msg=e))
 
     result = None
     if config_output_format=='html':
-        result = produce_html(mdd_map_in_json)
+        result = produce_html(inpfile_map_in_json)
     else:
         raise ValueError('report.py: unsupported output format: {fmt}'.format(fmt=config_output_format))
     
     result_fname = ( Path(input_map_filename).parents[0] / '{basename}{ext}'.format(basename=Path(input_map_filename).name,ext='.html') if Path(input_map_filename).is_file() else re.sub(r'^\s*?(.*?)\s*?$',lambda m: '{base}{added}'.format(base=m[1],added='.html'),'{path}'.format(path=input_map_filename)) )
-    print('MDM report script: saving as "{fname}"'.format(fname=result_fname))
+    print('{script_name}: saving as "{fname}"'.format(fname=result_fname,script_name=script_name))
     with open(result_fname, "w") as outfile:
         outfile.write(result)
 
     time_finish = datetime.now()
-    print('MDM report script: finished at {dt} (elapsed {duration})'.format(dt=time_finish,duration=time_finish-time_start))
+    print('{script_name}: finished at {dt} (elapsed {duration})'.format(dt=time_finish,duration=time_finish-time_start,script_name=script_name))
 
 
 if __name__ == '__main__':

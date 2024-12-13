@@ -177,12 +177,10 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
     overflow: hidden;
     overflow-wrap: anywhere;
 }
-/* first cell with item name */ .mdmreport-table .mdmreport-record td:first-child {
-    max-width: 45em;
-    overflow: visible;
-}
-/* 2nd cell with label */ .mdmreport-table .mdmreport-record td:first-child + td {
-    max-width: 45em;
+.mdmreport-table td.mdmreport-col-flagdiff {
+    max-width: 130px;
+}.mdmreport-table td.mdmreport-col-name {
+    max-width: 300px;
 }
 /* first row */ .mdmreport-table .mdmreport-record:first-child td {
     font-weight: 600;
@@ -194,6 +192,14 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
     border-bottom: 4px solid #217346;
 }
 
+.mdmreport-table.mdmreport-table-noborder .mdmreport-record td {
+    border-width: 0;
+    padding: 3px 8px 3px 0;
+}
+.mdmreport-table.mdmreport-table-noborder tr.mdmreport-record {
+    border-width: 0;
+    padding: 0;
+}
 
 
 
@@ -448,7 +454,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                     (function() {
                         const widthRaw = widthDefault;
                         const widthVal = `${widthRaw}px`;
-                        const cssSyntax = `.mdmreport-table .mdmreport-record td { max-width: ${widthVal}; }`
+                        const cssSyntax = `.mdmreport-table td { max-width: ${widthVal}; }`
                         cssSheet.replaceSync(cssSyntax);
                     })();
                     // now find new width values
@@ -503,7 +509,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         }
                         return result;
                     })();
-                    const colWidthsAverage = (function(){
+                    const colWidthsAverageAcrossSections = (function(){
                         const isValValid = val => isFinite(val) && (val>0);
                         var result = [];
                         for(let colIndex=0;colIndex<=colMaxIndex;++colIndex) {
@@ -519,12 +525,17 @@ TEMPLATE_HTML_SCRIPTS = r"""
                             });
                             result[colIndex] = numSectionsCounted>0 ? result[colIndex] / numSectionsCounted : 0;
                         }
+                        return result;
+                    })();
+                    const colWidthsAdjusted = (function(){
+                        const isValValid = val => isFinite(val) && (val>0);
+                        var result = Array.from(colWidthsAverageAcrossSections);
                         const sum = result.reduce((acc,val)=>isValValid(val)?(acc+val):acc,0);
                         if( sum<colParentWidth ) {
                             /* const multiplier = (colParentWidth-0.00001) / sum; */
                             /* result = result.map(a=>a*multiplier); */
                             const isBig = a => a>widthDefault*.99;
-                            const addPart = result.map(a=>({width:a,addCount:a>0?(isBig(a)?3:1):0}));
+                            const addPart = result.map(a=>({width:a,addCount:a>0?(isBig(a)?4:1):0}));
                             const multiplier = ( colParentWidth-0.00001 + addPart.reduce((acc,e)=>acc+colMinWidth*e.addCount,0) ) / addPart.reduce((acc,e)=>acc+e.width+colMinWidth*e.addCount,0);
                             if(!(multiplier>=1)) throw new Error('resizing columns: wrong multiplier');
                             result = addPart.map(a=>a.width*multiplier+colMinWidth*a.addCount*(multiplier-1));
@@ -536,9 +547,9 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         var cssSyntax = '';
                         for(colIndex=0;colIndex<=colMaxIndex;colIndex++) {
                             const colClass = `mdmreport-colindex-${colIndex}`;
-                            const widthRaw = `${( isFinite(colWidthsAverage[colIndex]) && (colWidthsAverage[colIndex]>colMaxAllowedWidth) ? colMaxAllowedWidth : colWidthsAverage[colIndex] )}`;
+                            const widthRaw = `${( isFinite(colWidthsAdjusted[colIndex]) && (colWidthsAdjusted[colIndex]>colMaxAllowedWidth) ? colMaxAllowedWidth : colWidthsAdjusted[colIndex] )}`;
                             const widthVal = `${widthRaw}px`;
-                            cssSyntax = cssSyntax + ` .${colClass} { width: ${widthVal}; max-width: ${widthVal}; } `;
+                            cssSyntax = cssSyntax + ` .${colClass} { width: ${widthVal}!important; max-width: ${widthVal}!important; } `;
                         }
                         cssSheet.replaceSync(cssSyntax);
                     })();
@@ -547,7 +558,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         //Array.prototype.forEach.call(rowElements,function(rowElement,tableIndex) {
                         //    colElements = rowElement.querySelectorAll('tr.mdmreport-record>td');
                         //    Array.prototype.forEach.call(colElements,function(colEl,colIndex) {
-                        //        colEl.width = colWidthsAverage[colIndex];
+                        //        colEl.width = colWidthsAdjusted[colIndex];
                         //    });
                         //});
                         tableEl.classList.add('mdmreport-table-formatting-fixeddimensions');
