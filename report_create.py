@@ -45,6 +45,7 @@ def html_sanitize_text(inp_value,flags=[]):
     result = sanitize_text_normalizelinebreaks(result)
     # basic clean up - basic conversion escaping all tags
     result =  html.escape('{result}'.format(result=result))
+    result = result.replace('\n','<br />')
 
     special_pattern = '<<KEYWORD>>'
     special_pattern = html.escape(special_pattern)
