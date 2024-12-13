@@ -159,7 +159,6 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
     overflow-x: hidden;
     white-space: nowrap;
 }
-
 .mdmreport-table .mdmreport-record {
     background: #fff;
     transition: all 200ms ease;
@@ -181,6 +180,12 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
     max-width: 130px;
 }.mdmreport-table td.mdmreport-col-name {
     max-width: 300px;
+}
+.mdmreport-table td.mdmreport-col-col_x95_axis_x40_side_x41_ {
+    /* for excel */
+    max-width: 200px;
+    min-width: 200px;
+    width: 200px;
 }
 /* first row */ .mdmreport-table .mdmreport-record:first-child td {
     font-weight: 600;
@@ -246,7 +251,7 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
     background: #fff5da;
     color: #444444;
 }
-.mdmreport-table .mdmreport-record.mdmdiff-ghost.mdmdiff-movedfrom {
+.mdmreport-table tr.mdmreport-record.mdmdiff-ghost, .mdmreport-table tr.mdmreport-record.mdmdiff-movedfrom {
     background: repeating-linear-gradient(45deg, #e5e5e5, #e5e5e5 20px, #eaeaea 21px, #eaeaea 40px);
 }
 .mdmreport-table .mdmreport-record.mdmdiff-diff {
@@ -649,7 +654,10 @@ TEMPLATE_HTML_SCRIPTS = r"""
                 }
             }
         }
-        if( ( (Array.from(columns_subsetName)).length>0 ) && ( (Array.from(columns_subsetLabel)).length>0 ) ) {
+        if( ((addedData.columnDefs.filter(a=>(a.id=='name')&&(a.text=='Row unique indentifier'))).length>0) && ((addedData.columnDefs.filter(a=>(/^\s*?axis\s*?\(\s*?side\s*?\).*?/.test(a.text)))).length>0) ) {
+            return Array.from(setDifference( columns, columns_subsetName ))
+        }
+        if( (addedData.sectionDefs.map(a=>a.text).filter(a=>(/.*?(?:shared[_\s]+list|(?:\bfield(?:s)?\b)).*?/.test(a))).length>0) && ( (Array.from(columns_subsetName)).length>0 ) && ( (Array.from(columns_subsetLabel)).length>0 ) ) {
             const result_TranslationsExcluded = setDifference( columns, columns_subsetTranslations )
             if(Array.from(result_TranslationsExcluded).length>0) {
                 const result_ScriptingTranslationsExcluded = setDifference( result_TranslationsExcluded, columns_subsetScripting )
@@ -728,10 +736,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
                             el: sectionElement
                         };
                     });
-                    addedData = {
+                    const meta = [];
+                    const addedData = {
                         columnDefs: listOfControls,
                         sectionNames: sectionDefs.map(a=>a.name),
-                        sectionDefs: sectionDefs
+                        sectionDefs: sectionDefs,
+                        meta: meta
                     };
                     columnsShown = decideColumnsShownAtStartup(columnsAll,addedData);
                     columnsAll.forEach(function(columnId){
