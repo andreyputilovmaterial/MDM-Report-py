@@ -436,6 +436,8 @@ TEMPLATE_HTML_SCRIPTS = r"""
     /* === align col widths js === */
 (function() {
     function alignColWidths() {
+        if( document.documentElement.innerHTML.length > 10000000 )
+            return;
         let errorBannerEl = null;
         try {
             errorBannerEl = document.querySelector('#error_banner');
@@ -1601,25 +1603,28 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
         }
         try {
             // 1. read data and find the list of sections in the report table
-            sectionDefs = [];
-            const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]');
-            Array.prototype.forEach.call(sectionElements,function(sectionElement) {
-                var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\s*?section\s+/ig,'');
-                var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\s*?mdmreport-wrapper-section-/ig,'');
-                textTitle = textTitle.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */
-                textCss = textCss.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */
-                if( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) {
-                    if( !textTitle || (textTitle.length==0) ) textTitle = textCss;
-                    if( !textCss || (textCss.length==0) ) textCss = textTitle;
-                    textCss = textCss.replace(/[^\w\-\.]/ig,'-');
-                    const statisticsEl = sectionElement.querySelector('.mdmreport-banner-table-details-statistics');
-                    sectionDefs.push({
-                        text: textTitle,
-                        id: textCss,
-                        statisticsText: !!statisticsEl && (`${statisticsEl.innerText}`.trim().length>0) ? `${statisticsEl.innerText}`.trim() : null
-                    });
-                }
-            });
+            const sectionDefs = (function(){
+                const sectionDefs = [];
+                const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]');
+                Array.prototype.forEach.call(sectionElements,function(sectionElement) {
+                    var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\s*?section\s+/ig,'');
+                    var textCss = ( Array.from(sectionElement.classList).filter(function(name){return /^\s*?mdmreport-wrapper-section-/ig.test(name)}) || [''] )[0].replace(/^\s*?mdmreport-wrapper-section-/ig,'');
+                    textTitle = textTitle.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */
+                    textCss = textCss.replace(/^\s*(.*?)\s*$/ig,'$1'); /* trim */
+                    if( ( !!textTitle && (textTitle.length>0) ) || ( !!textCss && (textCss.length>0) ) ) {
+                        if( !textTitle || (textTitle.length==0) ) textTitle = textCss;
+                        if( !textCss || (textCss.length==0) ) textCss = textTitle;
+                        textCss = textCss.replace(/[^\w\-\.]/ig,'-');
+                        const statisticsEl = sectionElement.querySelector('.mdmreport-banner-table-details-statistics');
+                        sectionDefs.push({
+                            text: textTitle,
+                            id: textCss,
+                            statisticsText: !!statisticsEl && (`${statisticsEl.innerText}`.trim().length>0) ? `${statisticsEl.innerText}`.trim() : null
+                        });
+                    }
+                });
+                return sectionDefs;
+            })();
             // 2. add a control block
             function applyDefaultSetup(listOfControls) {
                 function detectMode() {
@@ -1692,7 +1697,12 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                     };
                 } else {
                     /* nothing to hide */
-                    listOfControls.forEach(show);
+                    if( listOfControls.length>16 ) {
+                        listOfControls.filter((e,i)=>i>0).forEach(hide);
+                        listOfControls.filter((e,i)=>i==0).forEach(show);
+                    } else {
+                        istOfControls.forEach(show);
+                    }
                 }
             }
             function initSettingCss() {
