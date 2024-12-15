@@ -22,12 +22,6 @@ else:
 
 
 
-# TODO: (done) detect columns to show in "routing" type reports better
-# TODO: (what? I do not understand lol sad and funny) column widths in "routing" type reports should be fixed
-# TODO: (too complicated - our diffed text is an array of "parts" and they do not correspond to lines; searching for "\n" within within all these {"parts":[{"text":... is complicated) introduce a class when something changed within a row - useful for "routing" type rreports with long lines where something changed far to the right and we can't quickly see it
-# TODO: (declined, unnecessary complications) empty rows with name="" are looking strange - maybe add some "attribute" (hidden text to show, same as we are doing with attributes), and show something like "(root element)" so that it is less confusing
-# TODO: a failed to save a file with diff when comparing html results with diffs - investigate
-# TODO: (should be good, why would I change this; declined) col widths js code - .mdmreport-colindex-xxx classes - change it to some more general way of accessing columns by numbers - not working with added col with jira links
 
 
 
@@ -49,7 +43,7 @@ def html_sanitize_text(inp_value,flags=[]):
 
     special_pattern = '<<KEYWORD>>'
     special_pattern = html.escape(special_pattern)
-    # TODO: finding injected markers should be depricated in future versions
+    
     result = result.replace(special_pattern.replace('KEYWORD','ADDED'),'<span class="mdmdiff-inlineoverlay-added">').replace(special_pattern.replace('KEYWORD','REMOVED'),'<span class="mdmdiff-inlineoverlay-removed">').replace(special_pattern.replace('KEYWORD','ENDADDED'),'</span>').replace(special_pattern.replace('KEYWORD','ENDREMOVED'),'</span>')
     for keyword in ['ADDED','REMOVED','ENDADDED','ENDREMOVED']:
         if special_pattern.replace('KEYWORD',keyword) in result:
@@ -522,7 +516,7 @@ def prep_htmlmarkup_section(section_data,column_specs_global,column_titles,flags
                         flags = list(set([]+flags+flags_upd))
     
         return '{table_begin}{table_contents}{table_end}'.format(
-            table_begin = report_html_template.TEMPLATE_HTML_TABLE_BEGIN.replace('{{TABLE_NAME}}',html_sanitize_text(table_name)).replace('{{TABLE_ID}}',sanitize_idfield(table_id)).replace('{{INS_TABBANNER}}',ins_banner),
+            table_begin = report_html_template.TEMPLATE_HTML_TABLE_BEGIN.replace('{{TABLE_NAME}}',html_sanitize_tablecellcontents(table_name)).replace('{{TABLE_ID}}',sanitize_idfield(table_id)).replace('{{INS_TABBANNER}}',ins_banner),
             table_contents = ''.join( [ prep_htmlmarkup_row(row,column_specs=column_specs_localcopy,flags=[]+flags+(['row-header'] if i==0 else [])+['section-{sec_id}'.format(sec_id=sanitize_idfield(section_data['name']))]) for i,row in enumerate(rows) ] ),
             table_end = report_html_template.TEMPLATE_HTML_TABLE_END
         )

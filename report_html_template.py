@@ -15,8 +15,8 @@ def preptext_html_needsescaping(s):
 
 
 
-# TODO: JobNumber in jira - make it possible to read from fields
 # TODO: .mdmdiff-inlineoverlay-added - highlight the whole row
+# Jira - make it working not only in mdd, or hide the whole functionality in other types of files
 
 
 TEMPLATE_HTML_CSS_NORMALIZECSS = """
