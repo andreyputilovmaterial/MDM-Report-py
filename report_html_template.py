@@ -1607,6 +1607,87 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
             return;
         }
         try {
+            function applyDefaultSetup(listOfControls) {
+                function findListOfSectionsToShow(listOfControls,mode) {
+                    if( mode=='mdd') {
+                        const active = listOfControls.map(a=>a.id).includes('fields');
+                        if( active ) {
+                            return Array.from(listOfControls.filter(a=>a.id=='fields'));
+                        } else {
+                            return Arra.from(listOfControls);
+                        };
+                    } else if( mode=='diff' ) {
+                        const defs = listOfControls.map(function(def) {
+                            result = {...def};
+                            const secDef = def['sectionDefRef'];
+                            const detectDiffingStatus = {
+                                indicatesSomething: false,
+                                indicatesTrue: false,
+                                indicatesFalse: false
+                            };
+                            if(!!secDef['statisticsText']) {
+                                statisticsText = secDef['statisticsText'].replace(/\n/ig,' ');
+                                /* looking for: "rows changed: 0" */
+                                if( /\brows changed\s*?[=:]\s*?["']?\s*?([1-9,0]+)\s*?['"]?/ig.test(statisticsText) ) {
+                                    const numChanged = +statisticsText.replace(/^.*?\brows changed\s*?[=:]\s*?["']?\s*?(\d+)\s*?['"]?.*?$/ig,'$1');
+                                    if(numChanged>0) {
+                                        detectDiffingStatus.indicatesTrue = true;
+                                        detectDiffingStatus.indicatesFalse = false;
+                                    } else {
+                                        detectDiffingStatus.indicatesTrue = false;
+                                        detectDiffingStatus.indicatesFalse = true;
+                                    }
+                                }
+                                /* looking for: "something changed: false" */
+                                if( /\bsomething changed\s*?[=:]\s*?["']?\s*?((?:true)|(?:false))\s*?['"]?/ig.test(statisticsText) ) {
+                                    if( /\bsomething changed\s*?[=:]\s*?["']?\s*?((?:true))\s*?['"]?/ig.test(statisticsText) ) {
+                                        detectDiffingStatus.indicatesTrue = true;
+                                        detectDiffingStatus.indicatesFalse = false;
+                                    } else if( /\bsomething changed\s*?[=:]\s*?["']?\s*?((?:false))\s*?['"]?/ig.test(statisticsText) ) {
+                                        detectDiffingStatus.indicatesTrue = false;
+                                        detectDiffingStatus.indicatesFalse = true;
+                                    }
+                                }
+                                detectDiffingStatus.indicatesSomething = detectDiffingStatus.indicatesTrue || detectDiffingStatus.indicatesFalse || /(?:(?:something changed)|(?:rows changed\s*?[:=]))/ig.test(statisticsText);
+                            }
+                            result['diffing'] = detectDiffingStatus;
+                            return result;
+                        });
+                        const active = defs.filter(a=>a.diffing.indicatesSomething).length>0;
+                        if( active ) {
+                            return Array.from(defs.filter(a=>!a.diffing.indicatesFalse));
+                        } else {
+                            return Array.from(defs);
+                        };
+                    } else {
+                        /* nothing to hide, show all */
+                        return Array.from(listOfControls);
+                    }
+                }
+                function detectMode() {
+                    if( !!window.reportType ) {
+                        if(window.reportType=='MDD')
+                            return 'mdd';
+                        if(window.reportType=='diff')
+                            return 'diff';
+                    }
+                    return 'general';
+                }
+                function show(d) {
+                    d.controlEl.checked=true;d.controlEl.dispatchEvent(new Event('change'));
+                }
+                function hide(d) {
+                    d.controlEl.checked=false;d.controlEl.dispatchEvent(new Event('change'));
+                }
+                const mode = detectMode();
+                const sectionListShownPreliminary = findListOfSectionsToShow(listOfControls,mode);
+                const sectionListShown = sectionListShownPreliminary.length>16 ? [ sectionListShownPreliminary[0] ] : sectionListShownPreliminary;
+                listOfControls.forEach( function(item) {
+                    isShown = sectionListShown.map(a=>a.id).includes(item.id);
+                    action = isShown ? show : hide;
+                    return action(item);
+                } );
+            }
             // 1. read data and find the list of sections in the report table
             const sectionDefs = (function(){
                 const sectionDefs = [];
@@ -1632,93 +1713,19 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                 return sectionDefs;
             })();
             // 2. add a control block
-            function applyDefaultSetup(listOfControls) {
-                function detectMode() {
-                    if( !!window.reportType ) {
-                        if(window.reportType=='MDD')
-                            return 'mdd';
-                        if(window.reportType=='diff')
-                            return 'diff';
-                    }
-                    return 'general';
-                }
-                function show(d) {
-                    d.controlEl.checked=true;d.controlEl.dispatchEvent(new Event('change'));
-                }
-                function hide(d) {
-                    d.controlEl.checked=false;d.controlEl.dispatchEvent(new Event('change'));
-                }
-                const mode = detectMode();
-                if( mode=='mdd') {
-                    const active = listOfControls.map(a=>a.id).includes('fields');
-                    if( active ) {
-                        listOfControls.filter(a=>a.id=='fields').forEach(show);
-                        listOfControls.filter(a=>a.id!='fields').forEach(hide);
-                    } else {
-                        listOfControls.forEach(show);
-                    };
-                } else if( mode=='diff' ) {
-                    const defs = listOfControls.map(function(def) {
-                        result = {...def};
-                        const secDef = def['sectionDefRef'];
-                        const detectDiffingStatus = {
-                            indicatesSomething: false,
-                            indicatesTrue: false,
-                            indicatesFalse: false
-                        };
-                        if(!!secDef['statisticsText']) {
-                            statisticsText = secDef['statisticsText'];
-                            /* looking for: "rows changed: 0" */
-                            if( /\brows changed\s*?[=:]\s*?["']?\s*?([1-9,0]+)\s*?['"]?/ig.test(statisticsText) ) {
-                                const numChanged = +statisticsText.replace(/^.*?\brows changed\s*?[=:]\s*?["']?\s*?(\d+)\s*?['"]?.*?$/ig,'$1');
-                                if(numChanged>0) {
-                                    detectDiffingStatus.indicatesTrue = true;
-                                    detectDiffingStatus.indicatesFalse = false;
-                                } else {
-                                    detectDiffingStatus.indicatesTrue = false;
-                                    detectDiffingStatus.indicatesFalse = true;
-                                }
-                            }
-                            /* looking for: "something changed: false" */
-                            if( /\bsomething changed\s*?[=:]\s*?["']?\s*?((?:true)|(?:false))\s*?['"]?/ig.test(statisticsText) ) {
-                                if( /\bsomething changed\s*?[=:]\s*?["']?\s*?((?:true))\s*?['"]?/ig.test(statisticsText) ) {
-                                    detectDiffingStatus.indicatesTrue = true;
-                                    detectDiffingStatus.indicatesFalse = false;
-                                } else if( /\bsomething changed\s*?[=:]\s*?["']?\s*?((?:false))\s*?['"]?/ig.test(statisticsText) ) {
-                                    detectDiffingStatus.indicatesTrue = false;
-                                    detectDiffingStatus.indicatesFalse = true;
-                                }
-                            }
-                            detectDiffingStatus.indicatesSomething = detectDiffingStatus.indicatesTrue || detectDiffingStatus.indicatesFalse || /(?:(?:something changed)|(?:rows changed\s*?[:=]))/ig.test(statisticsText);
-                        }
-                        result['diffing'] = detectDiffingStatus;
-                        return result;
-                    });
-                    const active = defs.filter(a=>a.diffing.indicatesSomething).length>0;
-                    if( active ) {
-                        defs.filter(a=>a.diffing.indicatesFalse).forEach(hide);
-                        defs.filter(a=>!a.diffing.indicatesFalse).forEach(show);
-                    } else {
-                        defs.forEach(show);
-                    };
-                } else {
-                    /* nothing to hide */
-                    if( listOfControls.length>16 ) {
-                        listOfControls.filter((e,i)=>i>0).forEach(hide);
-                        listOfControls.filter((e,i)=>i==0).forEach(show);
-                    } else {
-                        istOfControls.forEach(show);
-                    }
-                }
-            }
+            const cssSheet = new CSSStyleSheet();
             function initSettingCss() {
-                const cssSheet = new CSSStyleSheet();
-                const cssSyntax = sectionDefs.map(function(item) {
+                const cssSyntax = '' +
+                '.mdmreport-section-wrapper { display: none; } ' +
+                sectionDefs.map(function(item) {
                     const itemClassName = item['id'].replace(/[^\w\-\.]/,'');
-                    return ' .mdmreport-hidesection-xxx .mdmreport-wrapper-section-xxx { display: none; } '.replaceAll('xxx',itemClassName);
+                    return ' body .mdmreport-wrapper-section-xxx { display: block; } .mdmreport-hidesection-xxx .mdmreport-wrapper-section-xxx { display: none; } '.replaceAll('xxx',itemClassName);
                 }).join('');
                 cssSheet.replaceSync(cssSyntax);
                 document.adoptedStyleSheets = [...document.adoptedStyleSheets,cssSheet];
+            }
+            function resetSettingCss() {
+                cssSheet.replaceSync('');
             }
             function initAddingControlBlock() {
                 const pluginHolderEl = document.querySelector('#mdmreport_toc_placeholder') || document.querySelector('#mdmreport_plugin_placeholder');
@@ -1812,12 +1819,32 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                         throw e;
                     }
                 });
-                setTimeout(function(){ applyDefaultSetup(controlsDefs); },50);
+                (new Promise(function(resolve,reject){setTimeout(function(){return resolve(controlsDefs);},50);})).then(applyDefaultSetup).catch(function(e){
+                    try {
+                        resetSettingCss();
+                    } catch(e) { }
+                    try {
+                        function escapeHtml(s) {
+                            const dummy = document.createElement('div');
+                            dummy.innerText = s.replace(/\n/ig,'\\n');
+                            return dummy.innerHTML;
+                        }
+                        errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
+                    } catch(ee) {};
+                    try {
+                        document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
+                    } catch(ee) {}
+                    throw e;
+                });
+                /* setTimeout(function(){ try { applyDefaultSetup(controlsDefs); } catch(e) { try { function escapeHtml(s) { const dummy = document.createElement('div'); dummy.innerText = s.replace(/\n/ig,'\\n'); return dummy.innerHTML; } errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />'; } catch(ee) {}; try { document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections); } catch(ee) {} throw e; } },50); */
             }
             initSettingCss();
             initAddingControlBlock();
             document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
         } catch(e) {
+            try {
+                resetSettingCss();
+            } catch(e) { }
             try {
                 function escapeHtml(s) {
                     const dummy = document.createElement('div');
