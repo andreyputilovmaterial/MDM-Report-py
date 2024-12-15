@@ -1588,6 +1588,11 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
     line-height: 1.1em;
     white-space: nowrap;
 }
+.toc-statistics .mdmdiff-inlineoverlay-added {
+    background: #c8f0da;
+    color: #000;
+    font-weight: 500;
+}
 </style>
 <script>
     /* === show/hide sections js === */
@@ -1788,6 +1793,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                         statisticsEl.classList.add('toc-statistics');
                         if( !!sectionDef['statisticsText'] )
                             statisticsEl.innerText = '( ' + sectionDef['statisticsText'].replace(/(?:\r\n|\r|\n)/ig,' ') + ' )'
+                        statisticsEl.innerHTML = statisticsEl.innerHTML.replace(/\b(something\s\s*\bchanged\s*?:\s*?true)\b/i,'<span class="mdmdiff-inlineoverlay-added">$1</span>')
                         wrapperEl.append(labelEl);
                         wrapperEl.append(sectionTitleEl);
                         if( !!sectionDef['statisticsText'] )
