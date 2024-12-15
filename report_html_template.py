@@ -1619,6 +1619,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                         sectionDefs.push({
                             text: textTitle,
                             id: textCss,
+                            element: sectionElement,
                             statisticsText: !!statisticsEl && (`${statisticsEl.innerText}`.trim().length>0) ? `${statisticsEl.innerText}`.trim() : null
                         });
                     }
@@ -1768,6 +1769,19 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                         sectionLinkHyperlinkEl.textContent = colText;
                         sectionLinkHyperlinkEl.classList.add('toc-section-hyperlink');
                         sectionLinkHyperlinkEl.setAttribute('href',`#${sectionDef['id']}`);
+                        sectionLinkHyperlinkEl.addEventListener('click',function( event ) {
+                            event.preventDefault();
+                            const element = sectionDef.element;
+                            if(!!element.scrollIntoView) {
+                                element.scrollIntoView();
+                            } else {
+                                const offset = element.offsetTop;
+                                const navigation = 0; /* document.querySelector('.over').clientHeight */
+                                const scroll = offset - navigation;
+                                window.scrollTo({top:scroll,left:0,behavior:'smooth'});
+                            }
+                            return false;
+                        });
                         sectionTitleEl.append(sectionLinkPlaintextEl);
                         sectionTitleEl.append(sectionLinkHyperlinkEl);
                         statisticsEl = document.createElement('span');
