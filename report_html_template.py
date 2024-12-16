@@ -108,6 +108,13 @@ TEMPLATE_HTML_STYLES = """
     .mdmreport-banners-wrapper-noborders .mdmreport-banner h3 {
         margin-top: 0;
     }
+    .mdmreport-contentcell-fullwidth {
+        width: 100%;
+        min-width: 100%;
+    }
+    .mdmreport-table-dummy .mdmreport-record .mdmreport-contentcell {
+        padding: 7.5px 7.5px 7.5px 15px;
+    }
 """
 
 TEMPLATE_HTML_STYLES_TABLE = r"""
@@ -436,8 +443,8 @@ TEMPLATE_HTML_SCRIPTS = r"""
     /* === align col widths js === */
 (function() {
     function alignColWidths() {
-        if( document.documentElement.innerHTML.length > 10000000 )
-            return;
+        /* if( document.documentElement.innerHTML.length > 10000000 )
+            return; */
         let errorBannerEl = null;
         try {
             errorBannerEl = document.querySelector('#error_banner');
@@ -447,12 +454,13 @@ TEMPLATE_HTML_SCRIPTS = r"""
             return;
         }
         try {
-            const tables_all = document.querySelectorAll('.mdmreport-table');
+            /* const tables_all = document.querySelectorAll('.mdmreport-table'); */
             const cssSheet = new CSSStyleSheet();
             document.adoptedStyleSheets = [...document.adoptedStyleSheets,cssSheet];
             function process() {
                 try {
                     const widthDefault = 300;
+                    const tables_all = document.querySelectorAll('.mdmreport-table');
                     // first, clear out previous formatting
                     Array.prototype.forEach.call(tables_all,function(tableEl) {
                         tableEl.classList.remove('mdmreport-table-formatting-fixeddimensions');
@@ -464,6 +472,9 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         const cssSyntax = `.mdmreport-table td { max-width: ${widthVal}; }`
                         cssSheet.replaceSync(cssSyntax);
                     })();
+                    /* stop if data is too big */
+                    if( Array.from(document.querySelectorAll('.mdmreport-table tr.mdmreport-record')).length>500*20*26 )
+                        return;
                     // now find new width values
                     const colWidthsData = (function(){
                         const result = [];
@@ -586,7 +597,24 @@ TEMPLATE_HTML_SCRIPTS = r"""
                 }
             };
             Promise.resolve().then(process);
-            window.addEventListener('resize',process);
+            const dispatchDelayedEventData = {
+                promise: null
+            };
+            function processDelayed() {
+                if(!!dispatchDelayedEventData.promise) {
+                    /* setTimeout(resolve,40); */
+                } else {
+                    dispatchDelayedEventData.promise = new Promise((resolve,reject)=>{
+                        setTimeout(resolve,40);
+                    });
+                    dispatchDelayedEventData.promise.then(()=>{
+                        dispatchDelayedEventData.promise = null;
+                        return process();
+                    });
+                }
+            }
+            window.addEventListener('resize',processDelayed);
+            window.addEventListener('mdmreport_table',processDelayed);
             document.removeEventListener('DOMContentLoaded',alignColWidths);
         } catch(e) {
             try {
@@ -609,6 +637,8 @@ TEMPLATE_HTML_SCRIPTS = r"""
 <script>
     /* === show/hide columns js === */
 (function() {
+    const globalDataStored = {};
+    const cssSheet = new CSSStyleSheet();
     function decideColumnsShownAtStartup(columnIDs,addedData) {
         function normalizeSectionId(id) {
             return id.replace(/_/ig,' ').replace(/\s/ig,' ').replace(/\bx\d+\b/ig,' ').replace(/\s+/ig,' ').replace(/^\s*/ig,'').replace(/\s*$/ig,'');
@@ -745,7 +775,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         sectionDefs: sectionDefs,
                         meta: meta
                     };
-                    columnsShown = decideColumnsShownAtStartup(columnsAll,addedData);
+                    columnsShown = decideColumnsShownAtStartup(columnsAll,addedData).filter( hid => (!Object.keys(globalDataStored).includes(hid) || (Object.keys(globalDataStored).filter(id=>!!globalDataStored[id]).includes(hid)) ) ).concat( Object.keys(globalDataStored).filter(id=>!!globalDataStored[id]) );
                     columnsAll.forEach(function(columnId){
                         const d = listOfControls.filter(function(def){ return def.id==columnId; })[0];
                         const isShown = columnsShown.includes(columnId);
@@ -771,7 +801,6 @@ TEMPLATE_HTML_SCRIPTS = r"""
             }
             function initSettingCss() {
                 // .mdmreport-hidecol-xxx .mdmreport-col-xxx
-                const cssSheet = new CSSStyleSheet();
                 const cssSyntax = columns.map(function(item) {
                     const itemClassName = item.replace(/[^\w\-\.]/ig,'');
                     return ' .mdmreport-hidecol-xxx .mdmreport-col-xxx { display: none; } '.replaceAll('xxx',itemClassName);
@@ -802,7 +831,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
                 bannerEl.className = 'mdmreport-showhidecolumns-plugin mdmreport-banner mdmreport-banner-columns';
                 bannerEl.innerHTML = '<form method="_POST" action="#!" onSubmit="javascript: return false;" class="mdmreport-controls"><fieldset class="mdmreport-controls"><div><legend>Show/hide columns:</legend></div></fieldset></form>';
                 Array.prototype.forEach.call(bannerEl.querySelectorAll('form'),function(formEl) {formEl.addEventListener('submit',function(event) {event.preventDefault();event.stopPropagation();return false;});});
-                pluginHolderEl.append(bannerEl);
+                const possiblyExistingEl = document.querySelector('.mdmreport-showhidecolumns-plugin');
+                if( possiblyExistingEl ) {
+                    possiblyExistingEl.replaceWith(bannerEl);
+                } else {
+                    pluginHolderEl.append(bannerEl);
+                }
                 controlsDefs = [];
                 columns.forEach(function(col) {
                     try {
@@ -818,6 +852,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         checkboxEl.addEventListener('change',function(event) {
                             const checkboxEl = event.target;
                             const className = `mdmreport-hidecol-${colClassName}`; // mdmreport-col-xxx
+                            globalDataStored[colClassName] = !!checkboxEl.checked;
                             if( checkboxEl.checked ) {
                                 Array.prototype.forEach.call(document.querySelectorAll('table.mdmreport-table'),function(tableEl) {
                                     tableEl.classList.remove(className);
@@ -865,7 +900,58 @@ TEMPLATE_HTML_SCRIPTS = r"""
         }
     }
     window.addEventListener('DOMContentLoaded',addControlBlock_ShowHideColumns);
+    /* window.mdmreportPluginShowHideColsInit = addControlBlock_ShowHideColumns; */
+    window.addEventListener('mdmreport_table',addControlBlock_ShowHideColumns);
 })()
+</script>
+<script>
+    /* === memory saving plugin === */
+    (function(){
+        const errorBannerPromiseHandlers = {};
+        const errorWrapperPromise = (new Promise((resolve,reject)=>{errorBannerPromiseHandlers.resolve=resolve;errorBannerPromiseHandlers.reject=reject;})).then(function(){
+            let errorBannerEl = null;
+            try {
+                errorBannerEl = document.querySelector('#error_banner');
+                if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                return errorBannerEl;
+            } catch(e) {
+                throw e;
+                return;
+            }
+        }).then(function(errorBannerEl){
+            function wrapErrors(fn) {
+                return (...args) => {
+                    try {
+                        return fn(...args);
+                    } catch(e) {
+                        try {
+                            function escapeHtml(s) {
+                                const dummy = document.createElement('div');
+                                dummy.innerText = s.replace(/\n/ig,'\\n');
+                                return dummy.innerHTML;
+                            }
+                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
+                        } catch(ee) {};
+                        throw e;
+                    }
+                }
+            }
+            return wrapErrors;
+        });
+        window.addEventListener('DOMContentLoaded',function(){return errorBannerPromiseHandlers.resolve();});
+        function wrapper() {
+            errorWrapperPromise.then(function(wrapErrors) {
+                return wrapErrors(mdmreportMemorySavingPluginTriggerEvents)();
+            });
+        }
+        function mdmreportMemorySavingPluginTriggerEvents() {
+            Promise.resolve().then( function() { window.dispatchEvent(new Event('mdmreport_table')); } );
+            /* Promise.resolve().then( function() { window.dispatchEvent(new Event('resize')); } );
+            Promise.resolve().then( mdmreportPluginShowHideColsInit ); */
+        }
+        window.mdmreportMemorySavingPluginTriggerEvents = wrapper;
+    })();
+    /* === end of memory saving plugin === */
 </script>
 <style>
     /* === jira connection css === */
@@ -1346,7 +1432,14 @@ TEMPLATE_HTML_SCRIPTS = r"""
             throw e;
         }
     }
-    runPromise.then(jiraPlugin_workaddelementstotables);
+    runPromise.then(function(params){
+        const process = function(){
+            const tablesEl = Array.from(document.querySelectorAll('table.mdmreport-table')).filter(tableEl=>!tableEl.querySelector('.mdmrep-diff-jiraaddon-col'));
+            return jiraPlugin_workaddelementstotables({...params,tablesEl});
+        }
+        window.addEventListener('mdmreport_table',process);
+        return process();
+    });
     runPromise.then(function(){window.dispatchEvent(new Event('resize'));});
     bannerHolderPromise.then(jiraPlugin_pluginpanelunhidden);
     window.addEventListener('DOMContentLoaded',jiraPlugin_init);
@@ -1399,6 +1492,8 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
             // 1. read data and find the list of sections in the report table
             const sectionElements = document.querySelectorAll('[class^="mdmreport-wrapper-section-"], [class*=" mdmreport-wrapper-section-"]');
             Array.prototype.forEach.call(sectionElements,function(sectionElement) {
+                if( sectionElement.querySelector('.mdmreport-tablefilterplugin-controls') )
+                    return;
                 var textTitle = `${(sectionElement.querySelector('h3') || {textContent:''}).textContent}`.replace(/^\s*?section\s+/ig,'');
                 const sectionClasses = Array.from(sectionElement.classList).filter(function(name){return /^\s*?mdmreport-wrapper-section-/ig.test(name)});
                 const sectionClassesUnique = sectionClasses.filter(function(className){return document.querySelectorAll('.'+className).length==1});
@@ -1544,6 +1639,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                 });});
                 // pluginHolderEl.append(bannerEl); // we don't want the user to press "add", we are just adding it, it's so nice to have, it is now added automatically
                 setTimeout(addElementsToTables_TableFilters,400);
+                window.addEventListener('mdmreport_table',addElementsToTables_TableFilters);
             }
             initAddingControlBlock();
             document.removeEventListener('DOMContentLoaded',addControlBlock_TableFilters);
@@ -1742,6 +1838,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                     try {
                         const colText = sectionDef['text'];
                         const colClassName = sectionDef['id'];
+                        const sectionEl = sectionDef.element;
                         const wrapperEl = document.createElement('div');
                         wrapperEl.classList.add('mdmreport-controls-row');
                         wrapperEl.classList.add('toc-section-row');
@@ -1757,7 +1854,8 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                         checkboxEl.addEventListener('change',function(event) {
                             const checkboxEl = event.target;
                             const className = `mdmreport-hidesection-${colClassName}`;
-                            if( checkboxEl.checked ) {
+                            const isShown = !!checkboxEl.checked;
+                            if( isShown ) {
                                 Array.prototype.forEach.call(document.querySelectorAll('.mdmreportpage'),function(pageEl) {
                                     pageEl.classList.remove(className);
                                     wrapperEl.classList.remove('toc-section-inactive');
@@ -1770,6 +1868,12 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                                     wrapperEl.classList.remove('toc-section-active');
                                 });
                             };
+                            if( isShown ) {
+                                const possibleLinkToUnhide = sectionEl.querySelector('.mdmreport-memorysaving-hidetab-link');
+                                if( possibleLinkToUnhide ) {
+                                    possibleLinkToUnhide.dispatchEvent( new Event('click') );
+                                }
+                            }
                         });
                         labelEl.prepend(checkboxEl);
                         const sectionTitleEl = document.createElement('span');

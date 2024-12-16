@@ -213,7 +213,7 @@ def html_sanitize_tablecellcontents(inp_value,flags=[]):
 # but is increasing memory consumption - report for merged disney BES MDD takes 2 GB in chrome memory witout these "labels" and 3 GB with this transformation performed
 # UPD: wow, I reloaded the page and it now takes 1.6 GB of memory; chrome is like unpredictable - it includes that "labels" added to "name" column and the page takes 1.6 GB
 
-def enchancement_plugin__combine_attributes_into_master_name_col__on_table(rows,column_specs,flags=[]):
+def enchancement_plugin__combine_attributes_into_master_name_col__on_table_before(rows,column_specs,flags=[]):
     def is_column_id_for_attribute_column(col_id):
         return re.match(r'^.*?\b(?:attribute)(?:s)?\b\s*?(?:\s*?.*?)?\s*?$',re.sub(r'_',' ',col_id))
     def is_empty(s):
@@ -283,7 +283,7 @@ def enchancement_plugin__combine_attributes_into_master_name_col__on_table(rows,
     return rows,column_specs,flags
 
 
-def enchancement_plugin__add_diff_classes_per_row__on_row(row,flags,column_specs,other_cols_ref=[]):
+def enchancement_plugin__add_diff_classes_per_row__on_row_before(row,flags,column_specs,other_cols_ref=[]):
     def did_col_change_deep_inspect(data):
         if isinstance(data,str):
             if '<<ADDED>>' in data:
@@ -320,7 +320,7 @@ def enchancement_plugin__add_diff_classes_per_row__on_row(row,flags,column_specs
         # if was_row_moved:
         #     was_row_changed = True
         for col in other_cols_ref:
-            # TODO: same comment as in "on_col" event
+            # TODO: same comment as in "on_col_before" event
             # do we really need such inspections?
             # this might be complicted
             was_row_changed = was_row_changed or did_col_change_deep_inspect(col)
@@ -337,7 +337,7 @@ def enchancement_plugin__add_diff_classes_per_row__on_row(row,flags,column_specs
             flags_added.append('format-cssclass-mdmdiff-movedfrom')
     return row,flags+flags_added
 
-def enchancement_plugin__add_diff_classes_per_row__on_col(col_data,col_index=None,flags=[],column_specs=[],other_cols_ref=[]):
+def enchancement_plugin__add_diff_classes_per_row__on_col_before(col_data,col_index=None,flags=[],column_specs=[],other_cols_ref=[]):
     def did_col_change_deep_inspect(data):
         if isinstance(data,str):
             if '<<ADDED>>' in data:
@@ -386,18 +386,79 @@ def enchancement_plugin__add_diff_classes_per_row__on_col(col_data,col_index=Non
     return col_data,flags
 
 
+
+def enchancement_plugin__wrap_tables_for_memory_saving__on_table_after(result_formatted,table_id,rows=None,column_specs_localcopy=None,flags=None):
+    try:
+        
+        TEMPLATE = r"""
+<table class="mdmreport-table mdmreport-table-dummy mdmreport-table-preloaded-hidden-content" id="mdmreport_hidetablememorysaving_outer_{{ID}}"><tbody><tr></tr><tr class="mdmreport-record"><td class="mdmreport-contentcell mdmreport-contentcell-fullwidth">{{CONTENT}}</td></tr></tbody></table>
+"""
+        TEMPLATE_SCRIPT = r"""
+<a href="#!" id="mdmreport_hidetablememorysaving_link_{{ID}}" class="mdmreport-memorysaving-hidetab-link" >Click to load contents</a>
+<script>
+(function(){
+    var data = {{DATA}};
+    const wrapperId = 'mdmreport_hidetablememorysaving_outer_{{ID}}';
+    const linkId = 'mdmreport_hidetablememorysaving_link_{{ID}}';
+    const wrapperEl = document.getElementById(wrapperId);
+    const linkEl = document.getElementById(linkId);
+    linkEl.addEventListener('click',function(event){
+        data = data;
+        /*  wrapperEl.innerHTML = data; */
+        const el = document.createElement('div');
+        el.innerHTML = data;
+        wrapperEl.replaceWith(el);
+        data = null;
+        if(!!window.mdmreportMemorySavingPluginTriggerEvents) Promise.resolve().then(window.mdmreportMemorySavingPluginTriggerEvents)
+        event.preventDefault();
+        return false;
+    });
+})()
+</script>
+"""
+
+        if not table_id:
+            raise ValueError('table id not provided!')
+        
+        pattern_beginning = re.match(r'^(.*?)(<\s*?table\b)(.*)$',result_formatted,flags=re.I|re.M|re.DOTALL)
+        pattern_ending = re.match(r'^(.*)(<\s*?/\s*?table\s*?>)(.*?)$',result_formatted,flags=re.I|re.M|re.DOTALL)
+        if not pattern_beginning or not pattern_ending:
+            raise AttributeError('pattern not found: <table> ... </table>')
+        pattern_beginning = pattern_beginning.start(2)
+        pattern_ending = pattern_ending.start(2) + len(pattern_ending.group(2))
+        
+        part_beginning = result_formatted[0:pattern_beginning]
+        part_body = result_formatted[pattern_beginning:pattern_ending]
+        part_ending = result_formatted[pattern_ending:]
+
+        part_body_encoded = TEMPLATE.replace('{{CONTENT}}',TEMPLATE_SCRIPT).replace('{{ID}}',table_id).replace('{{DATA}}',json.dumps(part_body))
+
+        result_formatted_upd = '' + part_beginning + part_body_encoded + part_ending
+
+        return result_formatted_upd
+    except Exception as e:
+        print('Error: HTML Report: failed when converting tables to collapsible to elaborate on memory saving: {e}'.format(e=e))
+        return result_formatted
+
+
+
 enchancement_plugins = [
     {
         'name': 'combine_attributes_into_master_name_col',
         'enabled': True,
-        # 'on_col': enchancement_plugin__combine_attributes_into_master_name_col__on_col,
-        'on_table': enchancement_plugin__combine_attributes_into_master_name_col__on_table,
+        # 'on_col_before': enchancement_plugin__combine_attributes_into_master_name_col__on_col_before,
+        'on_table_before': enchancement_plugin__combine_attributes_into_master_name_col__on_table_before,
     },
     {
-        'name': 'enchancement_plugin__add_diff_classes_per_row__on_row',
+        'name': 'enchancement_plugin__add_diff_classes_per_row__on_row_before',
         'enabled': True,
-        'on_row': enchancement_plugin__add_diff_classes_per_row__on_row,
-        'on_col': enchancement_plugin__add_diff_classes_per_row__on_col,
+        'on_row_before': enchancement_plugin__add_diff_classes_per_row__on_row_before,
+        'on_col_before': enchancement_plugin__add_diff_classes_per_row__on_col_before,
+    },
+    {
+        'name': 'enchancement_plugin__wrap_tables_for_memory_saving__on_table_after',
+        'enabled': True,
+        'on_table_after': enchancement_plugin__wrap_tables_for_memory_saving__on_table_after,
     },
 ]
 
@@ -420,8 +481,8 @@ def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[],other_cols_ref=[]
         if not('skip_plugin_enchancement' in flags):
             for plugin in enchancement_plugins:
                 if plugin['enabled']:
-                    if 'on_col' in plugin:
-                        result_upd,flags_upd = plugin['on_col'](col,col_index,flags,column_specs,other_cols_ref)
+                    if 'on_col_before' in plugin:
+                        result_upd,flags_upd = plugin['on_col_before'](col,col_index,flags,column_specs,other_cols_ref)
                         col = result_upd
                         flags = list(set([]+flags+flags_upd))
         
@@ -439,6 +500,14 @@ def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[],other_cols_ref=[]
             added_css_classes = ' '.join(col_css_classes),
             otherattrs = ' data-columnid="{colid}"'.format(colid=sanitize_idfield( column_specs[col_index] ) if sanitize_idfield( column_specs[col_index] ) else '') if 'header' in flags else ''
         )
+
+        if not('skip_plugin_enchancement' in flags):
+            for plugin in enchancement_plugins:
+                if plugin['enabled']:
+                    if 'on_col_after' in plugin:
+                        result_upd = plugin['on_col_after'](result_formatted,col,col_index,flags,column_specs,other_cols_ref)
+                        result_formatted = result_upd
+
         return result_formatted
     
     except Exception as e:
@@ -464,8 +533,8 @@ def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
         if not('skip_plugin_enchancement' in flags):
             for plugin in enchancement_plugins:
                 if plugin['enabled']:
-                    if 'on_row' in plugin:
-                        row_upd,flags_upd = plugin['on_row'](row,flags,column_specs,other_cols_ref=row)
+                    if 'on_row_before' in plugin:
+                        row_upd,flags_upd = plugin['on_row_before'](row,flags,column_specs,other_cols_ref=row)
                         row = row_upd
                         flags = list(set([]+flags+flags_upd))
         
@@ -480,6 +549,13 @@ def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
             columns = ''.join([ prep_htmlmarkup_col(col,col_index,flags=prep_updated_col_flags(col,col_index,column_specs),column_specs=column_specs,other_cols_ref=row) for col_index,col in enumerate((row or [''])) ]),
             added_css_classes = ' '.join(col_css_classes)
         )
+        
+        if not('skip_plugin_enchancement' in flags):
+            for plugin in enchancement_plugins:
+                if plugin['enabled']:
+                    if 'on_row_after' in plugin:
+                        result_upd = plugin['on_row_after'](result_formatted,row,flags,column_specs,other_cols_ref=row)
+                        result_formatted = result_upd
         
         return result_formatted
     
@@ -509,17 +585,26 @@ def prep_htmlmarkup_section(section_data,column_specs_global,column_titles,flags
         if not('skip_plugin_enchancement' in flags):
             for plugin in enchancement_plugins:
                 if plugin['enabled']:
-                    if 'on_table' in plugin:
-                        result_upd,column_specs_upd,flags_upd = plugin['on_table'](rows,column_specs_localcopy,flags)
+                    if 'on_table_before' in plugin:
+                        result_upd,column_specs_upd,flags_upd = plugin['on_table_before'](rows,column_specs_localcopy,flags)
                         rows = result_upd
                         column_specs_localcopy = column_specs_upd
                         flags = list(set([]+flags+flags_upd))
-    
-        return '{table_begin}{table_contents}{table_end}'.format(
+        
+        result_formatted = '{table_begin}{table_contents}{table_end}'.format(
             table_begin = report_html_template.TEMPLATE_HTML_TABLE_BEGIN.replace('{{TABLE_NAME}}',html_sanitize_tablecellcontents(table_name)).replace('{{TABLE_ID}}',sanitize_idfield(table_id)).replace('{{INS_TABBANNER}}',ins_banner),
             table_contents = ''.join( [ prep_htmlmarkup_row(row,column_specs=column_specs_localcopy,flags=[]+flags+(['row-header'] if i==0 else [])+['section-{sec_id}'.format(sec_id=sanitize_idfield(section_data['name']))]) for i,row in enumerate(rows) ] ),
             table_end = report_html_template.TEMPLATE_HTML_TABLE_END
         )
+
+        if not('skip_plugin_enchancement' in flags):
+            for plugin in enchancement_plugins:
+                if plugin['enabled']:
+                    if 'on_table_after' in plugin:
+                        result_upd = plugin['on_table_after'](result_formatted,table_id,rows,column_specs_localcopy,flags)
+                        result_formatted = result_upd
+        
+        return result_formatted
     
     except Exception as e:
         print('html markup: failed when processing section {c}'.format(c=section_data['name']))
