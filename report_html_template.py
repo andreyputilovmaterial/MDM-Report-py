@@ -473,7 +473,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         cssSheet.replaceSync(cssSyntax);
                     })();
                     /* stop if data is too big */
-                    if( Array.from(document.querySelectorAll('.mdmreport-table tr.mdmreport-record')).length>500*20*26 )
+                    if( Array.from(document.querySelectorAll('.mdmreport-table td')).length>500*16*26 )
                         return;
                     // now find new width values
                     const colWidthsData = (function(){
