@@ -326,9 +326,9 @@ td.mdmreport-contentcell label {
 .mdmreport-controls fieldset, fieldset.mdmreport-controls, .mdmreport-controls form, form.mdmreport-controls { display: block; border: none; margin: 0; padding: 0; }
 .mdmreport-controls legend, .mdmreport-controls label {
     display: inline-block;
-    line-height: 1em;
-    padding: 0.35em;
-    min-height: 1.3em;
+    line-height: 1.3em;
+    padding: 0 0.65em 0 0.65em;
+    min-height: 1.7em;
 }
 .mdmreport-controls label {
     border: 1px solid transparent;
@@ -1662,6 +1662,9 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
 })()
 </script>
 <style>
+.toc-section-row {
+    margin-left: -0.65em;
+}
 .mdmreport-showhidesections-plugin .toc-section-row .toc-section-plainlink {
     display: none;
 }
@@ -1674,20 +1677,24 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
 .mdmreport-showhidesections-plugin .toc-section-row.toc-section-inactive .toc-section-hyperlink {
     display: none;
 }
+.toc-section-highlighted {
+    background: #ffe49c;
+}
 .mdmreport-showhidesections-plugin .toc-statistics {
     display: inline-block;
-    color: #aaa;
+    color: rgba(0,0,0,.5);
     padding-left: 1em;
     max-width: 100%;
     text-overflow: ellipsis;
-    overflow: hidden;
+    overflow-x: hidden;
     line-height: 1.1em;
     white-space: nowrap;
+    vertical-align: middle;
 }
 .toc-statistics .mdmdiff-inlineoverlay-added {
-    background: #c8f0da;
     color: #000;
-    font-weight: 500;
+    background: transparent;
+    text-decoration: underline;
 }
 </style>
 <script>
@@ -1903,8 +1910,11 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                         statisticsEl = document.createElement('span');
                         statisticsEl.classList.add('toc-statistics');
                         if( !!sectionDef['statisticsText'] )
-                            statisticsEl.innerText = '( ' + sectionDef['statisticsText'].replace(/(?:\r\n|\r|\n)/ig,' ') + ' )'
-                        statisticsEl.innerHTML = statisticsEl.innerHTML.replace(/\b(something\s\s*\bchanged\s*?:\s*?true)\b/i,'<span class="mdmdiff-inlineoverlay-added">$1</span>')
+                            statisticsEl.innerText = '( ' + sectionDef['statisticsText'].replace(/(?:\r\n|\r|\n)/ig,' ') + ' )';
+                        if( /\b(something\s\s*\bchanged\s*?:\s*?true)\b/i.test(statisticsEl.innerHTML) ) {
+                            statisticsEl.innerHTML = statisticsEl.innerHTML.replace(/\b(something\s\s*\bchanged\s*?:\s*?true)\b/i,'<span class="mdmdiff-inlineoverlay-added">$1</span>')
+                            wrapperEl.classList.add('toc-section-highlighted');
+                        }
                         wrapperEl.append(labelEl);
                         wrapperEl.append(sectionTitleEl);
                         if( !!sectionDef['statisticsText'] )
