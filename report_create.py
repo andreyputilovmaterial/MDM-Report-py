@@ -66,6 +66,9 @@ def html_sanitize_text_date(s):
 def sanitize_idfield(s):
     return re.sub(r'-+','-',re.sub(r'^-*','',re.sub(r'-*$','',re.sub(r'[^\w\-\.]','-',s))))
 
+def sanitize_cssfield(s):
+    return re.sub(r'-+','-',re.sub(r'^-*','',re.sub(r'-*$','',re.sub(r'[^\w\-]','-',s))))
+
 def sanitize_text_extract_filename(s):
     return re.sub(r'^.*[/\\](.*?)\s*?$',lambda m: m[1],'{sstr}'.format(sstr=s))
 
@@ -487,8 +490,8 @@ def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[],other_cols_ref=[]
                         flags = list(set([]+flags+flags_upd))
         
         col_css_classes = ['mdmreport-contentcell']
-        if sanitize_idfield( column_specs[col_index] ):
-            col_css_classes.append('mdmreport-col-{colclass}'.format(colclass=sanitize_idfield( column_specs[col_index] )))
+        if sanitize_cssfield( column_specs[col_index] ):
+            col_css_classes.append('mdmreport-col-{colclass}'.format(colclass=sanitize_cssfield( column_specs[col_index] )))
         if col_index>=0:
             col_css_classes.append('mdmreport-colindex-{col_index}'.format(col_index=col_index))
         for flag in [flag for flag in flags if re.match(r'^\s*?format-cssclass-\w',flag)]:
@@ -498,7 +501,7 @@ def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[],other_cols_ref=[]
         result_formatted = '<td class="{added_css_classes}"{otherattrs}>{col}</td>'.format(
             col = html_sanitize_tablecellcontents(col,flags),
             added_css_classes = ' '.join(col_css_classes),
-            otherattrs = ' data-columnid="{colid}"'.format(colid=sanitize_idfield( column_specs[col_index] ) if sanitize_idfield( column_specs[col_index] ) else '') if 'header' in flags else ''
+            otherattrs = ' data-columnid="{colid}"'.format(colid=sanitize_cssfield( column_specs[col_index] ) if sanitize_cssfield( column_specs[col_index] ) else '') if 'header' in flags else ''
         )
 
         if not('skip_plugin_enchancement' in flags):
@@ -592,8 +595,8 @@ def prep_htmlmarkup_section(section_data,column_specs_global,column_titles,flags
                         flags = list(set([]+flags+flags_upd))
         
         result_formatted = '{table_begin}{table_contents}{table_end}'.format(
-            table_begin = report_html_template.TEMPLATE_HTML_TABLE_BEGIN.replace('{{TABLE_NAME}}',html_sanitize_tablecellcontents(table_name)).replace('{{TABLE_ID}}',sanitize_idfield(table_id)).replace('{{INS_TABBANNER}}',ins_banner),
-            table_contents = ''.join( [ prep_htmlmarkup_row(row,column_specs=column_specs_localcopy,flags=[]+flags+(['row-header'] if i==0 else [])+['section-{sec_id}'.format(sec_id=sanitize_idfield(section_data['name']))]) for i,row in enumerate(rows) ] ),
+            table_begin = report_html_template.TEMPLATE_HTML_TABLE_BEGIN.replace('{{TABLE_NAME}}',html_sanitize_tablecellcontents(table_name)).replace('{{TABLE_ID}}',sanitize_cssfield(table_id)).replace('{{INS_TABBANNER}}',ins_banner),
+            table_contents = ''.join( [ prep_htmlmarkup_row(row,column_specs=column_specs_localcopy,flags=[]+flags+(['row-header'] if i==0 else [])+['section-{sec_id}'.format(sec_id=sanitize_cssfield(section_data['name']))]) for i,row in enumerate(rows) ] ),
             table_end = report_html_template.TEMPLATE_HTML_TABLE_END
         )
 
@@ -712,7 +715,7 @@ def produce_html(inp):
         '{{INS_PAGEHEADER}}', result_ins_htmlmarkup_headertext
     )
     result = result.replace(
-        '{{INS_REPORTTYPE}}', sanitize_idfield(result_ins_htmlmarkup_reporttype)
+        '{{INS_REPORTTYPE}}', sanitize_cssfield(result_ins_htmlmarkup_reporttype)
     )
     result = result.replace(
         '{{INS_HEADING}}', result_ins_htmlmarkup_heading
