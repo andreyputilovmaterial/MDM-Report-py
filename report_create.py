@@ -566,24 +566,30 @@ def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
         print('html markup: failed when processing row {c}'.format(c='\t'.join(row)))
         raise e
 
-def prep_htmlmarkup_section(section_data,column_specs_global,column_titles,flags=[]):
+def prep_htmlmarkup_section(section_obj,column_specs_global,column_titles,flags=[]):
 
     try:
 
-        column_specs = section_data['columns'] if 'columns' in section_data else column_specs_global
+        column_specs = section_obj['columns'] if 'columns' in section_obj else column_specs_global
 
-        row_first = [ row for row in [[(column_titles[col_title] if col_title in column_titles else col_title) for col_title in column_specs]] ]
-        rows = []+row_first+section_data['data']
+        if 'column_headers' in section_obj:
+            column_titles = { **column_titles, **section_obj['column_headers'] }
+
+        section_data = section_obj['data']
+        row_first = [
+            [ (column_titles[col] if col in column_titles else col ) for col in column_specs ]
+        ]
+        rows = row_first + section_data
 
         column_specs_localcopy = column_specs
 
-        table_name = section_data['title']
+        table_name = section_obj['title']
 
-        table_id = section_data['id']
+        table_id = section_obj['id']
 
         ins_banner = ''
-        if 'statistics' in section_data:
-                ins_banner = '<div class="mdmreport-banner mdmreport-banner-table-details mdmreport-banner-table-details-statistics"><p>Statistics: </p>{body}</div>'.format( body = html_sanitize_tablecellcontents( section_data['statistics'], flags=['format_semicolon'] ) )
+        if 'statistics' in section_obj:
+                ins_banner = '<div class="mdmreport-banner mdmreport-banner-table-details mdmreport-banner-table-details-statistics"><p>Statistics: </p>{body}</div>'.format( body = html_sanitize_tablecellcontents( section_obj['statistics'], flags=['format_semicolon'] ) )
 
         if not('skip_plugin_enchancement' in flags):
             for plugin in enchancement_plugins:
@@ -596,7 +602,7 @@ def prep_htmlmarkup_section(section_data,column_specs_global,column_titles,flags
         
         result_formatted = '{table_begin}{table_contents}{table_end}'.format(
             table_begin = report_html_template.TEMPLATE_HTML_TABLE_BEGIN.replace('{{TABLE_NAME}}',html_sanitize_tablecellcontents(table_name)).replace('{{TABLE_ID}}',sanitize_cssfield(table_id)).replace('{{INS_TABBANNER}}',ins_banner),
-            table_contents = ''.join( [ prep_htmlmarkup_row(row,column_specs=column_specs_localcopy,flags=[]+flags+(['row-header'] if i==0 else [])+['section-{sec_id}'.format(sec_id=sanitize_cssfield(section_data['name']))]) for i,row in enumerate(rows) ] ),
+            table_contents = ''.join( [ prep_htmlmarkup_row(row,column_specs=column_specs_localcopy,flags=[]+flags+(['row-header'] if i==0 else [])+['section-{sec_id}'.format(sec_id=sanitize_cssfield(section_obj['name']))]) for i,row in enumerate(rows) ] ),
             table_end = report_html_template.TEMPLATE_HTML_TABLE_END
         )
 
@@ -610,7 +616,7 @@ def prep_htmlmarkup_section(section_data,column_specs_global,column_titles,flags
         return result_formatted
     
     except Exception as e:
-        print('html markup: failed when processing section {c}'.format(c=section_data['name']))
+        print('html markup: failed when processing section {c}'.format(c=section_obj['name']))
         raise e
 
 
@@ -652,6 +658,9 @@ def produce_html(inp):
 
     result_column_headers_global = ( ( [ '{col}'.format(col=col) for col in inp['report_scheme']['columns'] ] if 'columns' in inp['report_scheme'] else [] ) if 'report_scheme' in inp else [] )
     result_column_headers_global_text_specs = (inp['report_scheme']['column_headers'] if 'column_headers' in inp['report_scheme'] else {}) if 'report_scheme' in inp else {}
+    for col in result_column_headers_global:
+        if not col in result_column_headers_global_text_specs:
+            result_column_headers_global_text_specs[col] = col
 
     report_data_sections = []
     section_ids_used = []
