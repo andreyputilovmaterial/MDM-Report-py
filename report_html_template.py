@@ -1782,9 +1782,21 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                 function hide(d) {
                     d.controlEl.checked=false;d.controlEl.dispatchEvent(new Event('change'));
                 }
+                function calcComplexity(section) {
+                    return 50000; /* TODO: */
+                }
                 const mode = detectMode();
                 const sectionListShownPreliminary = findListOfSectionsToShow(listOfControls,mode);
-                const sectionListShown = sectionListShownPreliminary.length>16 ? [ sectionListShownPreliminary[0] ] : sectionListShownPreliminary;
+                let complexity = 0;
+                const complexityLimit = 40000; /* TODO: bring configs to top */
+                let sectionListShown = [];
+                sectionListShownPreliminary.forEach(function(section) {
+                    if( complexity<complexityLimit ) {
+                        sectionListShown.push(section);
+                        complexity+= calcComplexity(section);
+                    }
+                });
+                /* const sectionListShown = sectionListShownPreliminary.length>16 ? [ sectionListShownPreliminary[0] ] : sectionListShownPreliminary; */
                 listOfControls.forEach( function(item) {
                     isShown = sectionListShown.map(a=>a.id).includes(item.id);
                     action = isShown ? show : hide;
