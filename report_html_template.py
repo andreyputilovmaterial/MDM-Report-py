@@ -1988,6 +1988,84 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
     window.addEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
 })()
 </script>
+<style>
+    /* === add diff classes to the begginning of every line in pre tags in the report plugin === */
+.mdmreport-table tr td pre {
+
+}
+.mdmreport-table tr td pre p {
+    margin: 0 0 0 0;
+    padding: 0;
+    border-left: 1em solid #E5D8B4;
+}
+.mdmreport-table tr td pre p.mdmreport-l-c {
+    border-left: 1em solid #ff9632;
+}
+.mdmreport-table tr td pre p.mdmreport-l-a, .mdmreport-table tr td pre p.mdmreport-l-c.mdmreport-l-a {
+    border-left: 1em solid #6bc795;
+}
+.mdmreport-table tr td pre p.mdmreport-l-r, .mdmreport-table tr td pre p.mdmreport-l-c.mdmreport-l-r {
+    border-left: 1em solid #f59278;
+}
+</style>
+<script>
+    /* === add diff classes to the begginning of every line in pre tags in the report plugin === */
+(function(){
+    function init() {
+        let errorBannerEl = null;
+        try {
+            errorBannerEl = document.querySelector('#error_banner');
+            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+        } catch(e) {
+            throw e;
+            return;
+        }
+        try {
+            function checkClassesIndicatingEdit(el) {
+                return Array.from(el.querySelectorAll('.mdmdiff-inlineoverlay-added, .mdmdiff-inlineoverlay-removed')).length>0;
+            }
+            function checkClassesIndicatingEditAdded(el) {
+                return Array.from(el.querySelectorAll('.mdmdiff-inlineoverlay-added')).length>0;
+            }
+            function checkClassesIndicatingEditRemoved(el) {
+                return Array.from(el.querySelectorAll('.mdmdiff-inlineoverlay-removed')).length>0;
+            }
+            Array.from(document.querySelectorAll('.mdmreport-table tr td pre')).forEach(function(elPre){
+                elPre.innerHTML = elPre.innerHTML.split(/<\s*?br\s*?\/?\s*?>/ig).map(t=>`<p>${t}</p>`).join('');
+                Array.from(elPre.querySelectorAll('p')).forEach(function(elP){
+                    if(checkClassesIndicatingEdit(elP)) {
+                        elP.classList.add('mdmreport-l-c');
+                    }
+                    if(checkClassesIndicatingEditAdded(elP)) {
+                        elP.classList.add('mdmreport-l-a');
+                    }
+                    if(checkClassesIndicatingEditRemoved(elP)) {
+                        elP.classList.add('mdmreport-l-r');
+                    }
+                });
+            });
+        } catch(e) {
+            try {
+                // undoSmth();
+            } catch(e) { }
+            try {
+                function escapeHtml(s) {
+                    const dummy = document.createElement('div');
+                    dummy.innerText = s.replace(/\n/ig,'\\n');
+                    return dummy.innerHTML;
+                }
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
+            } catch(ee) {};
+            try {
+                document.removeEventListener('mdmreport_table',init);
+            } catch(ee) {}
+            throw e;
+        }
+    }
+    window.addEventListener('DOMContentLoaded',init);
+    window.addEventListener('mdmreport_table',init);
+})();
+</script>
 """
 
 TEMPLATE_HTML_DIFF_SCRIPTS = r""
