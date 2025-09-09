@@ -2119,12 +2119,11 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                 return wrapper;
             }
                         
-            Array.from(document.querySelectorAll('.mdmreport-table tr td pre')).forEach(function(elPreOriginal){
+            Array.from(document.querySelectorAll('.mdmreport-table tr td pre')).forEach(function(elPre){
                 
-                const elPreUpdated = wrapLinesInParagraphs(elPreOriginal);
-                elPreOriginal.replaceWith(elPreUpdated);
+                elPre.innerHTML = wrapLinesInParagraphs(elPre).innerHTML;
 
-                Array.from(elPreUpdated.querySelectorAll('p')).forEach(function(elP){
+                Array.from(elPre.querySelectorAll('p')).forEach(function(elP){
                     if(checkClassesIndicatingEdit(elP)) {
                         elP.classList.add('mdmreport-l-c');
                     }
