@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import json
 import html
+import traceback, sys
 
 
 
@@ -748,68 +749,88 @@ def produce_html(inp):
 
 
 def entry_point(config={}):
-    time_start = datetime.now()
-    script_name = 'mdmtoolsap html report script'
+    try:
+        time_start = datetime.now()
+        script_name = 'mdmtoolsap html report script'
 
-    parser = argparse.ArgumentParser(
-        description="Produce a summary of input file in html (read from json)",
-        prog='mdmtoolsap --program report'
-    )
-    parser.add_argument(
-        '--inpfile',
-        help='JSON with File Data',
-        type=str,
-        required=True
-    )
-    parser.add_argument(
-        '--output-format',
-        help='Set output format: html or excel',
-        type=str,
-        required=False
-    )
-    args = None
-    args_rest = None
-    if( ('arglist_strict' in config) and (not config['arglist_strict']) ):
-        args, args_rest = parser.parse_known_args()
-    else:
-        args = parser.parse_args()
-    input_map_filename = None
-    if args.inpfile:
-        input_map_filename = Path(args.inpfile)
-        # input_map_filename = '{input_map_filename}'.format(input_map_filename=input_map_filename.resolve())
-    # input_map_filename_specs = open(input_map_filename_specs_name, encoding="utf8")
-    config_output_format = 'html'
-    if args.output_format:
-        config_output_format = args.output_format
+        parser = argparse.ArgumentParser(
+            description="Produce a summary of input file in html (read from json)",
+            prog='mdmtoolsap --program report'
+        )
+        parser.add_argument(
+            '--inpfile',
+            help='JSON with file data',
+            type=str,
+            required=True
+        )
+        parser.add_argument(
+            '--output-format',
+            help='Set output format: html or excel',
+            type=str,
+            required=False
+        )
+        args = None
+        args_rest = None
+        if( ('arglist_strict' in config) and (not config['arglist_strict']) ):
+            args, args_rest = parser.parse_known_args()
+        else:
+            args = parser.parse_args()
+        input_map_filename = None
+        if args.inpfile:
+            input_map_filename = Path(args.inpfile)
+            # input_map_filename = '{input_map_filename}'.format(input_map_filename=input_map_filename.resolve())
+        # input_map_filename_specs = open(input_map_filename_specs_name, encoding="utf8")
+        config_output_format = 'html'
+        if args.output_format:
+            config_output_format = args.output_format
 
-    print('{script_name}: script started at {dt}'.format(dt=time_start,script_name=script_name))
+        print('{script_name}: script started at {dt}'.format(dt=time_start,script_name=script_name))
 
-    #print('{script_name}: reading {fname}'.format(fname=input_map_filename,script_name=script_name))
-    if not(Path(input_map_filename).is_file()):
-        raise FileNotFoundError('file not found: {fname}'.format(fname=input_map_filename))
-    
-    inpfile_map_in_json = None
-    with open(input_map_filename, encoding="utf8") as input_map_file:
-        try:
-            inpfile_map_in_json = json.load(input_map_file)
-        except json.JSONDecodeError as e:
-            # just a more descriptive message to the end user
-            # can happen if the tool is started two times in parallel and it is writing to the same json simultaneously
-            raise TypeError('Diff: Can\'t read input file as JSON: {msg}'.format(msg=e))
+        #print('{script_name}: reading {fname}'.format(fname=input_map_filename,script_name=script_name))
+        if not(Path(input_map_filename).is_file()):
+            raise FileNotFoundError('file not found: {fname}'.format(fname=input_map_filename))
+        
+        inpfile_map_in_json = None
+        with open(input_map_filename, encoding="utf8") as input_map_file:
+            try:
+                inpfile_map_in_json = json.load(input_map_file)
+            except json.JSONDecodeError as e:
+                # just a more descriptive message to the end user
+                # can happen if the tool is started two times in parallel and it is writing to the same json simultaneously
+                raise TypeError('Diff: Can\'t read input file as JSON: {msg}'.format(msg=e))
 
-    result = None
-    if config_output_format=='html':
-        result = produce_html(inpfile_map_in_json)
-    else:
-        raise ValueError('report.py: unsupported output format: {fmt}'.format(fmt=config_output_format))
-    
-    result_fname = ( Path(input_map_filename).parents[0] / '{basename}{ext}'.format(basename=Path(input_map_filename).name,ext='.html') if Path(input_map_filename).is_file() else re.sub(r'^\s*?(.*?)\s*?$',lambda m: '{base}{added}'.format(base=m[1],added='.html'),'{path}'.format(path=input_map_filename)) )
-    print('{script_name}: saving as "{fname}"'.format(fname=result_fname,script_name=script_name))
-    with open(result_fname, "w") as outfile:
-        outfile.write(result)
+        result = None
+        if config_output_format=='html':
+            result = produce_html(inpfile_map_in_json)
+        else:
+            raise ValueError('report.py: unsupported output format: {fmt}'.format(fmt=config_output_format))
+        
+        result_fname = ( Path(input_map_filename).parents[0] / '{basename}{ext}'.format(basename=re.sub(r'\.json\s*?$','','{n}'.format(n=Path(input_map_filename).name),flags=re.I),ext='.html') if Path(input_map_filename).is_file() else re.sub(r'^\s*?(.*?)(?:\.json)?\s*?$',lambda m: '{base}{added}'.format(base=m[1],added='.html'),'{path}'.format(path=input_map_filename)) )
+        print('{script_name}: saving as "{fname}"'.format(fname=result_fname,script_name=script_name))
+        with open(result_fname, "w") as outfile:
+            outfile.write(result)
 
-    time_finish = datetime.now()
-    print('{script_name}: finished at {dt} (elapsed {duration})'.format(dt=time_finish,duration=time_finish-time_start,script_name=script_name))
+        time_finish = datetime.now()
+        print('{script_name}: finished at {dt} (elapsed {duration})'.format(dt=time_finish,duration=time_finish-time_start,script_name=script_name))
+    except Exception as e:
+        # the program is designed to be user-friendly
+        # that's why we reformat error messages a little bit
+        # stack trace is still printed (I even made it longer to 20 steps!)
+        # but the error message itself is separated and printed as the last message again
+
+        # for example, I don't write "print('File Not Found!');exit(1);", I just write "raise FileNotFoundErro()"
+        print('',file=sys.stderr)
+        print('Stack trace:',file=sys.stderr)
+        print('',file=sys.stderr)
+        traceback.print_exception(e,limit=20)
+        print('',file=sys.stderr)
+        print('',file=sys.stderr)
+        print('',file=sys.stderr)
+        print('Error:',file=sys.stderr)
+        print('',file=sys.stderr)
+        print('{e}'.format(e=e),file=sys.stderr)
+        print('',file=sys.stderr)
+        exit(1)
 
 
 if __name__ == '__main__':
