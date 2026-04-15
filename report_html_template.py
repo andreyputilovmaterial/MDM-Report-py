@@ -2277,6 +2277,12 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
     window.addEventListener('mdmreport_table',init);
 })();
 </script>
+<style>
+    .mdmreport-plugin-validate-labels-error { color: #900; font-weight: 600; }
+    .mdmreport-plugin-validate-labels { }
+    .mdmreport-plugin-validate-labels-validated { }
+    .mdmreport-plugin-validate-labels-alertissues, .mdmrep-plgn-labelxmlerr { text-decoration-line: underline; text-decoration-style: dashed; text-decoration-color: #db4069; text-decoration-offset: 2px; }
+</style>
 """
 
 TEMPLATE_HTML_DIFF_SCRIPTS = r""

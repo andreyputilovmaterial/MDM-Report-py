@@ -7,6 +7,7 @@ import re
 import json
 import html
 import traceback, sys
+import xml.etree.ElementTree as ET # for enchancement_plugin__validate_labels__on_col_after
 
 
 
@@ -446,6 +447,63 @@ def enchancement_plugin__wrap_tables_for_memory_saving__on_table_after(result_fo
 
 
 
+
+def enchancement_plugin__validate_labels__on_col_after(result_formatted,col,col_index,flags,column_specs,other_cols_ref):
+    def is_mdd_report_type(flags):
+        return 'reporttype-diff' in flags
+    def is_label_column(result_formatted,col,col_index,flags,column_specs,other_cols_ref):
+        return re.match(r'^\s*(?:label|langcode).*',column_specs[col_index])
+        # try:
+        #     return is_mdd_report_type(flags) and re.match(r'^\s*(?:label|langcode).*',column_specs[col_index])
+        # except:
+        #     print('Failed at col == {c}'.format(c=repr(col)),file=sys.stderr)
+        #     print('Failed at column_specs == {c}'.format(c=repr(column_specs)),file=sys.stderr)
+        #     print('Failed at flags == {c}'.format(c=repr(flags)),file=sys.stderr)
+        #     raise Exception('mdmrep validate labels plugin: failed when executing a regexp on col: {c}'.format(c=repr(col)))
+    def get_flat_text(html):
+        root = ET.fromstring(html)
+        return ''.join(root.itertext())
+    def is_xml_compatible(snippet: str) -> bool:
+        try:
+            # Wrap snippet in a dummy root
+            ET.fromstring(f"<root>{snippet}</root>")
+            return True
+        except ET.ParseError as e:
+            # print("Parse error:", e,file=sys.stderr)
+            return False
+    try:
+        if is_label_column(result_formatted,col,col_index,flags,column_specs,other_cols_ref):
+            css_classes_add = []
+            css_classes_add += [] # ['mdmreport-plugin-validate-labels']
+            # css_classes_add += ['mdmreport-plugin-validate-labels-validated'] if is_xml_compatible(get_flat_text(result_formatted)) else ['mdmreport-plugin-validate-labels-alertissues']
+            css_classes_add += [] if is_xml_compatible(get_flat_text(result_formatted)) else ['mdmrep-plgn-labelxmlerr']
+            css_classes_add = ' '.join(css_classes_add)
+            if len(css_classes_add)>0:
+                m = re.match(r'^(\s*?<\s*?(?:td|th)(?:\s*?\w+\s*?=\s*?["\'].*?["\'])*?\s*?>)(.*)(<\s*?/\s*?(?:td|th)\s*?>\s*?)$',result_formatted,flags=re.I)
+                if not m:
+                    print(f'DEBUG: plugin: mdmrep validate plugin: could not parse <td> markup: {result_formatted}',file=sys.stderr)
+                    raise Exception('mdmrep validate plugin: could not parse <td> markup')
+                result_outer_begin = m[1]
+                result_inner = m[2]
+                result_outer_end = m[3]
+                return f'{result_outer_begin}<span class="{css_classes_add}">{result_inner}</span>{result_outer_end}'
+            else:
+                return result_formatted
+        else:
+            return result_formatted
+    except Exception as e:
+        print(f'mdmrep validate labels plugin: failed: {e}',file=sys.stderr)
+        err_msg = 'ERROR'
+        try:
+            err_msg = f'{e}'
+            err_msg = html_sanitize_text(err_msg)
+        except:
+            err_msg = 'ERROR'
+        return f'<span class="mdmreport-plugin-validate-labels-error">{err_msg}</span>{result_formatted}'
+        # return results_formatted
+
+
+
 enchancement_plugins = [
     {
         'name': 'combine_attributes_into_master_name_col',
@@ -464,6 +522,11 @@ enchancement_plugins = [
         'enabled': True,
         'on_table_after': enchancement_plugin__wrap_tables_for_memory_saving__on_table_after,
     },
+    {
+        'name': 'enchancement_plugin__validate_labels__on_col_after',
+        'enabled': True,
+        'on_col_after': enchancement_plugin__validate_labels__on_col_after,
+    }
 ]
 
 
@@ -515,7 +578,15 @@ def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[],other_cols_ref=[]
         return result_formatted
     
     except Exception as e:
-        print('html markup: failed when processing column {c}'.format(c=col))
+        err_ins = '<row>'
+        try:
+            err_ins = f'{col}'
+            # err_ins = '{c}'.format(c='\t'.join(col))
+        except:
+            pass
+        if len(err_ins)>64:
+            err_ins = err_ins[:63]+'...'
+        print(f'html markup: failed when processing column {err_ins}')
         raise e
 
 
@@ -564,7 +635,15 @@ def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
         return result_formatted
     
     except Exception as e:
-        print('html markup: failed when processing row {c}'.format(c='\t'.join(row)))
+        err_ins = '<row>'
+        try:
+            err_ins = f'{row}'
+            err_ins = '{c}'.format(c='\t'.join(row))
+        except:
+            pass
+        if len(err_ins)>64:
+            err_ins = err_ins[:63]+'...'
+        print(f'html markup: failed when processing row {err_ins}')
         raise e
 
 def prep_htmlmarkup_section(section_obj,column_specs_global,column_titles,flags=[]):
@@ -663,6 +742,10 @@ def produce_html(inp):
         if not col in result_column_headers_global_text_specs:
             result_column_headers_global_text_specs[col] = col
 
+    flags = []
+    reporttype = html_sanitize_text(inp['report_type']) if 'report_type' in inp else None
+    if reporttype in ['MDD','diff']:
+        flags += [f'reporttype-{reporttype}']
     report_data_sections = []
     section_ids_used = []
     for section_obj in ( inp['sections'] if 'sections' in inp else [] ):
@@ -701,7 +784,7 @@ def produce_html(inp):
 
 
     report_htmlmarkup_mainpart_with_tables = ''.join([
-        prep_htmlmarkup_section(section_data,result_column_headers_global,result_column_headers_global_text_specs) for section_data in report_data_sections
+        prep_htmlmarkup_section(section_data,result_column_headers_global,result_column_headers_global_text_specs,flags) for section_data in report_data_sections
     ])
 
     result_template = '{begin}{report_contents}{end}'.format(
