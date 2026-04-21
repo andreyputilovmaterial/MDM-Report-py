@@ -1174,7 +1174,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
     }
     function jiraPlugin_init(){
         try {
-            /* jira suggestions */
+            /* jira - related tickets lookup */
             /* https://materialplus.atlassian.net/jira/software/c/projects/P123456/issues/?jql=project%20%3D%20%22P123456%22%20AND%20%28resolution%3Dunresolved%29%20AND%20%28not%20%28status%20in%20%28Resolved%2CDone%2CClosed%29%29%29%20AND%20%28not%20%28status%20in%20%28%22Ready%20for%20Stage%22%2C%22Need%20more%20Information%22%29%29%29%20ORDER%20BY%20key%20ASC */
             /* import urllib.parse */
             /* print('https://materialplus.atlassian.net/jira/software/c/projects/P123456/issues/?jql='+(urllib.parse.quote(urllib.parse.unquote('project%20%3D%20%22P123456%22%20AND%20%28resolution%3Dunresolved%29%20AND%20%28not%20%28status%20in%20%28Resolved%2CDone%2CClosed%29%29%29%20AND%20%28not%20%28status%20in%20%28%22Ready%20for%20Stage%22%2C%22Need%20more%20Information%22%29%29%29%20ORDER%20BY%20key%20ASC'), safe=''))) */
@@ -1183,8 +1183,8 @@ TEMPLATE_HTML_SCRIPTS = r"""
             if(!pluginHolderEl) throw new Error('adding block to show/hide columns: failed to find proper place for the element: #mdmreport_plugin_placeholder');
             const tablesEl = document.querySelectorAll('table.mdmreport-table');
             const bannerEl = document.createElement('div');
-            bannerEl.className = 'mdmreport-layout-plugin mdmreport-banner mdmreport-banner-jirasuggestions';
-            bannerEl.innerHTML = '<legend>Jira - ticket suggestion</legend>';
+            bannerEl.className = 'mdmreport-layout-plugin mdmreport-banner mdmreport-banner-jiratixlink';
+            bannerEl.innerHTML = '<legend>Jira - related tickets lookup</legend>';
             const divBannerHolderEl = document.createElement('div');
             const clickmeRevealBannerEl = document.createElement('a');
             clickmeRevealBannerEl.setAttribute('href','#!');
