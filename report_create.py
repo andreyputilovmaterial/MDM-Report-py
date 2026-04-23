@@ -29,6 +29,14 @@ else:
 
 # helper text prep functions first
 
+def is_property_list(data):
+    try:
+        if isinstance(data,list) and ([(True if ('name' in dict.keys(item) and 'value' in dict.keys(item)) else False) for item in data].count(True)==len(data)):
+            return True
+        return False
+    except:
+        return False
+
 def sanitize_text_normalizelinebreaks(inp_value):
     return re.sub(r'\r','\n',re.sub(r'\r?\n','\n',inp_value))
 
@@ -42,7 +50,8 @@ def html_sanitize_text(inp_value,flags=[]):
     # basic clean up - basic conversion escaping all tags
     result =  html.escape('{result}'.format(result=result))
     result = result.replace('\n','<br />')
-
+    if 'format-escapequotes-htmlentity' in flags:
+        result = result.replace('"','&quot;')
     special_pattern = '<<KEYWORD>>'
     special_pattern = html.escape(special_pattern)
     
@@ -60,6 +69,10 @@ def html_sanitize_text(inp_value,flags=[]):
     
     result = re.sub('([^\t\r\n\x20-\x7E])',lambda m: '&#{n};'.format(n=ord(m[1])),result)
     return result
+
+def html_sanitize_htmlattribute(s,flags=None):
+    flags = (flags or []) + ['format-escapequotes-htmlentity'] # ['format-escapequotes-htmlentity','format-html-linebreaksallowed']
+    return html_sanitize_text(html_sanitize_value_general(s,flags),flags)
 
 def html_sanitize_text_date(s):
     #return '<<DATE:{d}>>'.format(d=s)
@@ -125,6 +138,8 @@ def html_sanitize_value_general(inp_value,flags=[]):
         elif flag=='role-label':
             # return '<label>{d}</label>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
             return '<span class="mdmreport-label-pseudo" data-added="{f}"></span>'.format(f=htmlattr_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
+        elif flag=='role-ellipsis':
+            return '<span class="mdmreport-txt-ellipsis" data-role="ellipsis" data-ellipsis="{d}">... ...</span>'.format(d=html_sanitize_htmlattribute(inp_value,flags=list(set(flags)-set([flag]))))
     result = None
     if False:
         pass
@@ -132,10 +147,15 @@ def html_sanitize_value_general(inp_value,flags=[]):
         result = html_sanitize_value_general('{f}'.format(f=inp_value),flags) 
     elif not inp_value:
         result = ''
-    elif isinstance(inp_value,list) and ([(True if 'name' in dict.keys(item) else False) for item in inp_value].count(True)==len(inp_value)):
+    elif is_property_list(inp_value):
         result = html_sanitize_value_asproperties(inp_value,flags)
+    elif isinstance(inp_value,list):
+        flag_role_add = []
+        result = ''.join(html_sanitize_value_general(piece,(flags or [])+flag_role_add) for piece in inp_value)
     elif isinstance(inp_value,dict) and 'parts' in dict.keys(inp_value):
-        result = ''.join( html_sanitize_value_general(part['text'],[]+flags+(['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',part['role']))] if 'role' in part else [])) if isinstance(part,dict) and 'text' in dict.keys(part) else html_sanitize_value_general(part,flags) for part in inp_value['parts'] )
+        flag_role_add = ['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',inp_value['role']))] if 'role' in inp_value and inp_value['role'] else []
+        result = html_sanitize_value_general(inp_value['parts'],(flags or [])+flag_role_add)
+        # result = ''.join( html_sanitize_value_general(part['text'],[]+flags+(['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',part['role']))] if 'role' in part else [])) if isinstance(part,dict) and 'text' in dict.keys(part) else html_sanitize_value_general(part,flags) for part in inp_value['parts'] )
     elif isinstance(inp_value,dict) and 'text' in dict.keys(inp_value):
         result = html_sanitize_value_general(inp_value['text'],flags)
     elif isinstance(inp_value,str):
@@ -163,6 +183,7 @@ def htmlattr_sanitize_value_general(inp_value,flags=[]):
             return '[+added: {i}]'.format(i=htmlattr_sanitize_value_general({**inp_value,'role':None},[f for f in flags if not (flag==f)]))
         elif flag=='role-removed' and not ('role-noshowdiff' in flags):
             return '[-removed: {i}]'.format(i=htmlattr_sanitize_value_general({**inp_value,'role':None},[f for f in flags if not (flag==f)]))
+        # TODO: do we need to handle other roles here? Maybe bring it to a dedicated fn?
     if isinstance(inp_value,dict) and 'role' in inp_value and inp_value['role']:
         return htmlattr_sanitize_value_general({**inp_value,'role':None},flags=[]+flags+['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',inp_value['role']))])
     if isinstance(inp_value,str):
@@ -179,7 +200,9 @@ def htmlattr_sanitize_value_general(inp_value,flags=[]):
     elif isinstance(inp_value,dict) and 'name' in inp_value and 'value' in inp_value:
         return '{prop} = &#34;{val}&#34;'.format(prop=htmlattr_sanitize_value_general(inp_value['name'],flags),val=htmlattr_sanitize_value_general(inp_value['value'],flags))
     elif isinstance(inp_value,dict) and 'parts' in inp_value:
-        return ''.join([p for p in [htmlattr_sanitize_value_general(part,flags=flags) for part in inp_value['parts']] if not is_empty(p)])
+        # return ''.join([p for p in [htmlattr_sanitize_value_general(part,flags=flags) for part in inp_value['parts']] if not is_empty(p)])
+        flag_role_add = ['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',inp_value['role']))] if 'role' in inp_value and inp_value['role'] else []
+        return htmlattr_sanitize_value_general(inp_value['parts'],(flags or []) + flag_role_add)
     else:
         return htmlattr_sanitize_value_general('{f}'.format(f=inp_value))
 
