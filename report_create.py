@@ -139,7 +139,8 @@ def html_sanitize_value_general(inp_value,flags=[]):
             # return '<label>{d}</label>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
             return '<span class="mdmreport-label-pseudo" data-added="{f}"></span>'.format(f=htmlattr_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
         elif flag=='role-ellipsis':
-            return '<span class="mdmreport-txt-ellipsis" data-role="ellipsis" data-ellipsis="{d}">... ...</span>'.format(d=html_sanitize_htmlattribute(inp_value,flags=list(set(flags)-set([flag]))))
+            _payload = html_sanitize_htmlattribute(inp_value,flags=list(set(flags)-set([flag])))
+            return '<span class="mdmreport-txt-ellipsis" title="Click to expand file" data-role="ellipsis" data-ellipsis="{d}"><span class="mdmreport-txt-ellipsis-1">...</span><span class="mdmreport-txt-ellipsis-2"><span class="mdmreport-txt-ellipsis-br"></span><span class="mdmreport-txt-ellipsis-mainline"> @@ +{n} characters @@</span><span class="mdmreport-txt-ellipsis-br"></span></span><span class="mdmreport-txt-ellipsis-3">...</span></span>'.format(d=_payload,n=len(_payload))
     result = None
     if False:
         pass

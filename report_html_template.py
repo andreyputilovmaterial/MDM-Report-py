@@ -439,6 +439,126 @@ TEMPLATE_HTML_SCRIPTS = r"""
     window.addEventListener('DOMContentLoaded',beautifyDates);
 })()
 </script>
+<style>
+    /* === revealing ellipsis links plugin === */
+    .mdmreport-txt-ellipsis {
+        background: rgba(173,216,230,.75);
+        /* color: #555; */ color: #000;
+        text-decoration: none;
+        cursor: pointer;
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
+    }
+    .mdmreport-txt-ellipsis.mdmreport-txt-ellipsis-enchanced {
+        background: none;
+    }
+    .mdmreport-txt-ellipsis:active, .mdmreport-txt-ellipsis:visited, .mdmreport-txt-ellipsis:link {
+        color: inherit;
+        text-decoration: none;
+    }
+    .mdmreport-txt-ellipsis:hover {
+        text-decoration: underline;
+        color: #3333aa;
+    }
+    .mdmreport-txt-ellipsis-mainline {
+        /*display: inline-block;
+        padding-top: 6px;
+        padding-bottom: 10px;*/
+        /*width: 100%;*/
+    }
+    /*.mdmreport-txt-ellipsis-br::before {
+        content: "\A";
+        white-space: pre;
+    }*/
+    .mdmreport-txt-ellipsis-start, .mdmreport-txt-ellipsis-full, .mdmreport-txt-ellipsis-end {
+        display: inline-block;
+    }
+    .mdmreport-txt-ellipsis-start:after, .mdmreport-txt-ellipsis-full:after {
+        display: block;
+        content: " ";
+        position: absolute;
+        height: 16px;
+        margin-top: -16px;
+        width: 100vw;
+        overflow: hidden;
+        background: rgba(173, 216, 230, .3);
+        z-index: 0;
+    }
+    .mdmreport-txt-ellipsis-end {
+        background: rgba(173, 216, 230, .3);
+    }
+    .mdmreport-txt-ellipsis-start, .mdmreport-txt-ellipsis-full {
+        color: #000;
+    }
+    .mdmreport-txt-ellipsis-full, .mdmreport-txt-ellipsis-full:after {
+        height: 32px;
+        vertical-align: middle;
+        line-height: 32px;
+    }
+    .mdmreport-txt-ellipsis-full {
+        display: block;
+    }
+    .mdmreport-txt-ellipsis-full:after {
+        transform: translateY(-16px);
+        background: rgba(173, 216, 230, .6);
+    }
+
+</style>
+<script>
+(function() {
+    /* === revealing ellipsis links plugin === */
+    function ellipsisAssignClickHandler() {
+        let errorBannerEl = null;
+        try {
+            errorBannerEl = document.querySelector('#error_banner');
+            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+        } catch(e) {
+            throw e;
+            return;
+        }
+        try {
+            const clickListener = function(event,el) {
+                    event.preventDefault();
+                    const content = el.dataset.ellipsis;
+                    const elNew = document.createElement('span');
+                    elNew.classList.add('mdmreport-ellipsis-unhidden');
+                    elNew.innerHTML = content;
+                    el.replaceWith(elNew);
+                    return false;
+                }
+            document.addEventListener('click',function(event) {
+                const el = event.target.closest('[data-role="ellipsis"]');
+                if (!el) return;
+                return clickListener(event,el);
+            });
+            const beautifyEllipsis = function(el) {
+                if( !el.matches('.mdmreport-txt-ellipsis') ) throw new Error('should be of .mdmreport-txt-ellipsis class!');
+                el.classList.add('mdmreport-txt-ellipsis-enchanced');
+                el.querySelector('.mdmreport-txt-ellipsis-1').classList.add('mdmreport-txt-ellipsis-start');
+                el.querySelector('.mdmreport-txt-ellipsis-2').classList.add('mdmreport-txt-ellipsis-full');
+                el.querySelector('.mdmreport-txt-ellipsis-3').classList.add('mdmreport-txt-ellipsis-end');
+                Array.from(el.querySelectorAll('.mdmreport-txt-ellipsis-br')).forEach(function(i){i.remove();})
+            }
+            window.beautifyEllipsis = beautifyEllipsis; // TODO: debug
+        } catch(e) {
+            try {
+                function escapeHtml(s) {
+                    const dummy = document.createElement('div');
+                    dummy.innerText = s.replace(/\n/ig,'\\n');
+                    return dummy.innerHTML;
+                }
+                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
+            } catch(ee) {};
+            try {
+                document.removeEventListener('DOMContentLoaded',ellipsisAssignClickHandler);
+            } catch(ee) {}
+            throw e;
+        }
+    }
+    window.addEventListener('DOMContentLoaded',ellipsisAssignClickHandler);
+    //window.addEventListener('mdmreport_table',beautifyEllipsis);
+})()
+</script>
 <script>
     /* === align col widths js === */
 (function() {
