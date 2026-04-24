@@ -123,7 +123,7 @@ def html_sanitize_value_asproperties(inp_value,flags=[]):
 def html_sanitize_value_general(inp_value,flags=[]):
     # it's recursive!
     if isinstance(inp_value,dict) and 'role' in inp_value and inp_value['role']:
-        flag_add = 'role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',inp_value['role']))
+        flag_add = 'role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',f"{inp_value['role']}"))
         if not (flag_add in flags):
             return html_sanitize_value_general({**inp_value,**{'role':None}},flags=[]+flags+[flag_add])
     for flag in flags:
@@ -154,7 +154,7 @@ def html_sanitize_value_general(inp_value,flags=[]):
         flag_role_add = []
         result = ''.join(html_sanitize_value_general(piece,(flags or [])+flag_role_add) for piece in inp_value)
     elif isinstance(inp_value,dict) and 'parts' in dict.keys(inp_value):
-        flag_role_add = ['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',inp_value['role']))] if 'role' in inp_value and inp_value['role'] else []
+        flag_role_add = ['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',f"{inp_value['role']}"))] if 'role' in inp_value and inp_value['role'] else []
         result = html_sanitize_value_general(inp_value['parts'],(flags or [])+flag_role_add)
         # result = ''.join( html_sanitize_value_general(part['text'],[]+flags+(['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',part['role']))] if 'role' in part else [])) if isinstance(part,dict) and 'text' in dict.keys(part) else html_sanitize_value_general(part,flags) for part in inp_value['parts'] )
     elif isinstance(inp_value,dict) and 'text' in dict.keys(inp_value):
@@ -327,7 +327,7 @@ def enchancement_plugin__add_diff_classes_per_row__on_row_before(row,flags,colum
             return result
         elif isinstance(data,dict) and 'text' in data:
             if 'role' in data:
-                if re.match(r'^\s*?(?:role-)?(?:added|removed).*?',data['role'],flags=re.I):
+                if re.match(r'^\s*?(?:role-)?(?:added|removed).*?',f"{data['role']}",flags=re.I):
                     return True
             return did_col_change_deep_inspect(data['text'])
         elif isinstance(data,dict) and 'parts' in data:
@@ -380,8 +380,8 @@ def enchancement_plugin__add_diff_classes_per_row__on_col_before(col_data,col_in
                 result = result or did_col_change_deep_inspect(slice)
             return result
         elif isinstance(data,dict) and 'text' in data:
-            if 'role' in data:
-                if re.match(r'^\s*?(?:role-)?(?:added|removed).*?',data['role'],flags=re.I):
+            if 'role' in data and data['role']:
+                if re.match(r'^\s*?(?:role-)?(?:added|removed).*?',f"{data['role']}",flags=re.I):
                     return True
             return did_col_change_deep_inspect(data['text'])
         elif isinstance(data,dict) and 'parts' in data:
