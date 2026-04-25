@@ -757,6 +757,14 @@ def produce_html(inp):
             result_ins_htmlmarkup_title = '{report_desc}: {filepath}'.format(filepath=html_sanitize_text(sanitize_text_extract_filename(inp['source_file'])),report_desc='File')
             result_ins_htmlmarkup_heading = '{report_desc}: {filepath}'.format(filepath=html_sanitize_text(sanitize_text_extract_filename(inp['source_file'])),report_desc='File')
     result_ins_htmlmarkup_banner = html_sanitize_tablecellcontents( []+[{'name':'datetime','value':html_sanitize_text_date(inp['report_datetime_utc'])}]+inp['source_file_metadata'], flags=['format_semicolon'] )
+
+    result_ins_cssclasses = [
+        f'mdmreportpage-type-{sanitize_cssfield(result_ins_htmlmarkup_reporttype)}',
+    ]
+    inp_data_flags = [f'{f}' for f in inp.get('report_scheme',{}).get('flags',[])]
+    result_ins_cssclasses += [ f'mdmreport-inpdataflag-{sanitize_cssfield(flag)}' for flag in inp_data_flags ]
+    if len([flag for flag in inp_data_flags if re.match(r'^\s*?diff_source_\w+:.*data-type:diff\s*?$',flag)])>0:
+        result_ins_cssclasses += [ 'mdmdiff-in-diff' ]
     
 
 
@@ -833,6 +841,9 @@ def produce_html(inp):
     )
     result = result.replace(
         '{{INS_REPORTTYPE}}', sanitize_cssfield(result_ins_htmlmarkup_reporttype)
+    )
+    result = result.replace(
+        '{{INS_ADDEDCLASSES}}', ' ' + ' '.join([ sanitize_cssfield(s) for s in result_ins_cssclasses])
     )
     result = result.replace(
         '{{INS_HEADING}}', result_ins_htmlmarkup_heading

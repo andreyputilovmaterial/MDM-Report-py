@@ -280,9 +280,44 @@ td.mdmreport-contentcell label {
     position: relative;
 }
 
-.mdmdiff-inlineoverlay-added { background: #6bc795; }
-.mdmdiff-inlineoverlay-removed { background: #f59278; }
-.mdmdiff-inlineoverlay-diff { background: #edbf45; }
+.mdmdiff-inlineoverlay-added {
+    background: #6bc795;
+}
+.mdmdiff-inlineoverlay-removed {
+    background: #f59278;
+}
+.mdmdiff-inlineoverlay-diff, .mdmdiff-inlineoverlay-added.mdmdiff-inlineoverlay-removed, .mdmdiff-inlineoverlay-added .mdmdiff-inlineoverlay-removed, .mdmdiff-inlineoverlay-removed .mdmdiff-inlineoverlay-added {
+    /* background: #edbf45; */
+    background: repeating-linear-gradient(45deg, #6bc795, #6bc795 6px, #f59278 7px, #f59278 12px);
+}
+.mdmdiff-in-diff .mdmdiff-inlineoverlay-added {
+    /*background: #6bc795;*/
+    background: none;
+    border-bottom: 4px solid #2c7d51;
+}
+.mdmdiff-in-diff .mdmdiff-inlineoverlay-removed {
+    /* background: #f59278; */
+    background: none;
+    border-bottom: 4px solid #df5c39;
+}
+.mdmdiff-in-diff .mdmdiff-inlineoverlay-diff, .mdmdiff-in-diff .mdmdiff-inlineoverlay-added.mdmdiff-inlineoverlay-removed, .mdmdiff-in-diff .mdmdiff-inlineoverlay-added .mdmdiff-inlineoverlay-removed, .mdmdiff-in-diff .mdmdiff-inlineoverlay-removed .mdmdiff-inlineoverlay-added {
+    /* background: #edbf45; */
+    /* background: repeating-linear-gradient(45deg, #6bc795, #6bc795 6px, #f59278 7px, #f59278 12px); */
+    background: none;
+    border-bottom: 4px solid #000;
+    position: relative;
+}
+.mdmdiff-in-diff .mdmdiff-inlineoverlay-underlying-added {
+    background: #6bc795;
+}
+.mdmdiff-in-diff .mdmdiff-inlineoverlay-underlying-removed {
+    background: #f59278;
+}
+.mdmdiff-in-diff .mdmdiff-inlineoverlay-underlying-diff, .mdmdiff-in-diff .mdmdiff-inlineoverlay-underlying-added.mdmdiff-inlineoverlay-underlying-removed, .mdmdiff-in-diff .mdmdiff-inlineoverlay-underlying-added .mdmdiff-inlineoverlay-underlying-removed, .mdmdiff-in-diff .mdmdiff-inlineoverlay-underlying-removed .mdmdiff-inlineoverlay-underlying-added {
+    /* background: #edbf45; */
+    background: repeating-linear-gradient(45deg, #6bc795, #6bc795 6px, #f59278 7px, #f59278 12px);
+}
+
 
 .mdmreport-format-multiline {
     /* white-space: nowrap; */
@@ -2443,7 +2478,7 @@ TEMPLATE_HTML_BEGIN = r"""
       <script>window.reportType = '{{{{INS_REPORTTYPE}}}}';</script>
       {ADD_SCRIPTS}
 </head>
-<body class="mdmreportpage mdmreportpage-type-{{{{INS_REPORTTYPE}}}}">
+<body class="mdmreportpage {{{{INS_ADDEDCLASSES}}}}">
 <header class="header">
     <div class="container">
         <p>{{{{INS_PAGEHEADER}}}}</p>
