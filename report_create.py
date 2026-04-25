@@ -55,6 +55,7 @@ def html_sanitize_text(inp_value,flags=[]):
     special_pattern = '<<KEYWORD>>'
     special_pattern = html.escape(special_pattern)
     
+    # TODO: remove deprecated code
     result = result.replace(special_pattern.replace('KEYWORD','ADDED'),'<span class="mdmdiff-inlineoverlay-added">').replace(special_pattern.replace('KEYWORD','REMOVED'),'<span class="mdmdiff-inlineoverlay-removed">').replace(special_pattern.replace('KEYWORD','ENDADDED'),'</span>').replace(special_pattern.replace('KEYWORD','ENDREMOVED'),'</span>')
     for keyword in ['ADDED','REMOVED','ENDADDED','ENDREMOVED']:
         if special_pattern.replace('KEYWORD',keyword) in result:
@@ -133,6 +134,10 @@ def html_sanitize_value_general(inp_value,flags=[]):
             return '<span class="mdmdiff-inlineoverlay-added">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
         elif flag=='role-removed':
             return '<span class="mdmdiff-inlineoverlay-removed">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
+        elif flag=='role-underlying_added':
+            return '<span class="mdmdiff-inlineoverlay-underlying-added">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
+        elif flag=='role-underlying_removed':
+            return '<span class="mdmdiff-inlineoverlay-underlying-removed">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
         elif flag=='role-sronly':
             return '<span class="mdmreport-sronly">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
         elif flag=='role-label':
@@ -765,7 +770,6 @@ def produce_html(inp):
     result_ins_cssclasses += [ f'mdmreport-inpdataflag-{sanitize_cssfield(flag)}' for flag in inp_data_flags ]
     if len([flag for flag in inp_data_flags if re.match(r'^\s*?diff_source_\w+:.*data-type:diff\s*?$',flag)])>0:
         result_ins_cssclasses += [ 'mdmdiff-in-diff' ]
-    
 
 
     result_column_headers_global = ( ( [ '{col}'.format(col=col) for col in inp['report_scheme']['columns'] ] if 'columns' in inp['report_scheme'] else [] ) if 'report_scheme' in inp else [] )
