@@ -224,6 +224,72 @@ def html_sanitize_tablecellcontents(inp_value,flags=[]):
     return result
 
 
+def sanitize_text_general(inp_value,flags=[]):
+    def is_property_list(input):
+        try:
+            if isinstance(input,list) and ([(True if ('name' in dict.keys(item) and 'value' in dict.keys(item)) else False) for item in input].count(True)==len(input)):
+                return True
+            return False
+        except:
+            return False
+    def is_diff_segment_dict(input):
+        if isinstance(input,dict):
+            has_payload_textfield = 'text' in input
+            has_payload_partsfield = 'parts' in input and isinstance(input['parts'],list)
+            has_payload = has_payload_textfield or has_payload_partsfield
+            has_conflicting_payloads = has_payload_textfield and has_payload_partsfield
+            all_keys = input.keys()
+            nonstd_keys = set(all_keys) - {'text','parts','role'}
+            if has_payload and not has_conflicting_payloads and (len(nonstd_keys)==0):
+                return True
+        return False
+    def is_empty(input):
+        if input==0:
+            return False
+        elif is_diff_segment_dict(input):
+            if not input:
+                return True
+            if 'text' in input and not is_empty(input['text']):
+                return False
+            if 'parts' in input and not is_empty(input['parts']):
+                return False
+            return True
+        elif isinstance(input,dict):
+            return not input
+        elif is_property_list(input):
+            if not input:
+                return True
+            result = True
+            for piece in input:
+                result = result and is_empty(piece['value'])
+            return result
+        elif isinstance(input,list):
+            if not input:
+                return True
+            result = True
+            for piece in input:
+                result = result and is_empty(piece)
+            return result
+        else:
+            # attention
+            # empty list, empty dict evaluates to empty
+            return not input
+    if is_empty(inp_value):
+        return ''
+    elif is_property_list(inp_value):
+        def esc(s):
+            return f'{s}'.replace('"','""')
+        return '[ '+', '.join([f'{record["name"]} = "{esc(record["value"])}"' for record in inp_value])+' ]'
+    elif is_diff_segment_dict(inp_value) and 'text' in inp_value:
+        return sanitize_text_general(inp_value['text'])
+    elif is_diff_segment_dict(inp_value) and 'parts' in inp_value:
+        return sanitize_text_general(inp_value['parts'])
+    elif isinstance(inp_value,list):
+        return ''.join([sanitize_text_general(s) for s in inp_value])
+    else:
+        return f'{inp_value}'
+
+
 
 
 
@@ -345,7 +411,7 @@ def enchancement_plugin__add_diff_classes_per_row__on_row_before(row,flags,colum
     flags_added = []
     if is_active:
         is_diff_on_diff = len([flag for flag in flags if re.match(r'^\s*?:inp-data:diff_source_\w+:.*data-type:diff\s*?$',flag)])>0
-        diffflag = row[column_specs.index('flagdiff')]
+        diffflag = sanitize_text_general(row[column_specs.index('flagdiff')])
         was_row_added = re.match(r'^.*?(?:(?:add)|(?:insert)).*?',diffflag)
         was_row_removed = re.match(r'^.*?(?:(?:remove)|(?:delete)).*?',diffflag)
         did_any_col_change = False
@@ -404,7 +470,7 @@ def enchancement_plugin__add_diff_classes_per_row__on_col_before(col_data,col_in
             marker_text_append_diffflag_col = '' # ' (mismatch)'
         if column_specs[col_index] == 'flagdiff':
             row = other_cols_ref
-            diffflag = row[column_specs.index('flagdiff')]
+            diffflag = sanitize_text_general(row[column_specs.index('flagdiff')])
             was_row_added = re.match(r'^.*?(?:(?:add)|(?:insert)).*?',diffflag)
             was_row_removed = re.match(r'^.*?(?:(?:remove)|(?:delete)).*?',diffflag)
             did_any_col_change = False
