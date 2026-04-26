@@ -134,9 +134,9 @@ def html_sanitize_value_general(inp_value,flags=[]):
             return '<span class="mdmdiff-inlineoverlay-added">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
         elif flag=='role-removed':
             return '<span class="mdmdiff-inlineoverlay-removed">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
-        elif flag=='role-underlying_added':
+        elif flag=='role-source_added':
             return '<span class="mdmdiff-inlineoverlay-underlying-added">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
-        elif flag=='role-underlying_removed':
+        elif flag=='role-source_removed':
             return '<span class="mdmdiff-inlineoverlay-underlying-removed">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
         elif flag=='role-sronly':
             return '<span class="mdmreport-sronly">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
