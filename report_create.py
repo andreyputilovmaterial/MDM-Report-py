@@ -344,27 +344,28 @@ def enchancement_plugin__add_diff_classes_per_row__on_row_before(row,flags,colum
     is_active = ( not ('plugin_add_diff_classes_per_row_already_called' in flags) ) and ( ('flagdiff' in column_specs) )
     flags_added = []
     if is_active:
-        classes_add = ''
+        is_diff_on_diff = len([flag for flag in flags if re.match(r'^\s*?:inp-data:diff_source_\w+:.*data-type:diff\s*?$',flag)])>0
         diffflag = row[column_specs.index('flagdiff')]
         was_row_added = re.match(r'^.*?(?:(?:add)|(?:insert)).*?',diffflag)
         was_row_removed = re.match(r'^.*?(?:(?:remove)|(?:delete)).*?',diffflag)
-        was_row_changed = False
+        did_any_col_change = False
         was_row_moved = re.match(r'^.*?(?:(?:move)).*?',diffflag) and not re.match(r'^.*?(?:(?:remove)).*?',diffflag)
         was_row_movedfromhere = 'moved from' in diffflag
         # if was_row_moved:
-        #     was_row_changed = True
+        #     did_any_col_change = True
         for col in other_cols_ref:
             # TODO: same comment as in "on_col_before" event
             # do we really need such inspections?
             # this might be complicted
-            was_row_changed = was_row_changed or did_col_change_deep_inspect(col)
+            did_any_col_change = did_any_col_change or did_col_change_deep_inspect(col)
+        # if is_diff_on_diff:
         if was_row_added:
             flags_added.append('format-cssclass-mdmdiff-added')
         if was_row_removed:
             flags_added.append('format-cssclass-mdmdiff-removed')
-        if was_row_changed and not ( was_row_added or was_row_removed ):
+        if did_any_col_change:
             flags_added.append('format-cssclass-mdmdiff-diff')
-        if was_row_moved and not ( was_row_added or was_row_removed or was_row_changed ):
+        if was_row_moved and not ( was_row_added or was_row_removed or did_any_col_change ):
             flags_added.append('format-cssclass-mdmdiff-moved')
             flags_added.append('format-cssclass-mdmdiff-ghost')
         if was_row_movedfromhere:
@@ -397,15 +398,19 @@ def enchancement_plugin__add_diff_classes_per_row__on_col_before(col_data,col_in
             return did_col_change_deep_inspect('{f}'.format(f=data))
     is_active = ( not ('plugin_add_diff_classes_per_row_already_called' in flags) ) and ( ('flagdiff' in column_specs) )
     if is_active:
+        is_diff_on_diff = len([flag for flag in flags if re.match(r'^\s*?:inp-data:diff_source_\w+:.*data-type:diff\s*?$',flag)])>0
+        marker_text_append_diffflag_col = ' (changed)'
+        if is_diff_on_diff:
+            marker_text_append_diffflag_col = '' # ' (mismatch)'
         if column_specs[col_index] == 'flagdiff':
             row = other_cols_ref
             diffflag = row[column_specs.index('flagdiff')]
             was_row_added = re.match(r'^.*?(?:(?:add)|(?:insert)).*?',diffflag)
             was_row_removed = re.match(r'^.*?(?:(?:remove)|(?:delete)).*?',diffflag)
-            was_row_changed = False
+            did_any_col_change = False
             was_row_moved = re.match(r'^.*?(?:(?:move)).*?',diffflag) and not re.match(r'^.*?(?:(?:remove)).*?',diffflag)
             # if was_row_moved:
-            #     was_row_changed = True
+            #     did_any_col_change = True
             for col in row:
                 # TODO: do we need this?
                 # inspecting the whole row, every column, to see if something changed?
@@ -413,10 +418,14 @@ def enchancement_plugin__add_diff_classes_per_row__on_col_before(col_data,col_in
                 # and checking this iteratively... uuufffhhh no
                 # inspecting {'parts':[...,{'text':'...','role':'added|removed|role-added...'}]}
                 # super complicated
-                was_row_changed = was_row_changed or did_col_change_deep_inspect(col)
-            was_row_changed = was_row_changed or was_row_moved # changing position is a change too
-            if was_row_added or was_row_removed or was_row_changed:
-                col_data = {'parts':[col_data,' (changed)']}
+                did_any_col_change = did_any_col_change or did_col_change_deep_inspect(col)
+            if is_diff_on_diff:
+                did_row_change = did_any_col_change
+            else:
+                did_row_change = did_any_col_change or was_row_moved # changing position is a change too
+                did_row_change = was_row_added or was_row_removed or did_row_change
+            if did_row_change:
+                col_data = {'parts':[col_data,marker_text_append_diffflag_col]}
     return col_data,flags
 
 
@@ -782,6 +791,7 @@ def produce_html(inp):
     reporttype = html_sanitize_text(inp['report_type']) if 'report_type' in inp else None
     if reporttype in ['MDD','diff']:
         flags += [f'reporttype-{reporttype}']
+    flags += [ f':inp-data:{flag}' for flag in inp_data_flags ]
     report_data_sections = []
     section_ids_used = []
     for section_obj in ( inp['sections'] if 'sections' in inp else [] ):

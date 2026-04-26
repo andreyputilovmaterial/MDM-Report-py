@@ -218,7 +218,7 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
 .mdmreport-table .mdmreport-record {
     position: relative;
 }
-.mdmreport-table .mdmreport-record.mdmdiff-added {
+.mdmreport-table .mdmreport-record.mdmdiff-added, .mdmreport-table .mdmreport-record.mdmdiff-diff.mdmdiff-added {
     background: #c8f0da;
 }
 /* .mdmreport-table .mdmreport-record.mdmdiff-added td { */
@@ -236,7 +236,7 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
 /*     font-weight: 700; */
 /*     font-size: 70%; */
 /* } */
-.mdmreport-table .mdmreport-record.mdmdiff-removed {
+.mdmreport-table .mdmreport-record.mdmdiff-removed, .mdmreport-table .mdmreport-record.mdmdiff-diff.mdmdiff-removed {
     background: #ffcbbd;
 }
 /* .mdmreport-table .mdmreport-record.mdmdiff-removed td { */
@@ -266,6 +266,13 @@ TEMPLATE_HTML_STYLES_TABLE = r"""
 }
 .mdmreport-table .mdmreport-record.mdmdiff-diff.mdmdiff-specialtype-routing, .mdmreport-table .mdmreport-record.mdmdiff-diff.mdmdiff-specialtype-routing:hover {
     background: #f2f2f2;
+}
+.mdmdiff-in-diff .mdmreport-table .mdmreport-record {
+    display: none;
+}
+.mdmdiff-in-diff .mdmreport-table .mdmreport-record.mdmdiff-diff, .mdmdiff-in-diff .mdmreport-table .mdmreport-record.mdmreport-record-header {
+    display: table-row;
+    background: none;
 }
 .mdmreport-prop-fieldvalue {
     color: #600060;
