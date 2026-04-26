@@ -798,7 +798,8 @@ TEMPLATE_HTML_SCRIPTS = r"""
         function normalizeSectionId(id) {
             return id.replace(/_/ig,' ').replace(/\s/ig,' ').replace(/\bx\d+\b/ig,' ').replace(/\s+/ig,' ').replace(/^\s*/ig,'').replace(/\s*$/ig,'');
         }
-        const columns = new Set(columnIDs);
+        const columnAll = new Set(columnIDs);
+        let columns = new Set(columnAll);
         if(Array.from(columns).length==0) {
             return Array.from(columns);
         }
@@ -812,11 +813,18 @@ TEMPLATE_HTML_SCRIPTS = r"""
         const columns_subsetTranslations = new Set(columnIDs.filter(function(id){return /^\s*?langcode.*\s*?$/.test(id)}));
         const columns_subsetScripting = new Set(columnIDs.filter(function(id){return /^\s*?script\w*\s*?$/.test(id)}));
         const columns_subsetRawText = new Set(columnIDs.filter(function(id){return /^\s*?rawtext\w*\s*?$/.test(id)}));
+        /* if diff on diffs */
+        if( (columns_subsetFlag.size>1) && columns_subsetFlag.has('flagdiff') ) {
+            const columns_subsetUnimportantFlagsToHide = setDifference(columns_subsetFlag,new Set(['flagdiff']));
+            columns = setDifference(columns,columns_subsetUnimportantFlagsToHide);
+        }
+        /* if "routing" is the only section shown */
         if( ( (Array.from(sectionNames)).includes('routing') ) && ( Array.from(setDifference(sectionNames,['routing']))==0 ) ) {
             if(Array.from(columns_subsetLabel).length>0) {
                 return Array.from(columns_subsetLabel);
             }
         }
+        /* if layout represents diff in text files, comparing raw contents */
         if( ( Array.from(sectionNames).length==1 ) && ( Array.from(columns_subsetRawText).length>0 ) ) {
             if(Array.from(columns_subsetRawText).length>0) {
                 const statisticsNumRows = (function(){
@@ -841,9 +849,11 @@ TEMPLATE_HTML_SCRIPTS = r"""
                 }
             }
         }
+        /* if scheme is representing excel file, hide clunky "row name" column */
         if( ((addedData.columnDefs.filter(a=>(a.id=='name')&&(a.text=='Row unique indentifier'))).length>0) && ((addedData.columnDefs.filter(a=>(/^\s*?axis\s*?\(\s*?side\s*?\).*?/.test(a.text)))).length>0) ) {
             return Array.from(setDifference( columns, columns_subsetName ))
         }
+        /* if likely a MDD, hide translationoverlays columns */
         if( (addedData.sectionDefs.map(a=>a.text).filter(a=>(/.*?(?:shared[_\s]+list|(?:\bfield(?:s)?\b)).*?/.test(a))).length>0) && ( (Array.from(columns_subsetName)).length>0 ) && ( (Array.from(columns_subsetLabel)).length>0 ) ) {
             const result_TranslationsExcluded = setDifference( columns, columns_subsetTranslations )
             if(Array.from(result_TranslationsExcluded).length>0) {
