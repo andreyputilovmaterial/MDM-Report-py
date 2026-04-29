@@ -9,19 +9,46 @@ import html
 import traceback, sys
 import xml.etree.ElementTree as ET # for enchancement_plugin__validate_labels__on_col_after
 
+from importlib import resources
 
 
 
-if __name__ == '__main__':
-    # run as a program
-    import report_html_template
-elif '.' in __name__:
-    # package
-    from . import report_html_template
+def is_in_pinliner():
+    for p in sys.meta_path:
+        try:
+            cls_str = f'{(p.__class__)}'
+            if re.match(r'.*\.InlinerImporter\b.*',cls_str):
+                return True
+        except:
+            pass
+    return False
+
+
+
+CONFIG_USE_COMPILED_TEMPLATE = is_in_pinliner()
+
+
+
+if CONFIG_USE_COMPILED_TEMPLATE:
+    if __name__ == '__main__':
+        # run as a program
+        from TEMPLATE_COMPILED import TEMPLATE as report_html_template
+    elif '.' in __name__:
+        # package
+        from .TEMPLATE_COMPILED import TEMPLATE as report_html_template
+    else:
+        # included with no parent package
+        from TEMPLATE_COMPILED import TEMPLATE as report_html_template
 else:
-    # included with no parent package
-    import report_html_template
-
+    if __name__ == '__main__':
+        # run as a program
+        import report_html_template
+    elif '.' in __name__:
+        # package
+        from . import report_html_template
+    else:
+        # included with no parent package
+        import report_html_template
 
 
 

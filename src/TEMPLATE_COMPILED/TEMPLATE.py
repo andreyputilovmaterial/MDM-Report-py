@@ -1,123 +1,109 @@
 
-import re
-import html
 
-
-def preptext_html_alreadyescaped(s):
-    if re.match(r'[<>]',re.sub(r'(?:<<(?:ADDED|ENDADDED|REMOVED|ENDREMOVED)>>|&#60;&#60;HIDDENLINEBREAK&#62;&#62;)','',s)):
-        raise Exception('Create HTML report: Field values should already be escaped in the input source. Some field contains "<" or ">". Please revise: {field}'.format(field=s))
-    return re.sub(r'<<ADDED>>','<span class="mdmdiff-inlineoverlay-added">',re.sub(r'<<REMOVED>>','<span class="mdmdiff-inlineoverlay-removed">',re.sub(r'<<(?:ENDADDED|ENDREMOVED)>>','</span>',re.sub(r'&#60;&#60;HIDDENLINEBREAK&#62;&#62;','<!-- HIDDENLINEBREAK --><br />',s))))
-
-def preptext_html_needsescaping(s):
-    s = re.sub(r'(?:&#60;|<)(?:&#60;|<)HIDDENLINEBREAK(?:&#62;|>)(?:&#62;|>)','<!-- HIDDENLINEBREAK --><br />',s)
-    s = html.escape(s)
-    return s.replace(html.escape('<<ADDED>>'),'<span class="mdmdiff-inlineoverlay-added">').replace(html.escape('<<REMOVED>>'),'<span class="mdmdiff-inlineoverlay-removed">').replace(html.escape('<<ENDADDED>>'),'replacement').replace(html.escape('<<ENDREMOVED>>'),'</span>').replace(html.escape('<!-- HIDDENLINEBREAK --><br />'),'<!-- HIDDENLINEBREAK --><br />')
-
-
-
-# TODO: .mdmdiff-inlineoverlay-added - highlight the whole row
-# Jira - make it working not only in mdd, or hide the whole functionality in other types of files
-
-
-TEMPLATE_HTML_CSS_NORMALIZECSS = """
+TEMPLATE_HTML_BEGIN = r"""
+<!doctype html>
+<html lang="">
+<head>
+      <meta charset="UTF-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta name="viewport" content="width=device-width">
+      <title>{{INS_TITLE}}</title>
+      <style>
 article,aside,details,figcaption,figure,footer,header,hgroup,nav,section,summary{display:block;}audio,canvas,video{display:inline-block;*display:inline;*zoom:1;}audio:not([controls]) {display:none;height:0;}[hidden]{display:none;}html{font-size:100%;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}html,button,input,select,textarea{font-family:sans-serif;}body{margin:0;}a:focus{outline:thin dotted;}a:active,a:hover{outline:0;}h1{font-size:2em;margin:0.67em 0;}h2{font-size:1.5em;margin:0.83em 0;}h3{font-size:1.17em;margin:1em 0;}h4{font-size:1em;margin:1.33em 0;}h5{font-size:0.83em;margin:1.67em 0;}h6{font-size:0.75em;margin:2.33em 0;}abbr[title]{border-bottom:1px dotted;}b,strong{font-weight:bold;}blockquote{margin:1em 40px;}dfn{font-style:italic;}mark{background:#ff0;color:#000;}p,pre{margin:1em 0;}code,kbd,pre,samp{font-family:monospace,serif;_font-family:'courier new',monospace;font-size:1em;}pre{white-space:pre;white-space:pre-wrap;word-wrap:break-word;}q{quotes:none;}q:before,q:after{content:'';content:none;}small{font-size:75%;}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline;}sup{top:-0.5em;}sub{bottom:-0.25em;}dl,menu,ol,ul{margin:1em 0;}dd{margin:0 0 0 40px;}menu,ol,ul{padding:0 0 0 40px;}nav ul,nav ol{list-style:none;list-style-image:none;}img{border:0;-ms-interpolation-mode:bicubic;}svg:not(:root) {overflow:hidden;}figure{margin:0;}form{margin:0;}fieldset{border:1px solid #c0c0c0;margin:0 2px;padding:0.35em 0.625em 0.75em;}legend{border:0;padding:0;white-space:normal;*margin-left:-7px;}button,input,select,textarea{font-size:100%;margin:0;vertical-align:baseline;*vertical-align:middle;}button,input{line-height:normal;}button,html input[type="button"],input[type="reset"],input[type="submit"]{-webkit-appearance:button;cursor:pointer;*overflow:visible;}button[disabled],input[disabled]{cursor:default;}input[type="checkbox"],input[type="radio"]{box-sizing:border-box;padding:0;*height:13px;*width:13px;}input[type="search"]{-webkit-appearance:textfield;-moz-box-sizing:content-box;-webkit-box-sizing:content-box;box-sizing:content-box;}input[type="search"]::-webkit-search-cancel-button,input[type="search"]::-webkit-search-decoration{-webkit-appearance:none;}button::-moz-focus-inner,input::-moz-focus-inner{border:0;padding:0;}textarea{overflow:auto;vertical-align:top;}table{border-collapse:collapse;border-spacing:0;}
-    """
-
-TEMPLATE_HTML_STYLES = """
-    body {
-        font-size: 14px;
-        Font-family: "Helvetica";
+</style>
+      <style>
+body {
+    font-size: 14px;
+    Font-family: "Helvetica";
+}
+* {
+    box-sizing: border-box;
+}
+.clearfix:after {
+   content: " "; /* Older browser do not support empty content */
+   visibility: hidden;
+   display: block;
+   height: 0;
+   clear: both;
+}
+.error {
+    color: #cc0000;
+    font-weight: 500;
+}
+.container {
+    margin: 0 15px 0;
+}
+@media all and (min-width: 1300px) {
+    .container {
+        margin: 0 auto 0;
+        width: 1200px;
     }
-    * {
-        box-sizing: border-box;
+}
+@media all and (min-width: 1650px) {
+    .container {
+        margin: 0 auto 0;
+        width: 1500px;
     }
-    .clearfix:after {
-       content: " "; /* Older browser do not support empty content */
-       visibility: hidden;
-       display: block;
-       height: 0;
-       clear: both;
+}
+@media all and (min-width: 1800px) {
+    .container {
+        margin: 0 auto 0;
+        width: 1700px;
     }
-   .error {
-        color: #cc0000;
-        font-weight: 500;
-    }
-   .container {
-        margin: 0 15px 0;
-    }
-    @media all and (min-width: 1300px) {
-        .container {
-            margin: 0 auto 0;
-            width: 1200px;
-        }
-    }
-    @media all and (min-width: 1650px) {
-        .container {
-            margin: 0 auto 0;
-            width: 1500px;
-        }
-    }
-    @media all and (min-width: 1800px) {
-        .container {
-            margin: 0 auto 0;
-            width: 1700px;
-        }
-    }
-    h1 {
-        font-weight: 700;
-        font-size: 32px;
-        color: #333;
-        margin: 0;
-        padding: 0px 0 30px;
-    }
-    h2 {
-        font-weight: 700;
-        font-size: 21px;
-        color: #222;
-        margin: 0;
-        padding: 22.5px 0 7.5px;
-    }
-    h3 {
-        font-weight: 700;
-        font-size: 17px;
-        color: #111;
-        margin: 0;
-        padding: 22.5px 0 7.5px;
-    }
-    .header {
-        padding: 15px 0 15px;
-        border-bottom: 1px solid #eee;
-    }
-    .footer {
-        padding: 15px 0 15px;
-        border-top: 1px solid #eee;
-    }
-    .main {
-        padding: 15px 0 15px;
-    }
-    .wrapper {
-        width: 100%; max-width: 100%; overflow-x: auto;
-    }
-    .mdmreport-banner {
-        display: block; position: relative; padding: 1em; margin: 0 0 1em; border: #ddd solid 1px;
-    }
-    .mdmreport-banners-wrapper-noborders .mdmreport-banner {
-        padding: 0;
-        border: none;
-    }
-    .mdmreport-banners-wrapper-noborders .mdmreport-banner h3 {
-        margin-top: 0;
-    }
-    .mdmreport-contentcell-fullwidth {
-        width: 100%;
-        min-width: 100%;
-    }
-    .mdmreport-table-dummy .mdmreport-record .mdmreport-contentcell {
-        padding: 7.5px 7.5px 7.5px 15px;
-    }
-"""
-
-TEMPLATE_HTML_STYLES_TABLE = r"""
+}
+h1 {
+    font-weight: 700;
+    font-size: 32px;
+    color: #333;
+    margin: 0;
+    padding: 0px 0 30px;
+}
+h2 {
+    font-weight: 700;
+    font-size: 21px;
+    color: #222;
+    margin: 0;
+    padding: 22.5px 0 7.5px;
+}
+h3 {
+    font-weight: 700;
+    font-size: 17px;
+    color: #111;
+    margin: 0;
+    padding: 22.5px 0 7.5px;
+}
+.header {
+    padding: 15px 0 15px;
+    border-bottom: 1px solid #eee;
+}
+.footer {
+    padding: 15px 0 15px;
+    border-top: 1px solid #eee;
+}
+.main {
+    padding: 15px 0 15px;
+}
+.wrapper {
+    width: 100%; max-width: 100%; overflow-x: auto;
+}
+.mdmreport-banner {
+    display: block; position: relative; padding: 1em; margin: 0 0 1em; border: #ddd solid 1px;
+}
+.mdmreport-banners-wrapper-noborders .mdmreport-banner {
+    padding: 0;
+    border: none;
+}
+.mdmreport-banners-wrapper-noborders .mdmreport-banner h3 {
+    margin-top: 0;
+}
+.mdmreport-contentcell-fullwidth {
+    width: 100%;
+    min-width: 100%;
+}
+.mdmreport-table-dummy .mdmreport-record .mdmreport-contentcell {
+    padding: 7.5px 7.5px 7.5px 15px;
+}</style>
+      <style>
 .mdmreport-section-wrapper {
     /* font-size: 12px; */
     font-size: 13px;
@@ -437,52 +423,286 @@ td.mdmreport-contentcell label {
     background: rgba(224,224,224,0.55);
 }
 </style>
+      <script>window.reportType = '{{INS_REPORTTYPE}}';</script>
+      
+<style>
+    /* beaufitydates - css */
+    /* Format dates */
+/* nothing */
 
-    """
-
-TEMPLATE_HTML_SCRIPTS = r"""
+</style>
 <script>
-(function() {
-    /* === beautify dates js === */
-    function beautifyDates() {
-        let errorBannerEl = null;
-        try {
-            errorBannerEl = document.querySelector('#error_banner');
-            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
-        } catch(e) {
-            throw e;
-            return;
+    /* beaufitydates - js */
+    /* Format dates */
+(function(){
+    errorBannerReadyPromise = new Promise((resolve,reject)=>{
+        function detect() {
+            try {
+                const _errorBannerEl = document.querySelector('#error_banner');
+                if( !_errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                resolve(_errorBannerEl);
+            } catch(e) {
+                throw e;
+                return reject(e);
+            }
         }
+        document.addEventListener('DOMContentLoaded',detect)
+    });
+    const pluginName = 'beaufitydates';
+    function printErrors(e) {
         try {
-            const elements = document.querySelectorAll('[data-role="date"]');
-            Array.prototype.forEach.call(elements,function(el) {
-                const content = el.innerText||el.textContent;
-                const dt = /[1-9]/.test(content) ? new Date(content) : undefined;
-                // const result = dt ? `original: ${content}, converted: ${dt}` : content; // for debugging
-                const result = dt ? `${dt}` : content;
-                el.innerText = result;
-            });
-            document.removeEventListener('DOMContentLoaded',beautifyDates);
-        } catch(e) {
+            function escapeHtml(s) {
+                const dummy = document.createElement('div');
+                dummy.innerText = s.replace(/\n/ig,'\\n');
+                return dummy.innerHTML;
+            }
+            errorBannerReadyPromise.then(errorBannerEl=>{errorBannerEl.innerHTML += escapeHtml(`Error: ${pluginName}: ${e}`)+'<br />';})
+        } catch(ee) {};
+    }
+    function wrapErrors(fn) {
+        return (...a) => {
             try {
-                function escapeHtml(s) {
-                    const dummy = document.createElement('div');
-                    dummy.innerText = s.replace(/\n/ig,'\\n');
-                    return dummy.innerHTML;
-                }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-            } catch(ee) {};
-            try {
-                document.removeEventListener('DOMContentLoaded',beautifyDates);
-            } catch(ee) {}
-            throw e;
+                return fn(...a);
+            } catch(e) {
+                printErrors(e);
+                throw e;
+            }
         }
     }
-    window.addEventListener('DOMContentLoaded',beautifyDates);
+    try {
+            /* === beautify dates js === */
+function beautifyDates() {
+    const elements = document.querySelectorAll('[data-role="date"]');
+    Array.prototype.forEach.call(elements,function(el) {
+        const content = el.innerText||el.textContent;
+        const dt = /[1-9]/.test(content) ? new Date(content) : undefined;
+        // const result = dt ? `original: ${content}, converted: ${dt}` : content; // for debugging
+        const result = dt ? `${dt}` : content;
+        el.innerText = result;
+    });
+}
+window.addEventListener('mdmdocument',wrapErrors(beautifyDates));
+window.addEventListener('mdmtable',wrapErrors(beautifyDates));
+
+    } catch(e) {
+        printErrors(e);
+        throw e;
+    }
 })()
 </script>
+
 <style>
-    /* === revealing ellipsis links plugin === */
+    /* aligncolwidths - css */
+    /* Try to calculate better col widths and adjust */
+
+</style>
+<script>
+    /* aligncolwidths - js */
+    /* Try to calculate better col widths and adjust */
+(function(){
+    errorBannerReadyPromise = new Promise((resolve,reject)=>{
+        function detect() {
+            try {
+                const _errorBannerEl = document.querySelector('#error_banner');
+                if( !_errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                resolve(_errorBannerEl);
+            } catch(e) {
+                throw e;
+                return reject(e);
+            }
+        }
+        document.addEventListener('DOMContentLoaded',detect)
+    });
+    const pluginName = 'aligncolwidths';
+    function printErrors(e) {
+        try {
+            function escapeHtml(s) {
+                const dummy = document.createElement('div');
+                dummy.innerText = s.replace(/\n/ig,'\\n');
+                return dummy.innerHTML;
+            }
+            errorBannerReadyPromise.then(errorBannerEl=>{errorBannerEl.innerHTML += escapeHtml(`Error: ${pluginName}: ${e}`)+'<br />';})
+        } catch(ee) {};
+    }
+    function wrapErrors(fn) {
+        return (...a) => {
+            try {
+                return fn(...a);
+            } catch(e) {
+                printErrors(e);
+                throw e;
+            }
+        }
+    }
+    try {
+            /* === align col widths js === */
+function alignColWidthsInit() {
+    /* const tables_all = document.querySelectorAll('.mdmreport-table'); */
+    const cssSheet = new CSSStyleSheet();
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets,cssSheet];
+    function process() {
+        try {
+            const widthDefault = 300;
+            const tables_all = document.querySelectorAll('.mdmreport-table');
+            // first, clear out previous formatting
+            Array.prototype.forEach.call(tables_all,function(tableEl) {
+                tableEl.classList.remove('mdmreport-table-formatting-fixeddimensions');
+            });
+            cssSheet.replaceSync('');
+            (function() {
+                const widthRaw = widthDefault;
+                const widthVal = `${widthRaw}px`;
+                const cssSyntax = `.mdmreport-table td { max-width: ${widthVal}; }`
+                cssSheet.replaceSync(cssSyntax);
+            })();
+            /* stop if data is too big */
+            if( Array.from(document.querySelectorAll('.mdmreport-table td')).length>500*16*26 )
+                return;
+            // now find new width values
+            const colWidthsData = (function(){
+                const result = [];
+                Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
+                    const rowElements = tableEl.querySelectorAll('tr.mdmreport-record');
+                    if( rowElements.length>0 ) {
+                        colElements = rowElements[0].querySelectorAll('tr.mdmreport-record>td');
+                        Array.prototype.forEach.call(colElements,function(colEl,colIndex) {
+                            if(!result[colIndex]) result[colIndex] = [];
+                            result[colIndex][tableIndex] = colEl.getBoundingClientRect().width;
+                        });
+                    }
+                });
+                return result;
+            })();
+            const colMaxIndex = colWidthsData.length-1;
+            const colParentWidth = (function(){
+                var result = 0;
+                Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
+                    if(!(result>0)) {
+                        if(!!tableEl.parentElement) {
+                            result = tableEl.parentElement.getBoundingClientRect().width;
+                        }
+                    }
+                });
+                return result;
+            })();
+            const numColsCounted = (function(){
+                const isValValid = val => isFinite(val) && (val>0);
+                var result = [];
+                for(let colIndex=0;colIndex<=colMaxIndex;++colIndex) {
+                    Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
+                        const val = colWidthsData[colIndex][tableIndex];
+                        if(isValValid(val)) {
+                            result[colIndex] = 1;
+                        }
+                    });
+                }
+                return result.reduce((acc,e)=>acc+(e>0?1:0),0);
+            })();
+            const colMinWidth = 60;
+            const colMaxAllowedWidth = (function(){
+                var result = document.querySelector('body').getBoundingClientRect().width;
+                if( numColsCounted==1 ) {
+                    result = colParentWidth;
+                } else {
+                    const resultVerA = colParentWidth - colMinWidth * 1.19 >= colMinWidth ? colParentWidth - colMinWidth * 1.19 : colMinWidth;
+                    const resultVerB = (colParentWidth>(numColsCounted+.24)*colMinWidth?colParentWidth:(numColsCounted+.24)*colMinWidth) / numColsCounted;
+                    result = (resultVerA * resultVerB) ** .5;
+                }
+                return result;
+            })();
+            const colWidthsAverageAcrossSections = (function(){
+                const isValValid = val => isFinite(val) && (val>0);
+                var result = [];
+                for(let colIndex=0;colIndex<=colMaxIndex;++colIndex) {
+                    var numSectionsCounted = 0;
+                    if(!result[colIndex]) result[colIndex] = 0;
+                    Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
+                        const val = colWidthsData[colIndex][tableIndex];
+                        if(isValValid(val)) {
+                            if(!result[colIndex]) result[colIndex] = 0;
+                            result[colIndex] += val;
+                            numSectionsCounted++;
+                        }
+                    });
+                    result[colIndex] = numSectionsCounted>0 ? result[colIndex] / numSectionsCounted : 0;
+                }
+                return result;
+            })();
+            const colWidthsAdjusted = (function(){
+                const isValValid = val => isFinite(val) && (val>0);
+                var result = Array.from(colWidthsAverageAcrossSections);
+                const sum = result.reduce((acc,val)=>isValValid(val)?(acc+val):acc,0);
+                if( sum<colParentWidth ) {
+                    /* const multiplier = (colParentWidth-0.00001) / sum; */
+                    /* result = result.map(a=>a*multiplier); */
+                    const isBig = a => a>widthDefault*.99;
+                    const addPart = result.map(a=>({width:a,addCount:a>0?(isBig(a)?4:1):0}));
+                    const multiplier = ( colParentWidth-0.00001 + addPart.reduce((acc,e)=>acc+colMinWidth*e.addCount,0) ) / addPart.reduce((acc,e)=>acc+e.width+colMinWidth*e.addCount,0);
+                    if(!(multiplier>=1)) throw new Error('resizing columns: wrong multiplier');
+                    result = addPart.map(a=>a.width*multiplier+colMinWidth*a.addCount*(multiplier-1));
+                }
+                result = result.map( a => a>=colMinWidth ? a : colMinWidth );
+                return result;
+            })();
+            (function(){
+                var cssSyntax = '';
+                for(colIndex=0;colIndex<=colMaxIndex;colIndex++) {
+                    const colClass = `mdmreport-colindex-${colIndex}`;
+                    const widthRaw = `${( isFinite(colWidthsAdjusted[colIndex]) && (colWidthsAdjusted[colIndex]>colMaxAllowedWidth) ? colMaxAllowedWidth : colWidthsAdjusted[colIndex] )}`;
+                    const widthVal = `${widthRaw}px`;
+                    cssSyntax = cssSyntax + ` .${colClass} { width: ${widthVal}!important; max-width: ${widthVal}!important; } `;
+                }
+                cssSheet.replaceSync(cssSyntax);
+            })();
+            Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
+                //const rowElements = tableEl.querySelectorAll('tr.mdmreport-record');
+                //Array.prototype.forEach.call(rowElements,function(rowElement,tableIndex) {
+                //    colElements = rowElement.querySelectorAll('tr.mdmreport-record>td');
+                //    Array.prototype.forEach.call(colElements,function(colEl,colIndex) {
+                //        colEl.width = colWidthsAdjusted[colIndex];
+                //    });
+                //});
+                tableEl.classList.add('mdmreport-table-formatting-fixeddimensions');
+            });
+        } catch(e) {
+            printErrors(e);
+            throw e;
+        }
+    };
+    const dispatchDelayedEventData = {
+        promise: null
+    };
+    function processDelayed() {
+        if(!!dispatchDelayedEventData.promise) {
+            /* setTimeout(resolve,40); */
+        } else {
+            dispatchDelayedEventData.promise = new Promise((resolve,reject)=>{
+                setTimeout(resolve,40);
+            });
+            dispatchDelayedEventData.promise.then(()=>{
+                dispatchDelayedEventData.promise = null;
+                return process();
+            });
+        }
+    }
+    window.addEventListener('resize',wrapErrors(processDelayed));
+    window.addEventListener('mdmtable',wrapErrors(processDelayed));
+    document.addEventListener('mdmdocument',wrapErrors(processDelayed));
+}
+alignColWidthsInit();
+
+
+    } catch(e) {
+        printErrors(e);
+        throw e;
+    }
+})()
+</script>
+
+<style>
+    /* expandable - css */
+    /* Expandable blocks, usually in "context" diff segments */
+    /* === expandable blocks === */
     .mdmreport-txt-ellipsis {
         background: rgba(173,216,230,.75);
         /* color: #555; */ color: #000;
@@ -547,260 +767,132 @@ TEMPLATE_HTML_SCRIPTS = r"""
 
 </style>
 <script>
-(function() {
-    /* === revealing ellipsis links plugin === */
-    function ellipsisAssignClickHandler() {
-        let errorBannerEl = null;
-        try {
-            errorBannerEl = document.querySelector('#error_banner');
-            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
-        } catch(e) {
-            throw e;
-            return;
-        }
-        try {
-            const clickListener = function(event,el) {
-                    event.preventDefault();
-                    const content = el.dataset.ellipsis;
-                    const elNew = document.createElement('span');
-                    elNew.classList.add('mdmreport-ellipsis-unhidden');
-                    elNew.innerHTML = content;
-                    el.replaceWith(elNew);
-                    return false;
-                }
-            document.addEventListener('click',function(event) {
-                const el = event.target.closest('[data-role="ellipsis"]');
-                if (!el) return;
-                return clickListener(event,el);
-            });
-            const beautifyEllipsis = function(el) {
-                if( !el.matches('.mdmreport-txt-ellipsis') ) throw new Error('should be of .mdmreport-txt-ellipsis class!');
-                el.classList.add('mdmreport-txt-ellipsis-enchanced');
-                el.querySelector('.mdmreport-txt-ellipsis-1').classList.add('mdmreport-txt-ellipsis-start');
-                el.querySelector('.mdmreport-txt-ellipsis-2').classList.add('mdmreport-txt-ellipsis-full');
-                el.querySelector('.mdmreport-txt-ellipsis-3').classList.add('mdmreport-txt-ellipsis-end');
-                Array.from(el.querySelectorAll('.mdmreport-txt-ellipsis-br')).forEach(function(i){i.remove();})
+    /* expandable - js */
+    /* Expandable blocks, usually in "context" diff segments */
+(function(){
+    errorBannerReadyPromise = new Promise((resolve,reject)=>{
+        function detect() {
+            try {
+                const _errorBannerEl = document.querySelector('#error_banner');
+                if( !_errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                resolve(_errorBannerEl);
+            } catch(e) {
+                throw e;
+                return reject(e);
             }
-            window.beautifyEllipsis = beautifyEllipsis; // TODO: debug
-        } catch(e) {
+        }
+        document.addEventListener('DOMContentLoaded',detect)
+    });
+    const pluginName = 'expandable';
+    function printErrors(e) {
+        try {
+            function escapeHtml(s) {
+                const dummy = document.createElement('div');
+                dummy.innerText = s.replace(/\n/ig,'\\n');
+                return dummy.innerHTML;
+            }
+            errorBannerReadyPromise.then(errorBannerEl=>{errorBannerEl.innerHTML += escapeHtml(`Error: ${pluginName}: ${e}`)+'<br />';})
+        } catch(ee) {};
+    }
+    function wrapErrors(fn) {
+        return (...a) => {
             try {
-                function escapeHtml(s) {
-                    const dummy = document.createElement('div');
-                    dummy.innerText = s.replace(/\n/ig,'\\n');
-                    return dummy.innerHTML;
-                }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-            } catch(ee) {};
-            try {
-                document.removeEventListener('DOMContentLoaded',ellipsisAssignClickHandler);
-            } catch(ee) {}
-            throw e;
+                return fn(...a);
+            } catch(e) {
+                printErrors(e);
+                throw e;
+            }
         }
     }
-    window.addEventListener('DOMContentLoaded',ellipsisAssignClickHandler);
-    //window.addEventListener('mdmreport_table',beautifyEllipsis);
+    try {
+        
+    /* === expandable blocks plugin === */
+function ellipsisAssignClickHandler() {
+    const clickListener = function(event,el) {
+        event.preventDefault();
+        const content = el.dataset.ellipsis;
+        const elNew = document.createElement('span');
+        elNew.classList.add('mdmreport-ellipsis-unhidden');
+        elNew.innerHTML = content;
+        el.replaceWith(elNew);
+        return false;
+    }
+    document.addEventListener('click',wrapErrors(function(event) {
+        const el = event.target.closest('[data-role="ellipsis"]');
+        if (!el) return;
+        return clickListener(event,el);
+    }));
+    const beautifyEllipsis = function(el) {
+        if( !el.matches('.mdmreport-txt-ellipsis') ) throw new Error('should be of .mdmreport-txt-ellipsis class!');
+        el.classList.add('mdmreport-txt-ellipsis-enchanced');
+        el.querySelector('.mdmreport-txt-ellipsis-1').classList.add('mdmreport-txt-ellipsis-start');
+        el.querySelector('.mdmreport-txt-ellipsis-2').classList.add('mdmreport-txt-ellipsis-full');
+        el.querySelector('.mdmreport-txt-ellipsis-3').classList.add('mdmreport-txt-ellipsis-end');
+        Array.from(el.querySelectorAll('.mdmreport-txt-ellipsis-br')).forEach(function(i){i.remove();})
+    }
+}
+window.addEventListener('mdmdocument',wrapErrors(ellipsisAssignClickHandler));
+// window.addEventListener('mdmtable',wrapErrors(ellipsisAssignClickHandler));
+
+    } catch(e) {
+        printErrors(e);
+        throw e;
+    }
 })()
 </script>
+
+<style>
+    /* showhidecolumns - css */
+    /* Show/hide columns */
+
+</style>
 <script>
-    /* === align col widths js === */
-(function() {
-    function alignColWidths() {
-        /* if( document.documentElement.innerHTML.length > 10000000 )
-            return; */
-        let errorBannerEl = null;
-        try {
-            errorBannerEl = document.querySelector('#error_banner');
-            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
-        } catch(e) {
-            throw e;
-            return;
-        }
-        try {
-            /* const tables_all = document.querySelectorAll('.mdmreport-table'); */
-            const cssSheet = new CSSStyleSheet();
-            document.adoptedStyleSheets = [...document.adoptedStyleSheets,cssSheet];
-            function process() {
-                try {
-                    const widthDefault = 300;
-                    const tables_all = document.querySelectorAll('.mdmreport-table');
-                    // first, clear out previous formatting
-                    Array.prototype.forEach.call(tables_all,function(tableEl) {
-                        tableEl.classList.remove('mdmreport-table-formatting-fixeddimensions');
-                    });
-                    cssSheet.replaceSync('');
-                    (function() {
-                        const widthRaw = widthDefault;
-                        const widthVal = `${widthRaw}px`;
-                        const cssSyntax = `.mdmreport-table td { max-width: ${widthVal}; }`
-                        cssSheet.replaceSync(cssSyntax);
-                    })();
-                    /* stop if data is too big */
-                    if( Array.from(document.querySelectorAll('.mdmreport-table td')).length>500*16*26 )
-                        return;
-                    // now find new width values
-                    const colWidthsData = (function(){
-                        const result = [];
-                        Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
-                            const rowElements = tableEl.querySelectorAll('tr.mdmreport-record');
-                            if( rowElements.length>0 ) {
-                                colElements = rowElements[0].querySelectorAll('tr.mdmreport-record>td');
-                                Array.prototype.forEach.call(colElements,function(colEl,colIndex) {
-                                    if(!result[colIndex]) result[colIndex] = [];
-                                    result[colIndex][tableIndex] = colEl.getBoundingClientRect().width;
-                                });
-                            }
-                        });
-                        return result;
-                    })();
-                    const colMaxIndex = colWidthsData.length-1;
-                    const colParentWidth = (function(){
-                        var result = 0;
-                        Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
-                            if(!(result>0)) {
-                                if(!!tableEl.parentElement) {
-                                    result = tableEl.parentElement.getBoundingClientRect().width;
-                                }
-                            }
-                        });
-                        return result;
-                    })();
-                    const numColsCounted = (function(){
-                        const isValValid = val => isFinite(val) && (val>0);
-                        var result = [];
-                        for(let colIndex=0;colIndex<=colMaxIndex;++colIndex) {
-                            Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
-                                const val = colWidthsData[colIndex][tableIndex];
-                                if(isValValid(val)) {
-                                    result[colIndex] = 1;
-                                }
-                            });
-                        }
-                        return result.reduce((acc,e)=>acc+(e>0?1:0),0);
-                    })();
-                    const colMinWidth = 60;
-                    const colMaxAllowedWidth = (function(){
-                        var result = document.querySelector('body').getBoundingClientRect().width;
-                        if( numColsCounted==1 ) {
-                            result = colParentWidth;
-                        } else {
-                            const resultVerA = colParentWidth - colMinWidth * 1.19 >= colMinWidth ? colParentWidth - colMinWidth * 1.19 : colMinWidth;
-                            const resultVerB = (colParentWidth>(numColsCounted+.24)*colMinWidth?colParentWidth:(numColsCounted+.24)*colMinWidth) / numColsCounted;
-                            result = (resultVerA * resultVerB) ** .5;
-                        }
-                        return result;
-                    })();
-                    const colWidthsAverageAcrossSections = (function(){
-                        const isValValid = val => isFinite(val) && (val>0);
-                        var result = [];
-                        for(let colIndex=0;colIndex<=colMaxIndex;++colIndex) {
-                            var numSectionsCounted = 0;
-                            if(!result[colIndex]) result[colIndex] = 0;
-                            Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
-                                const val = colWidthsData[colIndex][tableIndex];
-                                if(isValValid(val)) {
-                                    if(!result[colIndex]) result[colIndex] = 0;
-                                    result[colIndex] += val;
-                                    numSectionsCounted++;
-                                }
-                            });
-                            result[colIndex] = numSectionsCounted>0 ? result[colIndex] / numSectionsCounted : 0;
-                        }
-                        return result;
-                    })();
-                    const colWidthsAdjusted = (function(){
-                        const isValValid = val => isFinite(val) && (val>0);
-                        var result = Array.from(colWidthsAverageAcrossSections);
-                        const sum = result.reduce((acc,val)=>isValValid(val)?(acc+val):acc,0);
-                        if( sum<colParentWidth ) {
-                            /* const multiplier = (colParentWidth-0.00001) / sum; */
-                            /* result = result.map(a=>a*multiplier); */
-                            const isBig = a => a>widthDefault*.99;
-                            const addPart = result.map(a=>({width:a,addCount:a>0?(isBig(a)?4:1):0}));
-                            const multiplier = ( colParentWidth-0.00001 + addPart.reduce((acc,e)=>acc+colMinWidth*e.addCount,0) ) / addPart.reduce((acc,e)=>acc+e.width+colMinWidth*e.addCount,0);
-                            if(!(multiplier>=1)) throw new Error('resizing columns: wrong multiplier');
-                            result = addPart.map(a=>a.width*multiplier+colMinWidth*a.addCount*(multiplier-1));
-                        }
-                        result = result.map( a => a>=colMinWidth ? a : colMinWidth );
-                        return result;
-                    })();
-                    (function(){
-                        var cssSyntax = '';
-                        for(colIndex=0;colIndex<=colMaxIndex;colIndex++) {
-                            const colClass = `mdmreport-colindex-${colIndex}`;
-                            const widthRaw = `${( isFinite(colWidthsAdjusted[colIndex]) && (colWidthsAdjusted[colIndex]>colMaxAllowedWidth) ? colMaxAllowedWidth : colWidthsAdjusted[colIndex] )}`;
-                            const widthVal = `${widthRaw}px`;
-                            cssSyntax = cssSyntax + ` .${colClass} { width: ${widthVal}!important; max-width: ${widthVal}!important; } `;
-                        }
-                        cssSheet.replaceSync(cssSyntax);
-                    })();
-                    Array.prototype.forEach.call(tables_all,function(tableEl,tableIndex) {
-                        //const rowElements = tableEl.querySelectorAll('tr.mdmreport-record');
-                        //Array.prototype.forEach.call(rowElements,function(rowElement,tableIndex) {
-                        //    colElements = rowElement.querySelectorAll('tr.mdmreport-record>td');
-                        //    Array.prototype.forEach.call(colElements,function(colEl,colIndex) {
-                        //        colEl.width = colWidthsAdjusted[colIndex];
-                        //    });
-                        //});
-                        tableEl.classList.add('mdmreport-table-formatting-fixeddimensions');
-                    });
-                } catch(e) {
-                    try {
-                        function escapeHtml(s) {
-                            const dummy = document.createElement('div');
-                            dummy.innerText = s.replace(/\n/ig,'\\n');
-                            return dummy.innerHTML;
-                        }
-                        errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: Error when resizing columns: ${e}`)+'<br />';
-                    } catch(ee) {};
-                    try {
-                        document.removeEventListener('DOMContentLoaded',alignColWidths);
-                    } catch(ee) {}
-                    throw e;
-                }
-            };
-            Promise.resolve().then(process);
-            const dispatchDelayedEventData = {
-                promise: null
-            };
-            function processDelayed() {
-                if(!!dispatchDelayedEventData.promise) {
-                    /* setTimeout(resolve,40); */
-                } else {
-                    dispatchDelayedEventData.promise = new Promise((resolve,reject)=>{
-                        setTimeout(resolve,40);
-                    });
-                    dispatchDelayedEventData.promise.then(()=>{
-                        dispatchDelayedEventData.promise = null;
-                        return process();
-                    });
-                }
+    /* showhidecolumns - js */
+    /* Show/hide columns */
+(function(){
+    errorBannerReadyPromise = new Promise((resolve,reject)=>{
+        function detect() {
+            try {
+                const _errorBannerEl = document.querySelector('#error_banner');
+                if( !_errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                resolve(_errorBannerEl);
+            } catch(e) {
+                throw e;
+                return reject(e);
             }
-            window.addEventListener('resize',processDelayed);
-            window.addEventListener('mdmreport_table',processDelayed);
-            document.removeEventListener('DOMContentLoaded',alignColWidths);
-        } catch(e) {
+        }
+        document.addEventListener('DOMContentLoaded',detect)
+    });
+    const pluginName = 'showhidecolumns';
+    function printErrors(e) {
+        try {
+            function escapeHtml(s) {
+                const dummy = document.createElement('div');
+                dummy.innerText = s.replace(/\n/ig,'\\n');
+                return dummy.innerHTML;
+            }
+            errorBannerReadyPromise.then(errorBannerEl=>{errorBannerEl.innerHTML += escapeHtml(`Error: ${pluginName}: ${e}`)+'<br />';})
+        } catch(ee) {};
+    }
+    function wrapErrors(fn) {
+        return (...a) => {
             try {
-                function escapeHtml(s) {
-                    const dummy = document.createElement('div');
-                    dummy.innerText = s.replace(/\n/ig,'\\n');
-                    return dummy.innerHTML;
-                }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-            } catch(ee) {};
-            try {
-                document.removeEventListener('DOMContentLoaded',alignColWidths);
-            } catch(ee) {}
-            throw e;
+                return fn(...a);
+            } catch(e) {
+                printErrors(e);
+                throw e;
+            }
         }
     }
-    window.addEventListener('DOMContentLoaded',alignColWidths);
-})()
-</script>
-<script>
+    try {
+        
+
     /* === show/hide columns js === */
-(function() {
+
     const globalDataStored = {};
+
     const cssSheet = new CSSStyleSheet();
+
     function decideColumnsShownAtStartup(columnIDs,addedData) {
         function normalizeSectionId(id) {
             return id.replace(/_/ig,' ').replace(/\s/ig,' ').replace(/\bx\d+\b/ig,' ').replace(/\s+/ig,' ').replace(/^\s*/ig,'').replace(/\s*$/ig,'');
@@ -874,15 +966,8 @@ TEMPLATE_HTML_SCRIPTS = r"""
         }
         return Array.from(columns);
     }
+
     function addControlBlock_ShowHideColumns() {
-        let errorBannerEl = null;
-        try {
-            errorBannerEl = document.querySelector('#error_banner');
-            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
-        } catch(e) {
-            throw e;
-            return;
-        }
         try {
             // 1. read data and find the list of columns in the report table
             // it's interesting, we don't care how many columns are there; we iterate over css classes, and adding show/hide functionality per css class
@@ -960,14 +1045,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         }
                     });
                 } catch(e) {
-                    try {
-                        function escapeHtml(s) {
-                            const dummy = document.createElement('div');
-                            dummy.innerText = s.replace(/\n/ig,'\\n');
-                            return dummy.innerHTML;
-                        }
-                        errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-                    } catch(ee) {};
+                    printErrors(e);
                     throw e;
                 }
             }
@@ -1002,7 +1080,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                 const bannerEl = document.createElement('div');
                 bannerEl.className = 'mdmreport-showhidecolumns-plugin mdmreport-banner mdmreport-banner-columns';
                 bannerEl.innerHTML = '<form method="_POST" action="#!" onSubmit="javascript: return false;" class="mdmreport-controls"><fieldset class="mdmreport-controls"><div><legend>Show/hide columns:</legend></div></fieldset></form>';
-                Array.prototype.forEach.call(bannerEl.querySelectorAll('form'),function(formEl) {formEl.addEventListener('submit',function(event) {event.preventDefault();event.stopPropagation();return false;});});
+                Array.prototype.forEach.call(bannerEl.querySelectorAll('form'),function(formEl) {formEl.addEventListener('submit',wrapErrors(function(event) {event.preventDefault();event.stopPropagation();return false;}));});
                 const possiblyExistingEl = document.querySelector('.mdmreport-showhidecolumns-plugin');
                 if( possiblyExistingEl ) {
                     possiblyExistingEl.replaceWith(bannerEl);
@@ -1021,7 +1099,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         checkboxEl.setAttribute('type','checkbox');
                         checkboxEl.setAttribute('checked','true');
                         checkboxEl.checked = true;
-                        checkboxEl.addEventListener('change',function(event) {
+                        checkboxEl.addEventListener('change',wrapErrors(function(event) {
                             const checkboxEl = event.target;
                             const className = `mdmreport-hidecol-${colClassName}`; // mdmreport-col-xxx
                             globalDataStored[colClassName] = !!checkboxEl.checked;
@@ -1035,19 +1113,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
                                 });
                             };
                             dispatchResizeEvent();
-                        });
+                        }));
                         labelEl.prepend(checkboxEl);
                         bannerEl.querySelector('fieldset').append(labelEl);
                         controlsDefs.push({id:colClassName,text:colText,controlEl:checkboxEl});
                     } catch(e) {
-                        try {
-                            function escapeHtml(s) {
-                                const dummy = document.createElement('div');
-                                dummy.innerText = s.replace(/\n/ig,'\\n');
-                                return dummy.innerHTML;
-                            }
-                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-                        } catch(ee) {};
+                        printErrors(e);
                         throw e;
                     }
                 });
@@ -1057,75 +1128,24 @@ TEMPLATE_HTML_SCRIPTS = r"""
             setTimeout(function(){ applyDefaultSetup(controlsDefs); },50);
             document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideColumns);
         } catch(e) {
-            try {
-                function escapeHtml(s) {
-                    const dummy = document.createElement('div');
-                    dummy.innerText = s.replace(/\n/ig,'\\n');
-                    return dummy.innerHTML;
-                }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-            } catch(ee) {};
-            try {
-                document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideColumns);
-            } catch(ee) {}
+            printErrors(e);
             throw e;
         }
     }
-    window.addEventListener('DOMContentLoaded',addControlBlock_ShowHideColumns);
-    /* window.mdmreportPluginShowHideColsInit = addControlBlock_ShowHideColumns; */
-    window.addEventListener('mdmreport_table',addControlBlock_ShowHideColumns);
+
+window.addEventListener('mdmdocument',wrapErrors(addControlBlock_ShowHideColumns));
+window.addEventListener('mdmtable',wrapErrors(addControlBlock_ShowHideColumns));
+
+    } catch(e) {
+        printErrors(e);
+        throw e;
+    }
 })()
 </script>
-<script>
-    /* === memory saving plugin === */
-    (function(){
-        const errorBannerPromiseHandlers = {};
-        const errorWrapperPromise = (new Promise((resolve,reject)=>{errorBannerPromiseHandlers.resolve=resolve;errorBannerPromiseHandlers.reject=reject;})).then(function(){
-            let errorBannerEl = null;
-            try {
-                errorBannerEl = document.querySelector('#error_banner');
-                if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
-                return errorBannerEl;
-            } catch(e) {
-                throw e;
-                return;
-            }
-        }).then(function(errorBannerEl){
-            function wrapErrors(fn) {
-                return (...args) => {
-                    try {
-                        return fn(...args);
-                    } catch(e) {
-                        try {
-                            function escapeHtml(s) {
-                                const dummy = document.createElement('div');
-                                dummy.innerText = s.replace(/\n/ig,'\\n');
-                                return dummy.innerHTML;
-                            }
-                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-                        } catch(ee) {};
-                        throw e;
-                    }
-                }
-            }
-            return wrapErrors;
-        });
-        window.addEventListener('DOMContentLoaded',function(){return errorBannerPromiseHandlers.resolve();});
-        function wrapper() {
-            errorWrapperPromise.then(function(wrapErrors) {
-                return wrapErrors(mdmreportMemorySavingPluginTriggerEvents)();
-            });
-        }
-        function mdmreportMemorySavingPluginTriggerEvents() {
-            Promise.resolve().then( function() { window.dispatchEvent(new Event('mdmreport_table')); } );
-            /* Promise.resolve().then( function() { window.dispatchEvent(new Event('resize')); } );
-            Promise.resolve().then( mdmreportPluginShowHideColsInit ); */
-        }
-        window.mdmreportMemorySavingPluginTriggerEvents = wrapper;
-    })();
-    /* === end of memory saving plugin === */
-</script>
+
 <style>
+    /* jira - css */
+    /* Jira - related ticket lookup */
     /* === jira connection css === */
 .mdmrep-diff-jiraaddon-col a  {
     display: block;
@@ -1138,17 +1158,60 @@ TEMPLATE_HTML_SCRIPTS = r"""
 .mdmrep-diff-jiraaddon-col {
     max-width: 120px!important;
 }
-    /* === end of jira connection css === */
+
 </style>
 <script>
+    /* jira - js */
+    /* Jira - related ticket lookup */
+(function(){
+    errorBannerReadyPromise = new Promise((resolve,reject)=>{
+        function detect() {
+            try {
+                const _errorBannerEl = document.querySelector('#error_banner');
+                if( !_errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                resolve(_errorBannerEl);
+            } catch(e) {
+                throw e;
+                return reject(e);
+            }
+        }
+        document.addEventListener('DOMContentLoaded',detect)
+    });
+    const pluginName = 'jira';
+    function printErrors(e) {
+        try {
+            function escapeHtml(s) {
+                const dummy = document.createElement('div');
+                dummy.innerText = s.replace(/\n/ig,'\\n');
+                return dummy.innerHTML;
+            }
+            errorBannerReadyPromise.then(errorBannerEl=>{errorBannerEl.innerHTML += escapeHtml(`Error: ${pluginName}: ${e}`)+'<br />';})
+        } catch(ee) {};
+    }
+    function wrapErrors(fn) {
+        return (...a) => {
+            try {
+                return fn(...a);
+            } catch(e) {
+                printErrors(e);
+                throw e;
+            }
+        }
+    }
+    try {
+        
+
+
 // new cell markup: <td class="mdmreport-contentcell mdmreport-col-flagdiff" data-columnid="flagdiff">Diff flag</td>
 // new cell markup: <td class="mdmreport-contentcell mdmreport-col-label">Serial number</td>
 // old cell markup: <td class="mdmreport-contentcell">October</td>
-</script>
-<script>
-    /* === jira connection js === */
-(function() {
+
+
+   /* === jira connection js === */
+
     const validDomains = ['lrwjira.atlassian.net','www.lrwjira.atlassian.net','www.materialplus.atlassian.net','materialplus.atlassian.net'];
+    
+    
     let bannerHolderPromiseResolve = () => { throw new Error('please jiraPlugin_init the promise first'); };
     let bannerHolderPromiseReject = () => { throw new Error('please jiraPlugin_init the promise first'); };
     const bannerHolderPromise = new Promise((resolve,reject)=>{ bannerHolderPromiseResolve = resolve; bannerHolderPromiseReject = reject; });
@@ -1157,23 +1220,6 @@ TEMPLATE_HTML_SCRIPTS = r"""
     const runPromise = new Promise((resolve,reject)=>{ runPromiseResolve = resolve; runPromiseReject = reject; });
     function sanitizeCellText(s) {
         return s.replace(/&\#(\d+);/i,function(n,n1){if(isFinite(+n1)) return String.fromCharCode(+n1);else return n;});
-    }
-    function err(e){
-        let errorBannerEl;
-        try {
-            errorBannerEl = document.querySelector('#error_banner');
-            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
-        } catch(e) {
-            throw e;
-        }
-        try {
-            function escapeHtml(s) {
-                const dummy = document.createElement('div');
-                dummy.innerText = s.replace(/\n/ig,'\\n');
-                return dummy.innerHTML;
-            }
-            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: Jira connection: ${e}<br />`);
-        } catch(ee) {};
     }
     function parsePropertiesText(s) {
         const results = [];
@@ -1189,7 +1235,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
         } else {
             // // TODO: why throw an exception and stop? Can we just ignore?
             // // throw new Error(`can't parse properties at [${s}]`);
-            // err(`Warning: Jira connection plugin: Reading custom properties: can't parse this as properties: "${s}"`);
+            // printErrors(`Warning: Jira connection plugin: Reading custom properties: can't parse this as properties: "${s}"`);
             // return results;
             // // Actually, no, the function should read the properties, if it can't, it fails; if we want to handle failure differently, i.e. not break - we can do at a level where we check results of this fn
             throw new Error(`Reading custom properties: can't parse this as properties: "${s}"`);
@@ -1242,7 +1288,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
             } else
                 return null;
         } catch(e) {
-            err(e);
+            printErrors(e);
             throw e;
         }
     }
@@ -1318,7 +1364,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                                 return parsePropertiesText(s);
                             } catch(e) {
                                 err_msg = `${e} (processing row: "${itemName})"`.replace('Error','Warning');
-                                err(err_msg);
+                                printErrors(err_msg);
                                 return [];
                             }
                         }
@@ -1333,14 +1379,14 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         }
                     });
                 } catch(e) {
-                    err(e);
+                    printErrors(e);
                     throw e;
                 }
                 return reject('JobJumber not found');
             });
             return promise;
         } catch(e) {
-            err(e);
+            printErrors(e);
             throw e;
         }
     }
@@ -1367,12 +1413,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
             bannerEl.append(divBannerHolderEl);
             pluginHolderEl.append(bannerEl);
             try {
-                window.removeEventListener('DOMContentLoaded',jiraPlugin_init);
+                window.removeEventListener('mdmdocument',jiraPlugin_init);
             } catch(ee) {}
         } catch(e) {
-            err(e);
+            printErrors(e);
             try {
-                window.removeEventListener('DOMContentLoaded',jiraPlugin_init);
+                window.removeEventListener('mdmdocument',jiraPlugin_init);
             } catch(ee) {}
             throw e;
         }
@@ -1470,7 +1516,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                                 return parsePropertiesText(s);
                             } catch(e) {
                                 err_msg = `${e} (processing row: "${itemName})"`.replace('Error','Warning');
-                                err(err_msg);
+                                printErrors(err_msg);
                                 return [];
                             }
                         }
@@ -1530,7 +1576,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                 });
             });
         } catch(e) {
-            err(e);
+            printErrors(e);
             throw e;
         }
     }
@@ -1565,12 +1611,12 @@ TEMPLATE_HTML_SCRIPTS = r"""
                             inp1El.value = propertyJobNumber;
                             inp1El.dispatchEvent(new Event('change'));
                         } catch(e) {
-                            err(e);
+                            printErrors(e);
                             throw e;
                         }
                     });
                 } catch(e) {
-                    err(e);
+                    printErrors(e);
                     throw e;
                 }
             });
@@ -1586,7 +1632,7 @@ TEMPLATE_HTML_SCRIPTS = r"""
                         throw new Error(`Not valid jira domain! It has to be in this list: [ ${validDomains.join(', ')} ], or, update the code, it's easy; search for "validDomains"`);
                     runPromiseResolve(  { getJiraUrl, tablesEl, jiraPlugin_clearUp } );
                 } catch(e) {
-                    err(e);
+                    printErrors(e);
                     throw e;
                 }
                 return false;
@@ -1597,9 +1643,9 @@ TEMPLATE_HTML_SCRIPTS = r"""
             };
             bannerHolderEl.append(bannerContentEl);
         } catch(e) {
-            err(e);
+            printErrors(e);
             try {
-                window.removeEventListener('DOMContentLoaded',jiraPlugin_init); // trying to save memory and clear this function from memory but that's stupid - as we have a reference here, it is stil in memory; it should be cleared at a different, outer level
+                window.removeEventListener('mdmdocument',jiraPlugin_init); // trying to save memory and clear this function from memory but that's stupid - as we have a reference here, it is stil in memory; it should be cleared at a different, outer level
             } catch(ee) {}
             throw e;
         }
@@ -1609,55 +1655,87 @@ TEMPLATE_HTML_SCRIPTS = r"""
             const tablesEl = Array.from(document.querySelectorAll('table.mdmreport-table')).filter(tableEl=>!tableEl.querySelector('.mdmrep-diff-jiraaddon-col'));
             return jiraPlugin_workaddelementstotables({...params,tablesEl});
         }
-        window.addEventListener('mdmreport_table',process);
+        window.addEventListener('mdmtable',wrapErrors(process));
         return process();
     });
     runPromise.then(function(){window.dispatchEvent(new Event('resize'));});
     bannerHolderPromise.then(jiraPlugin_pluginpanelunhidden);
-    window.addEventListener('DOMContentLoaded',jiraPlugin_init);
+    window.addEventListener('mdmdocument',wrapErrors(jiraPlugin_init));
+
+    } catch(e) {
+        printErrors(e);
+        throw e;
+    }
 })()
 </script>
+
 <style>
+    /* columnfiltering - css */
+    /* Those check boxes to toggle columns */
     /* === column filtering css === */
-.mdmreport-record.mdmreport-tablefilterplugin-hide-0, .mdmreport-record.mdmreport-tablefilterplugin-hide-1, .mdmreport-record.mdmreport-tablefilterplugin-hide-2, .mdmreport-record.mdmreport-tablefilterplugin-hide-3, .mdmreport-record.mdmreport-tablefilterplugin-hide-4, .mdmreport-record.mdmreport-tablefilterplugin-hide-5, .mdmreport-record.mdmreport-tablefilterplugin-hide-6, .mdmreport-record.mdmreport-tablefilterplugin-hide-7, .mdmreport-record.mdmreport-tablefilterplugin-hide-8, .mdmreport-record.mdmreport-tablefilterplugin-hide-9, .mdmreport-record.mdmreport-tablefilterplugin-hide-10, .mdmreport-record.mdmreport-tablefilterplugin-hide-11, .mdmreport-record.mdmreport-tablefilterplugin-hide-12, .mdmreport-record.mdmreport-tablefilterplugin-hide-13, .mdmreport-record.mdmreport-tablefilterplugin-hide-14, .mdmreport-record.mdmreport-tablefilterplugin-hide-15, .mdmreport-record.mdmreport-tablefilterplugin-hide-16, .mdmreport-record.mdmreport-tablefilterplugin-hide-17, .mdmreport-record.mdmreport-tablefilterplugin-hide-18, .mdmreport-record.mdmreport-tablefilterplugin-hide-19, .mdmreport-record.mdmreport-tablefilterplugin-hide-20, .mdmreport-record.mdmreport-tablefilterplugin-hide-21, .mdmreport-record.mdmreport-tablefilterplugin-hide-22, .mdmreport-record.mdmreport-tablefilterplugin-hide-23, .mdmreport-record.mdmreport-tablefilterplugin-hide-24, .mdmreport-record.mdmreport-tablefilterplugin-hide-25, .mdmreport-record.mdmreport-tablefilterplugin-hide-26, .mdmreport-record.mdmreport-tablefilterplugin-hide-27, .mdmreport-record.mdmreport-tablefilterplugin-hide-28, .mdmreport-record.mdmreport-tablefilterplugin-hide-29, .mdmreport-record.mdmreport-tablefilterplugin-hide-30, .mdmreport-record.mdmreport-tablefilterplugin-hide-31, .mdmreport-record.mdmreport-tablefilterplugin-hide-32, .mdmreport-record.mdmreport-tablefilterplugin-hide-33, .mdmreport-record.mdmreport-tablefilterplugin-hide-34, .mdmreport-record.mdmreport-tablefilterplugin-hide-35, .mdmreport-record.mdmreport-tablefilterplugin-hide-36, .mdmreport-record.mdmreport-tablefilterplugin-hide-37, .mdmreport-record.mdmreport-tablefilterplugin-hide-38, .mdmreport-record.mdmreport-tablefilterplugin-hide-39, .mdmreport-record.mdmreport-tablefilterplugin-hide-40, .mdmreport-record.mdmreport-tablefilterplugin-hide-41, .mdmreport-record.mdmreport-tablefilterplugin-hide-42, .mdmreport-record.mdmreport-tablefilterplugin-hide-43, .mdmreport-record.mdmreport-tablefilterplugin-hide-44, .mdmreport-record.mdmreport-tablefilterplugin-hide-45, .mdmreport-record.mdmreport-tablefilterplugin-hide-46, .mdmreport-record.mdmreport-tablefilterplugin-hide-47, .mdmreport-record.mdmreport-tablefilterplugin-hide-48, .mdmreport-record.mdmreport-tablefilterplugin-hide-49, .mdmreport-record.mdmreport-tablefilterplugin-hide-50, .mdmreport-record.mdmreport-tablefilterplugin-hide-51, .mdmreport-record.mdmreport-tablefilterplugin-hide-52, .mdmreport-record.mdmreport-tablefilterplugin-hide-53, .mdmreport-record.mdmreport-tablefilterplugin-hide-54, .mdmreport-record.mdmreport-tablefilterplugin-hide-55, .mdmreport-record.mdmreport-tablefilterplugin-hide-56, .mdmreport-record.mdmreport-tablefilterplugin-hide-57, .mdmreport-record.mdmreport-tablefilterplugin-hide-58, .mdmreport-record.mdmreport-tablefilterplugin-hide-59, .mdmreport-record.mdmreport-tablefilterplugin-hide-60, .mdmreport-record.mdmreport-tablefilterplugin-hide-61, .mdmreport-record.mdmreport-tablefilterplugin-hide-62, .mdmreport-record.mdmreport-tablefilterplugin-hide-63, .mdmreport-record.mdmreport-tablefilterplugin-hide-64, .mdmreport-record.mdmreport-tablefilterplugin-hide-65, .mdmreport-record.mdmreport-tablefilterplugin-hide-66, .mdmreport-record.mdmreport-tablefilterplugin-hide-67, .mdmreport-record.mdmreport-tablefilterplugin-hide-68, .mdmreport-record.mdmreport-tablefilterplugin-hide-69, .mdmreport-record.mdmreport-tablefilterplugin-hide-70, .mdmreport-record.mdmreport-tablefilterplugin-hide-71, .mdmreport-record.mdmreport-tablefilterplugin-hide-72, .mdmreport-record.mdmreport-tablefilterplugin-hide-73, .mdmreport-record.mdmreport-tablefilterplugin-hide-74, .mdmreport-record.mdmreport-tablefilterplugin-hide-75, .mdmreport-record.mdmreport-tablefilterplugin-hide-76, .mdmreport-record.mdmreport-tablefilterplugin-hide-77, .mdmreport-record.mdmreport-tablefilterplugin-hide-78, .mdmreport-record.mdmreport-tablefilterplugin-hide-79, .mdmreport-record.mdmreport-tablefilterplugin-hide-80, .mdmreport-record.mdmreport-tablefilterplugin-hide-81, .mdmreport-record.mdmreport-tablefilterplugin-hide-82, .mdmreport-record.mdmreport-tablefilterplugin-hide-83, .mdmreport-record.mdmreport-tablefilterplugin-hide-84, .mdmreport-record.mdmreport-tablefilterplugin-hide-85, .mdmreport-record.mdmreport-tablefilterplugin-hide-86, .mdmreport-record.mdmreport-tablefilterplugin-hide-87, .mdmreport-record.mdmreport-tablefilterplugin-hide-88, .mdmreport-record.mdmreport-tablefilterplugin-hide-89, .mdmreport-record.mdmreport-tablefilterplugin-hide-90, .mdmreport-record.mdmreport-tablefilterplugin-hide-91, .mdmreport-record.mdmreport-tablefilterplugin-hide-92, .mdmreport-record.mdmreport-tablefilterplugin-hide-93, .mdmreport-record.mdmreport-tablefilterplugin-hide-94, .mdmreport-record.mdmreport-tablefilterplugin-hide-95, .mdmreport-record.mdmreport-tablefilterplugin-hide-96, .mdmreport-record.mdmreport-tablefilterplugin-hide-97, .mdmreport-record.mdmreport-tablefilterplugin-hide-98, .mdmreport-record.mdmreport-tablefilterplugin-hide-99 {
-    display: none!important;
-}
-tr.mdmreport-record td.mdmreport-contentcell.mdmreport-tablefilterplugin-enchancedcell {
-    padding-bottom: 2.55em;
-    position: relative;
-}
-td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 2px; /* to align with that green bottom border */
-    /* height: 1.9em; */
-    padding: 0; /* .1em; */
-    /* line-height: 1em;
-    padding: 0.35em; */
-}
+    .mdmreport-record.mdmreport-tablefilterplugin-hide-0, .mdmreport-record.mdmreport-tablefilterplugin-hide-1, .mdmreport-record.mdmreport-tablefilterplugin-hide-2, .mdmreport-record.mdmreport-tablefilterplugin-hide-3, .mdmreport-record.mdmreport-tablefilterplugin-hide-4, .mdmreport-record.mdmreport-tablefilterplugin-hide-5, .mdmreport-record.mdmreport-tablefilterplugin-hide-6, .mdmreport-record.mdmreport-tablefilterplugin-hide-7, .mdmreport-record.mdmreport-tablefilterplugin-hide-8, .mdmreport-record.mdmreport-tablefilterplugin-hide-9, .mdmreport-record.mdmreport-tablefilterplugin-hide-10, .mdmreport-record.mdmreport-tablefilterplugin-hide-11, .mdmreport-record.mdmreport-tablefilterplugin-hide-12, .mdmreport-record.mdmreport-tablefilterplugin-hide-13, .mdmreport-record.mdmreport-tablefilterplugin-hide-14, .mdmreport-record.mdmreport-tablefilterplugin-hide-15, .mdmreport-record.mdmreport-tablefilterplugin-hide-16, .mdmreport-record.mdmreport-tablefilterplugin-hide-17, .mdmreport-record.mdmreport-tablefilterplugin-hide-18, .mdmreport-record.mdmreport-tablefilterplugin-hide-19, .mdmreport-record.mdmreport-tablefilterplugin-hide-20, .mdmreport-record.mdmreport-tablefilterplugin-hide-21, .mdmreport-record.mdmreport-tablefilterplugin-hide-22, .mdmreport-record.mdmreport-tablefilterplugin-hide-23, .mdmreport-record.mdmreport-tablefilterplugin-hide-24, .mdmreport-record.mdmreport-tablefilterplugin-hide-25, .mdmreport-record.mdmreport-tablefilterplugin-hide-26, .mdmreport-record.mdmreport-tablefilterplugin-hide-27, .mdmreport-record.mdmreport-tablefilterplugin-hide-28, .mdmreport-record.mdmreport-tablefilterplugin-hide-29, .mdmreport-record.mdmreport-tablefilterplugin-hide-30, .mdmreport-record.mdmreport-tablefilterplugin-hide-31, .mdmreport-record.mdmreport-tablefilterplugin-hide-32, .mdmreport-record.mdmreport-tablefilterplugin-hide-33, .mdmreport-record.mdmreport-tablefilterplugin-hide-34, .mdmreport-record.mdmreport-tablefilterplugin-hide-35, .mdmreport-record.mdmreport-tablefilterplugin-hide-36, .mdmreport-record.mdmreport-tablefilterplugin-hide-37, .mdmreport-record.mdmreport-tablefilterplugin-hide-38, .mdmreport-record.mdmreport-tablefilterplugin-hide-39, .mdmreport-record.mdmreport-tablefilterplugin-hide-40, .mdmreport-record.mdmreport-tablefilterplugin-hide-41, .mdmreport-record.mdmreport-tablefilterplugin-hide-42, .mdmreport-record.mdmreport-tablefilterplugin-hide-43, .mdmreport-record.mdmreport-tablefilterplugin-hide-44, .mdmreport-record.mdmreport-tablefilterplugin-hide-45, .mdmreport-record.mdmreport-tablefilterplugin-hide-46, .mdmreport-record.mdmreport-tablefilterplugin-hide-47, .mdmreport-record.mdmreport-tablefilterplugin-hide-48, .mdmreport-record.mdmreport-tablefilterplugin-hide-49, .mdmreport-record.mdmreport-tablefilterplugin-hide-50, .mdmreport-record.mdmreport-tablefilterplugin-hide-51, .mdmreport-record.mdmreport-tablefilterplugin-hide-52, .mdmreport-record.mdmreport-tablefilterplugin-hide-53, .mdmreport-record.mdmreport-tablefilterplugin-hide-54, .mdmreport-record.mdmreport-tablefilterplugin-hide-55, .mdmreport-record.mdmreport-tablefilterplugin-hide-56, .mdmreport-record.mdmreport-tablefilterplugin-hide-57, .mdmreport-record.mdmreport-tablefilterplugin-hide-58, .mdmreport-record.mdmreport-tablefilterplugin-hide-59, .mdmreport-record.mdmreport-tablefilterplugin-hide-60, .mdmreport-record.mdmreport-tablefilterplugin-hide-61, .mdmreport-record.mdmreport-tablefilterplugin-hide-62, .mdmreport-record.mdmreport-tablefilterplugin-hide-63, .mdmreport-record.mdmreport-tablefilterplugin-hide-64, .mdmreport-record.mdmreport-tablefilterplugin-hide-65, .mdmreport-record.mdmreport-tablefilterplugin-hide-66, .mdmreport-record.mdmreport-tablefilterplugin-hide-67, .mdmreport-record.mdmreport-tablefilterplugin-hide-68, .mdmreport-record.mdmreport-tablefilterplugin-hide-69, .mdmreport-record.mdmreport-tablefilterplugin-hide-70, .mdmreport-record.mdmreport-tablefilterplugin-hide-71, .mdmreport-record.mdmreport-tablefilterplugin-hide-72, .mdmreport-record.mdmreport-tablefilterplugin-hide-73, .mdmreport-record.mdmreport-tablefilterplugin-hide-74, .mdmreport-record.mdmreport-tablefilterplugin-hide-75, .mdmreport-record.mdmreport-tablefilterplugin-hide-76, .mdmreport-record.mdmreport-tablefilterplugin-hide-77, .mdmreport-record.mdmreport-tablefilterplugin-hide-78, .mdmreport-record.mdmreport-tablefilterplugin-hide-79, .mdmreport-record.mdmreport-tablefilterplugin-hide-80, .mdmreport-record.mdmreport-tablefilterplugin-hide-81, .mdmreport-record.mdmreport-tablefilterplugin-hide-82, .mdmreport-record.mdmreport-tablefilterplugin-hide-83, .mdmreport-record.mdmreport-tablefilterplugin-hide-84, .mdmreport-record.mdmreport-tablefilterplugin-hide-85, .mdmreport-record.mdmreport-tablefilterplugin-hide-86, .mdmreport-record.mdmreport-tablefilterplugin-hide-87, .mdmreport-record.mdmreport-tablefilterplugin-hide-88, .mdmreport-record.mdmreport-tablefilterplugin-hide-89, .mdmreport-record.mdmreport-tablefilterplugin-hide-90, .mdmreport-record.mdmreport-tablefilterplugin-hide-91, .mdmreport-record.mdmreport-tablefilterplugin-hide-92, .mdmreport-record.mdmreport-tablefilterplugin-hide-93, .mdmreport-record.mdmreport-tablefilterplugin-hide-94, .mdmreport-record.mdmreport-tablefilterplugin-hide-95, .mdmreport-record.mdmreport-tablefilterplugin-hide-96, .mdmreport-record.mdmreport-tablefilterplugin-hide-97, .mdmreport-record.mdmreport-tablefilterplugin-hide-98, .mdmreport-record.mdmreport-tablefilterplugin-hide-99 {
+        display: none!important;
+    }
+    tr.mdmreport-record td.mdmreport-contentcell.mdmreport-tablefilterplugin-enchancedcell {
+        padding-bottom: 2.55em;
+        position: relative;
+    }
+    td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 2px; /* to align with that green bottom border */
+        /* height: 1.9em; */
+        padding: 0; /* .1em; */
+        /* line-height: 1em;
+        padding: 0.35em; */
+    }
 </style>
 <script>
-    /* === column filtering js === */
-(function() {
-    function addElementsToTables_TableFilters() {
-        let errorBannerEl = null;
-        try {
-            errorBannerEl = document.querySelector('#error_banner');
-            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
-        } catch(e) {
-            throw e;
-            return;
-        }
-        function bubbleException(e) {
+    /* columnfiltering - js */
+    /* Those check boxes to toggle columns */
+(function(){
+    errorBannerReadyPromise = new Promise((resolve,reject)=>{
+        function detect() {
             try {
-                function escapeHtml(s) {
-                    const dummy = document.createElement('div');
-                    dummy.innerText = s.replace(/\n/ig,'\\n');
-                    return dummy.innerHTML;
-                }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-            } catch(ee) {};
+                const _errorBannerEl = document.querySelector('#error_banner');
+                if( !_errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                resolve(_errorBannerEl);
+            } catch(e) {
+                throw e;
+                return reject(e);
+            }
+        }
+        document.addEventListener('DOMContentLoaded',detect)
+    });
+    const pluginName = 'columnfiltering';
+    function printErrors(e) {
+        try {
+            function escapeHtml(s) {
+                const dummy = document.createElement('div');
+                dummy.innerText = s.replace(/\n/ig,'\\n');
+                return dummy.innerHTML;
+            }
+            errorBannerReadyPromise.then(errorBannerEl=>{errorBannerEl.innerHTML += escapeHtml(`Error: ${pluginName}: ${e}`)+'<br />';})
+        } catch(ee) {};
+    }
+    function wrapErrors(fn) {
+        return (...a) => {
+            try {
+                return fn(...a);
+            } catch(e) {
+                printErrors(e);
+                throw e;
+            }
+        }
+    }
+    try {
+        
+    /* === column filtering js === */
+
+    function addElementsToTables_TableFilters() {
+        function bubbleException(e) {
+            printErrors(e);
             throw e;
         }
         try {
@@ -1752,35 +1830,20 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                             throw e;
                         }
                     }
-                    controlEl.addEventListener('change',handleChange);
-                    controlEl.addEventListener('keyup',handleChange);
-                    controlEl.addEventListener('keydown',handleChange);
-                    controlEl.addEventListener('keypress',handleChange);
+                    controlEl.addEventListener('change',wrapErrors(handleChange));
+                    controlEl.addEventListener('keyup',wrapErrors(handleChange));
+                    controlEl.addEventListener('keydown',wrapErrors(handleChange));
+                    controlEl.addEventListener('keypress',wrapErrors(handleChange));
                     cellEl.append(controlGroupElAdd);
                     cellEl.classList.add('mdmreport-tablefilterplugin-enchancedcell');
                 });
             });
         } catch(e) {
-            try {
-                function escapeHtml(s) {
-                    const dummy = document.createElement('div');
-                    dummy.innerText = s.replace(/\n/ig,'\\n');
-                    return dummy.innerHTML;
-                }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-            } catch(ee) {};
+            printErrors(e);
             throw e;
         }
     }
     function addControlBlock_TableFilters() {
-        let errorBannerEl = null;
-        try {
-            errorBannerEl = document.querySelector('#error_banner');
-            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
-        } catch(e) {
-            throw e;
-            return;
-        }
         try {
             // 2. add a control block
             function initAddingControlBlock() {
@@ -1789,7 +1852,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                 const bannerEl = document.createElement('div');
                 bannerEl.className = 'mdmreport-tablefilters-plugin mdmreport-banner mdmreport-banner-tablefilters';
                 bannerEl.innerHTML = '<form method="_POST" action="#!" onSubmit="javascript: return false;" class="mdmreport-controls"><fieldset class="mdmreport-controls"><div><legend>Add the ability to filter tables by content</legend></div><input type="submit" value="Yes, add this please!" /></fieldset></form>';
-                Array.prototype.forEach.call(bannerEl.querySelectorAll('form'),function(formEl) {formEl.addEventListener('submit',function(event) {
+                Array.prototype.forEach.call(bannerEl.querySelectorAll('form'),function(formEl) {formEl.addEventListener('submit',wrapErrors(function(event) {
                     try {
                         event.preventDefault();
                         event.stopPropagation();
@@ -1798,42 +1861,34 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                         bannerEl.innerHTML = '<p>Add the ability to filter tables by content</p><span>Done, input boxes are added below the header line in every table.</span>';
                         return false;
                     } catch(e) {
-                        try {
-                            function escapeHtml(s) {
-                                const dummy = document.createElement('div');
-                                dummy.innerText = s.replace(/\n/ig,'\\n');
-                                return dummy.innerHTML;
-                            }
-                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-                        } catch(ee) {};
+                        printErrors(e);
                         throw e;
                     }
-                });});
+                }));});
                 // pluginHolderEl.append(bannerEl); // we don't want the user to press "add", we are just adding it, it's so nice to have, it is now added automatically
                 setTimeout(addElementsToTables_TableFilters,400);
-                window.addEventListener('mdmreport_table',addElementsToTables_TableFilters);
+                window.addEventListener('mdmreport_table',wrapErrors(addElementsToTables_TableFilters));
             }
             initAddingControlBlock();
             document.removeEventListener('DOMContentLoaded',addControlBlock_TableFilters);
         } catch(e) {
-            try {
-                function escapeHtml(s) {
-                    const dummy = document.createElement('div');
-                    dummy.innerText = s.replace(/\n/ig,'\\n');
-                    return dummy.innerHTML;
-                }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-            } catch(ee) {};
-            try {
-                document.removeEventListener('DOMContentLoaded',addControlBlock_TableFilters);
-            } catch(ee) {}
+            printErrors(e);
             throw e;
         }
     }
-    window.addEventListener('DOMContentLoaded',addControlBlock_TableFilters);
+    window.addEventListener('DOMContentLoaded',wrapErrors(addControlBlock_TableFilters));
+
+    } catch(e) {
+        printErrors(e);
+        throw e;
+    }
 })()
 </script>
+
 <style>
+    /* showhidesections - css */
+    /* TOC - functionality to show/hide sections by clicking in TOC */
+
 .toc-section-row {
     margin-left: -0.65em;
 }
@@ -1868,19 +1923,51 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
     background: transparent;
     text-decoration: underline;
 }
+
 </style>
 <script>
-    /* === show/hide sections js === */
-(function() {
-    function addControlBlock_ShowHideSections() {
-        let errorBannerEl = null;
-        try {
-            errorBannerEl = document.querySelector('#error_banner');
-            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
-        } catch(e) {
-            throw e;
-            return;
+    /* showhidesections - js */
+    /* TOC - functionality to show/hide sections by clicking in TOC */
+(function(){
+    errorBannerReadyPromise = new Promise((resolve,reject)=>{
+        function detect() {
+            try {
+                const _errorBannerEl = document.querySelector('#error_banner');
+                if( !_errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                resolve(_errorBannerEl);
+            } catch(e) {
+                throw e;
+                return reject(e);
+            }
         }
+        document.addEventListener('DOMContentLoaded',detect)
+    });
+    const pluginName = 'showhidesections';
+    function printErrors(e) {
+        try {
+            function escapeHtml(s) {
+                const dummy = document.createElement('div');
+                dummy.innerText = s.replace(/\n/ig,'\\n');
+                return dummy.innerHTML;
+            }
+            errorBannerReadyPromise.then(errorBannerEl=>{errorBannerEl.innerHTML += escapeHtml(`Error: ${pluginName}: ${e}`)+'<br />';})
+        } catch(ee) {};
+    }
+    function wrapErrors(fn) {
+        return (...a) => {
+            try {
+                return fn(...a);
+            } catch(e) {
+                printErrors(e);
+                throw e;
+            }
+        }
+    }
+    try {
+        
+    /* === show/hide sections js === */
+
+    function addControlBlock_ShowHideSections() {
         try {
             function applyDefaultSetup(listOfControls) {
                 function findListOfSectionsToShow(listOfControls,mode) {
@@ -2022,7 +2109,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                 bannerEl.classList.add('mdmreport-banner');
                 bannerEl.classList.add('mdmreport-banner-sections');
                 bannerEl.innerHTML = '<form method="_POST" action="#!" onSubmit="javascript: return false;" class="mdmreport-controls"><fieldset class="mdmreport-controls"><div><h3>Table of contents</h3><legend style="display: none;">Show/hide sections:</legend></div></fieldset></form>';
-                Array.prototype.forEach.call(bannerEl.querySelectorAll('form'),function(formEl) {formEl.addEventListener('submit',function(event) {event.preventDefault();event.stopPropagation();return false;});});
+                Array.prototype.forEach.call(bannerEl.querySelectorAll('form'),function(formEl) {formEl.addEventListener('submit',wrapErrors(function(event) {event.preventDefault();event.stopPropagation();return false;}));});
                 pluginHolderEl.append(bannerEl);
                 const controlsDefs = [];
                 sectionDefs.forEach(function(sectionDef) {
@@ -2042,7 +2129,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                         checkboxEl.setAttribute('type','checkbox');
                         checkboxEl.setAttribute('checked','true');
                         checkboxEl.checked = true;
-                        checkboxEl.addEventListener('change',function(event) {
+                        checkboxEl.addEventListener('change',wrapErrors(function(event) {
                             const checkboxEl = event.target;
                             const className = `mdmreport-hidesection-${colClassName}`;
                             const isShown = !!checkboxEl.checked;
@@ -2063,9 +2150,10 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                                 const possibleLinkToUnhide = sectionEl.querySelector('.mdmreport-memorysaving-hidetab-link');
                                 if( possibleLinkToUnhide ) {
                                     possibleLinkToUnhide.dispatchEvent( new Event('click') );
+                                    Promise.resolve().then( function() { window.dispatchEvent(new Event('mdmtable')); } );
                                 }
                             }
-                        });
+                        }));
                         labelEl.prepend(checkboxEl);
                         const sectionTitleEl = document.createElement('span');
                         sectionTitleEl.classList.add('toc-title');
@@ -2076,7 +2164,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                         sectionLinkHyperlinkEl.textContent = colText;
                         sectionLinkHyperlinkEl.classList.add('toc-section-hyperlink');
                         sectionLinkHyperlinkEl.setAttribute('href',`#${sectionDef['id']}`);
-                        sectionLinkHyperlinkEl.addEventListener('click',function( event ) {
+                        sectionLinkHyperlinkEl.addEventListener('click',wrapErrors(function( event ) {
                             event.preventDefault();
                             const element = sectionDef.element;
                             if(!!element.scrollIntoView) {
@@ -2088,7 +2176,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                                 window.scrollTo({top:scroll,left:0,behavior:'smooth'});
                             }
                             return false;
-                        });
+                        }));
                         sectionTitleEl.append(sectionLinkPlaintextEl);
                         sectionTitleEl.append(sectionLinkHyperlinkEl);
                         statisticsEl = document.createElement('span');
@@ -2106,14 +2194,7 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                         bannerEl.querySelector('fieldset').append(wrapperEl);
                         controlsDefs.push({id:sectionDef['id'],text:colText,controlEl:checkboxEl,sectionDefRef:sectionDef});
                     } catch(e) {
-                        try {
-                            function escapeHtml(s) {
-                                const dummy = document.createElement('div');
-                                dummy.innerText = s.replace(/\n/ig,'\\n');
-                                return dummy.innerHTML;
-                            }
-                            errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-                        } catch(ee) {};
+                        printErrors(e);
                         throw e;
                     }
                 });
@@ -2121,46 +2202,34 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
                     try {
                         resetSettingCss();
                     } catch(e) { }
-                    try {
-                        function escapeHtml(s) {
-                            const dummy = document.createElement('div');
-                            dummy.innerText = s.replace(/\n/ig,'\\n');
-                            return dummy.innerHTML;
-                        }
-                        errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-                    } catch(ee) {};
-                    try {
-                        document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
-                    } catch(ee) {}
+                    printErrors(e);
                     throw e;
                 });
-                /* setTimeout(function(){ try { applyDefaultSetup(controlsDefs); } catch(e) { try { function escapeHtml(s) { const dummy = document.createElement('div'); dummy.innerText = s.replace(/\n/ig,'\\n'); return dummy.innerHTML; } errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />'; } catch(ee) {}; try { document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections); } catch(ee) {} throw e; } },50); */
+                /* setTimeout(function(){ try { applyDefaultSetup(controlsDefs); } catch(e) { try { function escapeHtml(s) { const dummy = document.createElement('div'); dummy.innerText = s.replace(/\n/ig,'\\n'); return dummy.innerHTML; } printErrors(e)+'<br />'; } catch(ee) {}; try { document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections); } catch(ee) {} throw e; } },50); */
             }
             initSettingCss();
             initAddingControlBlock();
-            document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
         } catch(e) {
             try {
                 resetSettingCss();
             } catch(e) { }
-            try {
-                function escapeHtml(s) {
-                    const dummy = document.createElement('div');
-                    dummy.innerText = s.replace(/\n/ig,'\\n');
-                    return dummy.innerHTML;
-                }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-            } catch(ee) {};
-            try {
-                document.removeEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
-            } catch(ee) {}
+            printErrors(e);
             throw e;
         }
     }
-    window.addEventListener('DOMContentLoaded',addControlBlock_ShowHideSections);
+    window.addEventListener('mdmdocument',wrapErrors(addControlBlock_ShowHideSections));
+
+    } catch(e) {
+        printErrors(e);
+        throw e;
+    }
 })()
 </script>
+
 <style>
+    /* colordiffrows - css */
+    /* Add css styles to rows */
+
     /* === add diff classes to the begginning of every line in pre tags in the report plugin === */
 .mdmreport-table tr td pre {
 
@@ -2213,320 +2282,467 @@ td.mdmreport-contentcell .mdmreport-tablefilterplugin-controls {
     display: inline;
     content: "S";
 }*/
+
 </style>
 <script>
-    /* === add diff classes to the begginning of every line in pre tags in the report plugin === */
+    /* colordiffrows - js */
+    /* Add css styles to rows */
 (function(){
-    function init() {
-        let errorBannerEl = null;
+    errorBannerReadyPromise = new Promise((resolve,reject)=>{
+        function detect() {
+            try {
+                const _errorBannerEl = document.querySelector('#error_banner');
+                if( !_errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                resolve(_errorBannerEl);
+            } catch(e) {
+                throw e;
+                return reject(e);
+            }
+        }
+        document.addEventListener('DOMContentLoaded',detect)
+    });
+    const pluginName = 'colordiffrows';
+    function printErrors(e) {
         try {
-            errorBannerEl = document.querySelector('#error_banner');
-            if( !errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
-        } catch(e) {
-            throw e;
-            return;
-        }
-        function initUpdateLines() {
-            
-            function checkClassesIndicatingEdit(el) {
-                return Array.from(el.querySelectorAll('.mdmdiff-inlineoverlay-added, .mdmdiff-inlineoverlay-removed')).length>0;
+            function escapeHtml(s) {
+                const dummy = document.createElement('div');
+                dummy.innerText = s.replace(/\n/ig,'\\n');
+                return dummy.innerHTML;
             }
-            function checkClassesIndicatingEditAdded(el) {
-                return Array.from(el.querySelectorAll('.mdmdiff-inlineoverlay-added')).length>0;
-            }
-            function checkClassesIndicatingEditRemoved(el) {
-                return Array.from(el.querySelectorAll('.mdmdiff-inlineoverlay-removed')).length>0;
-            }
-
-            function wrapLinesInParagraphs(container) {
-                // warning: code suggested by chatgpt
-                const wrapper = container.cloneNode(false);
-            
-                let currentP = document.createElement('p');
-                wrapper.appendChild(currentP);
-            
-                // Stack to track nesting of inline tags
-                const stack = [];
-            
-                function cloneStack() {
-                let parent = currentP;
-                stack.forEach(originalNode => {
-                    const clone = originalNode.cloneNode(false);
-                    parent.appendChild(clone);
-                    parent = clone;
-                });
-                return parent; // Deepest nested element
-                }
-            
-                function processNode(node, currentParent) {
-                if (node.nodeType === Node.TEXT_NODE) {
-                    currentParent.appendChild(node.cloneNode());
-                } else if (node.nodeType === Node.ELEMENT_NODE) {
-                    if (node.tagName === 'BR') {
-                    // Start new <p> on <br>
-                    currentP = document.createElement('p');
-                    wrapper.appendChild(currentP);
-                    const newDeepest = cloneStack(); // Reopen nested inline tags
-                    return newDeepest;
-                    } else {
-                    const clone = node.cloneNode(false);
-                    currentParent.appendChild(clone);
-                    stack.push(node); // Push original node to stack
-                    let childParent = clone;
-            
-                    node.childNodes.forEach(child => {
-                        childParent = processNode(child, childParent) || childParent;
-                    });
-            
-                    stack.pop(); // Pop after done
-                    }
-                }
-                return currentParent;
-                }
-            
-                container.childNodes.forEach(node => {
-                    processNode(node, currentP);
-                });
-            
-                return wrapper;
-            }
-                        
-            Array.from(document.querySelectorAll('.mdmreport-table tr td pre')).forEach(function(elPreOriginal){
-                
-                const elPreUpdated = wrapLinesInParagraphs(elPreOriginal);
-                elPreOriginal.replaceWith(elPreUpdated);
-
-                Array.from(elPreUpdated.querySelectorAll('p')).forEach(function(elP){
-                    if(checkClassesIndicatingEdit(elP)) {
-                        elP.classList.add('mdmreport-l-c');
-                    }
-                    if(checkClassesIndicatingEditAdded(elP)) {
-                        elP.classList.add('mdmreport-l-a');
-                    }
-                    if(checkClassesIndicatingEditRemoved(elP)) {
-                        elP.classList.add('mdmreport-l-r');
-                    }
-                });
-
-            });
-        }
-        function initAddControls() {
-            Array.from(document.querySelectorAll('.mdmreport-table tr td pre')).forEach(function(elPre) {
-                
-                if( Array.from(elPre.querySelectorAll('.mdmreport-precontrolplugin-control, .mdmreport-precontrolplugin-control-prev, .mdmreport-precontrolplugin-control-next')).length>0 ) return;
-                
-                const data = {
-                    elPre: elPre,
-                    activeRowEl: null,
-                    allRowEls: [],
-                    visible: false,
-                    controlPrevEl: null,
-                    controlNextEl: null,
-                    visibilityTriggerers: 0
-                };
-                function scrollToElementCenter(element) {
-                    const elementRect = element.getBoundingClientRect();
-                    const elementTop = elementRect.top + window.scrollY;
-                    const elementHeight = elementRect.height;
-                    const viewportHeight = window.innerHeight;
-                    const scrollTo = elementTop - (viewportHeight / 2) + (elementHeight / 2);
-                    window.scrollTo({ top: scrollTo, behavior: 'smooth' });
-                }
-                function getPrev(el) {
-                    if( !el || !data.allRowEls ) return;
-                    const indexActive = data.allRowEls.indexOf(el);
-                    if( indexActive<0 ) return;
-                    const elSwitchTo = indexActive>=1 ? data.allRowEls[indexActive-1] : null;
-                    return elSwitchTo;
-                }
-                function getNext(el) {
-                    if( !el || !data.allRowEls ) return;
-                    const indexActive = data.allRowEls.indexOf(el);
-                    if( indexActive<0 ) return;
-                    const elSwitchTo = indexActive<data.allRowEls.length-1 ? data.allRowEls[indexActive+1] : null;
-                    return elSwitchTo;
-                }
-                function scrollPrev() {
-                    const elSwitchTo = getPrev(data.activeRowEl);
-                    if( !elSwitchTo ) return;
-                    console.log(`this one: "${data.activeRowEl.innerText}", switch to (prev): "${elSwitchTo.innerText}"`);
-                    scrollToElementCenter(elSwitchTo);
-                    handleHover(({target:elSwitchTo}));
-                }
-                function scrollNext() {
-                    const elSwitchTo = getNext(data.activeRowEl);
-                    if( !elSwitchTo ) return;
-                    console.log(`this one: "${data.activeRowEl.innerText}", switch to (next): "${elSwitchTo.innerText}"`);
-                    scrollToElementCenter(elSwitchTo);
-                    handleHover(({target:elSwitchTo}));
-                }
-                function updatePosition() {
-                    data.controlPrevEl.style.top = `${data.activeRowEl.offsetTop-data.controlPrevEl.offsetHeight*1.25}px`;
-                    data.controlNextEl.style.top = `${data.activeRowEl.offsetTop+data.activeRowEl.offsetHeight+data.controlNextEl.offsetHeight*0.25}px`;
-                    if( !!getPrev(data.activeRowEl) ) { data.controlPrevEl.style.visibility = 'visible'; } else { data.controlPrevEl.style.visibility = 'hidden'; };
-                    if( !!getNext(data.activeRowEl) ) { data.controlNextEl.style.visibility = 'visible'; } else { data.controlNextEl.style.visibility = 'hidden'; };
-                }
-                function handleChange(newRowEl) {
-                    if( newRowEl===data.activeRowEl ) {
-                        /* no action needed */
-                    } else {
-                        data.activeRowEl = newRowEl;
-                        updatePosition();
-                    }
-                };
-                function checkVisibility() {
-                    if( !data.controlPrevEl || !data.controlNextEl ) return;
-                    if( data.visibilityTriggerers>0 ) {
-                        if( !data.visible ) {
-                            data.controlPrevEl.style.display = 'block';
-                            data.controlNextEl.style.display = 'block';
-                        }
-                        data.visible = true;
-                    } else {
-                        if( !!data.visible ) {
-                            data.controlPrevEl.style.display = 'none';
-                            data.controlNextEl.style.display = 'none';
-                        }
-                        data.visible = false;
-                    }
-                }
-                function updateVisibility() {
-                    setTimeout(function(){
-                        const promise = new Promise(function(resolve,reject){data.visibilityTriggerers+=1;checkVisibility();setTimeout(resolve,3000)});
-                        promise.then(function(){data.visibilityTriggerers-=1;checkVisibility();});
-                    },400);
-                }
-                function handleHover(event) {
-                    const el = event.target;
-                    handleChange(el);
-                    updateVisibility();
-                }
-
-                const elAddControlPrev = document.createElement('div');
-                const elAddControlNext = document.createElement('div');
-                elAddControlPrev.classList.add('mdmreport-precontrolplugin-control','mdmreport-precontrolplugin-control-prev');
-                elAddControlNext.classList.add('mdmreport-precontrolplugin-control','mdmreport-precontrolplugin-control-next');
-                elAddControlPrev.innerHTML = '&#x25B2;';
-                elAddControlNext.innerHTML = '&#x25BC;';
-                elAddControlPrev.addEventListener('click',function(event){event.preventDefault();return scrollPrev()&&false;});
-                elAddControlNext.addEventListener('click',function(event){event.preventDefault();return scrollNext()&&false;});
-                data.controlPrevEl = elAddControlPrev;
-                data.controlNextEl = elAddControlNext;
-                data.allRowEls = Array.from(elPre.querySelectorAll('.mdmreport-l-c, .mdmreport-l-a, .mdmreport-l-r'));
-                data.allRowEls.forEach(function(elRow){
-                    elRow.addEventListener('mouseover',handleHover);
-                    data.allRowElements
-                });
-                elAddControlPrev.addEventListener('mouseover',updateVisibility);
-                elAddControlNext.addEventListener('mouseover',updateVisibility);
-                elPre.appendChild(elAddControlPrev);
-                elPre.appendChild(elAddControlNext);
-
-            });
-        }
-        try {
-            initUpdateLines();
-            initAddControls();
-        } catch(e) {
+            errorBannerReadyPromise.then(errorBannerEl=>{errorBannerEl.innerHTML += escapeHtml(`Error: ${pluginName}: ${e}`)+'<br />';})
+        } catch(ee) {};
+    }
+    function wrapErrors(fn) {
+        return (...a) => {
             try {
-                // undoSmth();
-            } catch(e) { }
-            try {
-                function escapeHtml(s) {
-                    const dummy = document.createElement('div');
-                    dummy.innerText = s.replace(/\n/ig,'\\n');
-                    return dummy.innerHTML;
-                }
-                errorBannerEl.innerHTML = errorBannerEl.innerHTML + escapeHtml(`Error: ${e}`)+'<br />';
-            } catch(ee) {};
-            try {
-                document.removeEventListener('mdmreport_table',init);
-            } catch(ee) {}
-            throw e;
+                return fn(...a);
+            } catch(e) {
+                printErrors(e);
+                throw e;
+            }
         }
     }
-    window.addEventListener('DOMContentLoaded',init);
-    window.addEventListener('mdmreport_table',init);
-})();
+    try {
+        /* === add diff classes to the begginning of every line in pre tags in the report plugin === */
+function init() {
+    function initUpdateLines() {
+        
+        function checkClassesIndicatingEdit(el) {
+            return Array.from(el.querySelectorAll('.mdmdiff-inlineoverlay-added, .mdmdiff-inlineoverlay-removed')).length>0;
+        }
+        function checkClassesIndicatingEditAdded(el) {
+            return Array.from(el.querySelectorAll('.mdmdiff-inlineoverlay-added')).length>0;
+        }
+        function checkClassesIndicatingEditRemoved(el) {
+            return Array.from(el.querySelectorAll('.mdmdiff-inlineoverlay-removed')).length>0;
+        }
+
+        function wrapLinesInParagraphs(container) {
+            // warning: code suggested by chatgpt
+            const wrapper = container.cloneNode(false);
+        
+            let currentP = document.createElement('p');
+            wrapper.appendChild(currentP);
+        
+            // Stack to track nesting of inline tags
+            const stack = [];
+        
+            function cloneStack() {
+            let parent = currentP;
+            stack.forEach(originalNode => {
+                const clone = originalNode.cloneNode(false);
+                parent.appendChild(clone);
+                parent = clone;
+            });
+            return parent; // Deepest nested element
+            }
+        
+            function processNode(node, currentParent) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                currentParent.appendChild(node.cloneNode());
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                if (node.tagName === 'BR') {
+                // Start new <p> on <br>
+                currentP = document.createElement('p');
+                wrapper.appendChild(currentP);
+                const newDeepest = cloneStack(); // Reopen nested inline tags
+                return newDeepest;
+                } else {
+                const clone = node.cloneNode(false);
+                currentParent.appendChild(clone);
+                stack.push(node); // Push original node to stack
+                let childParent = clone;
+        
+                node.childNodes.forEach(child => {
+                    childParent = processNode(child, childParent) || childParent;
+                });
+        
+                stack.pop(); // Pop after done
+                }
+            }
+            return currentParent;
+            }
+        
+            container.childNodes.forEach(node => {
+                processNode(node, currentP);
+            });
+        
+            return wrapper;
+        }
+                    
+        Array.from(document.querySelectorAll('.mdmreport-table tr td pre')).forEach(function(elPreOriginal){
+            
+            const elPreUpdated = wrapLinesInParagraphs(elPreOriginal);
+            elPreOriginal.replaceWith(elPreUpdated);
+
+            Array.from(elPreUpdated.querySelectorAll('p')).forEach(function(elP){
+                if(checkClassesIndicatingEdit(elP)) {
+                    elP.classList.add('mdmreport-l-c');
+                }
+                if(checkClassesIndicatingEditAdded(elP)) {
+                    elP.classList.add('mdmreport-l-a');
+                }
+                if(checkClassesIndicatingEditRemoved(elP)) {
+                    elP.classList.add('mdmreport-l-r');
+                }
+            });
+
+        });
+    }
+    function initAddControls() {
+        Array.from(document.querySelectorAll('.mdmreport-table tr td pre')).forEach(function(elPre) {
+            
+            if( Array.from(elPre.querySelectorAll('.mdmreport-precontrolplugin-control, .mdmreport-precontrolplugin-control-prev, .mdmreport-precontrolplugin-control-next')).length>0 ) return;
+            
+            const data = {
+                elPre: elPre,
+                activeRowEl: null,
+                allRowEls: [],
+                visible: false,
+                controlPrevEl: null,
+                controlNextEl: null,
+                visibilityTriggerers: 0
+            };
+            function scrollToElementCenter(element) {
+                const elementRect = element.getBoundingClientRect();
+                const elementTop = elementRect.top + window.scrollY;
+                const elementHeight = elementRect.height;
+                const viewportHeight = window.innerHeight;
+                const scrollTo = elementTop - (viewportHeight / 2) + (elementHeight / 2);
+                window.scrollTo({ top: scrollTo, behavior: 'smooth' });
+            }
+            function getPrev(el) {
+                if( !el || !data.allRowEls ) return;
+                const indexActive = data.allRowEls.indexOf(el);
+                if( indexActive<0 ) return;
+                const elSwitchTo = indexActive>=1 ? data.allRowEls[indexActive-1] : null;
+                return elSwitchTo;
+            }
+            function getNext(el) {
+                if( !el || !data.allRowEls ) return;
+                const indexActive = data.allRowEls.indexOf(el);
+                if( indexActive<0 ) return;
+                const elSwitchTo = indexActive<data.allRowEls.length-1 ? data.allRowEls[indexActive+1] : null;
+                return elSwitchTo;
+            }
+            function scrollPrev() {
+                const elSwitchTo = getPrev(data.activeRowEl);
+                if( !elSwitchTo ) return;
+                console.log(`this one: "${data.activeRowEl.innerText}", switch to (prev): "${elSwitchTo.innerText}"`);
+                scrollToElementCenter(elSwitchTo);
+                handleHover(({target:elSwitchTo}));
+            }
+            function scrollNext() {
+                const elSwitchTo = getNext(data.activeRowEl);
+                if( !elSwitchTo ) return;
+                console.log(`this one: "${data.activeRowEl.innerText}", switch to (next): "${elSwitchTo.innerText}"`);
+                scrollToElementCenter(elSwitchTo);
+                handleHover(({target:elSwitchTo}));
+            }
+            function updatePosition() {
+                data.controlPrevEl.style.top = `${data.activeRowEl.offsetTop-data.controlPrevEl.offsetHeight*1.25}px`;
+                data.controlNextEl.style.top = `${data.activeRowEl.offsetTop+data.activeRowEl.offsetHeight+data.controlNextEl.offsetHeight*0.25}px`;
+                if( !!getPrev(data.activeRowEl) ) { data.controlPrevEl.style.visibility = 'visible'; } else { data.controlPrevEl.style.visibility = 'hidden'; };
+                if( !!getNext(data.activeRowEl) ) { data.controlNextEl.style.visibility = 'visible'; } else { data.controlNextEl.style.visibility = 'hidden'; };
+            }
+            function handleChange(newRowEl) {
+                if( newRowEl===data.activeRowEl ) {
+                    /* no action needed */
+                } else {
+                    data.activeRowEl = newRowEl;
+                    updatePosition();
+                }
+            };
+            function checkVisibility() {
+                if( !data.controlPrevEl || !data.controlNextEl ) return;
+                if( data.visibilityTriggerers>0 ) {
+                    if( !data.visible ) {
+                        data.controlPrevEl.style.display = 'block';
+                        data.controlNextEl.style.display = 'block';
+                    }
+                    data.visible = true;
+                } else {
+                    if( !!data.visible ) {
+                        data.controlPrevEl.style.display = 'none';
+                        data.controlNextEl.style.display = 'none';
+                    }
+                    data.visible = false;
+                }
+            }
+            function updateVisibility() {
+                setTimeout(function(){
+                    const promise = new Promise(function(resolve,reject){data.visibilityTriggerers+=1;checkVisibility();setTimeout(resolve,3000)});
+                    promise.then(function(){data.visibilityTriggerers-=1;checkVisibility();});
+                },400);
+            }
+            function handleHover(event) {
+                const el = event.target;
+                handleChange(el);
+                updateVisibility();
+            }
+
+            const elAddControlPrev = document.createElement('div');
+            const elAddControlNext = document.createElement('div');
+            elAddControlPrev.classList.add('mdmreport-precontrolplugin-control','mdmreport-precontrolplugin-control-prev');
+            elAddControlNext.classList.add('mdmreport-precontrolplugin-control','mdmreport-precontrolplugin-control-next');
+            elAddControlPrev.innerHTML = '&#x25B2;';
+            elAddControlNext.innerHTML = '&#x25BC;';
+            elAddControlPrev.addEventListener('click',wrapErrors(function(event){event.preventDefault();return scrollPrev()&&false;}));
+            elAddControlNext.addEventListener('click',wrapErrors(function(event){event.preventDefault();return scrollNext()&&false;}));
+            data.controlPrevEl = elAddControlPrev;
+            data.controlNextEl = elAddControlNext;
+            data.allRowEls = Array.from(elPre.querySelectorAll('.mdmreport-l-c, .mdmreport-l-a, .mdmreport-l-r'));
+            data.allRowEls.forEach(function(elRow){
+                elRow.addEventListener('mouseover',wrapErrors(handleHover));
+                data.allRowElements
+            });
+            elAddControlPrev.addEventListener('mouseover',wrapErrors(updateVisibility));
+            elAddControlNext.addEventListener('mouseover',wrapErrors(updateVisibility));
+            elPre.appendChild(elAddControlPrev);
+            elPre.appendChild(elAddControlNext);
+
+        });
+    }
+    try {
+        initUpdateLines();
+        initAddControls();
+    } catch(e) {
+        try {
+            // undoSmth();
+        } catch(e) { }
+        printErrors(e);
+        throw e;
+    }
+}
+window.addEventListener('mdmdocument',wrapErrors(init));
+window.addEventListener('mdmtable',wrapErrors(init));
+
+    } catch(e) {
+        printErrors(e);
+        throw e;
+    }
+})()
 </script>
+
 <style>
+    /* validatemddlabelissues - css */
+    /* Validate MDD label issues, that are in fact xml parsing issues - just helping to highlight problematic rows */
     .mdmreport-plugin-validate-labels-error { color: #900; font-weight: 600; }
-    .mdmreport-plugin-validate-labels { }
-    .mdmreport-plugin-validate-labels-validated { }
+    /* .mdmreport-plugin-validate-labels { }
+    .mdmreport-plugin-validate-labels-validated { } */
     .mdmreport-plugin-validate-labels-alertissues, .mdmrep-plgn-labelxmlerr { text-decoration-line: underline; text-decoration-style: dashed; text-decoration-color: #db4069; text-decoration-offset: 2px; }
+
 </style>
+<script>
+    /* validatemddlabelissues - js */
+    /* Validate MDD label issues, that are in fact xml parsing issues - just helping to highlight problematic rows */
+(function(){
+    errorBannerReadyPromise = new Promise((resolve,reject)=>{
+        function detect() {
+            try {
+                const _errorBannerEl = document.querySelector('#error_banner');
+                if( !_errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                resolve(_errorBannerEl);
+            } catch(e) {
+                throw e;
+                return reject(e);
+            }
+        }
+        document.addEventListener('DOMContentLoaded',detect)
+    });
+    const pluginName = 'validatemddlabelissues';
+    function printErrors(e) {
+        try {
+            function escapeHtml(s) {
+                const dummy = document.createElement('div');
+                dummy.innerText = s.replace(/\n/ig,'\\n');
+                return dummy.innerHTML;
+            }
+            errorBannerReadyPromise.then(errorBannerEl=>{errorBannerEl.innerHTML += escapeHtml(`Error: ${pluginName}: ${e}`)+'<br />';})
+        } catch(ee) {};
+    }
+    function wrapErrors(fn) {
+        return (...a) => {
+            try {
+                return fn(...a);
+            } catch(e) {
+                printErrors(e);
+                throw e;
+            }
+        }
+    }
+    try {
+        
+    } catch(e) {
+        printErrors(e);
+        throw e;
+    }
+})()
+</script>
+
+<style>
+    /* diffondiffshowallrows - css */
+    /* Helper switch that allows to show all rows in "diff on diff" mode */
+
+</style>
+<script>
+    /* diffondiffshowallrows - js */
+    /* Helper switch that allows to show all rows in "diff on diff" mode */
+(function(){
+    errorBannerReadyPromise = new Promise((resolve,reject)=>{
+        function detect() {
+            try {
+                const _errorBannerEl = document.querySelector('#error_banner');
+                if( !_errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                resolve(_errorBannerEl);
+            } catch(e) {
+                throw e;
+                return reject(e);
+            }
+        }
+        document.addEventListener('DOMContentLoaded',detect)
+    });
+    const pluginName = 'diffondiffshowallrows';
+    function printErrors(e) {
+        try {
+            function escapeHtml(s) {
+                const dummy = document.createElement('div');
+                dummy.innerText = s.replace(/\n/ig,'\\n');
+                return dummy.innerHTML;
+            }
+            errorBannerReadyPromise.then(errorBannerEl=>{errorBannerEl.innerHTML += escapeHtml(`Error: ${pluginName}: ${e}`)+'<br />';})
+        } catch(ee) {};
+    }
+    function wrapErrors(fn) {
+        return (...a) => {
+            try {
+                return fn(...a);
+            } catch(e) {
+                printErrors(e);
+                throw e;
+            }
+        }
+    }
+    try {
+        
+    } catch(e) {
+        printErrors(e);
+        throw e;
+    }
+})()
+</script>
+
+<style>
+    /* common - css */
+    /* Common code (launcher) */
+
+</style>
+<script>
+    /* common - js */
+    /* Common code (launcher) */
+(function(){
+    errorBannerReadyPromise = new Promise((resolve,reject)=>{
+        function detect() {
+            try {
+                const _errorBannerEl = document.querySelector('#error_banner');
+                if( !_errorBannerEl ) throw new Error('no error banner, stop execution of js scripts');
+                resolve(_errorBannerEl);
+            } catch(e) {
+                throw e;
+                return reject(e);
+            }
+        }
+        document.addEventListener('DOMContentLoaded',detect)
+    });
+    const pluginName = 'common';
+    function printErrors(e) {
+        try {
+            function escapeHtml(s) {
+                const dummy = document.createElement('div');
+                dummy.innerText = s.replace(/\n/ig,'\\n');
+                return dummy.innerHTML;
+            }
+            errorBannerReadyPromise.then(errorBannerEl=>{errorBannerEl.innerHTML += escapeHtml(`Error: ${pluginName}: ${e}`)+'<br />';})
+        } catch(ee) {};
+    }
+    function wrapErrors(fn) {
+        return (...a) => {
+            try {
+                return fn(...a);
+            } catch(e) {
+                printErrors(e);
+                throw e;
+            }
+        }
+    }
+    try {
+        function dispatchEvents() {
+    Promise.resolve().then( function() { window.dispatchEvent(new Event('mdmdocument')); } );
+    Promise.resolve().then( function() { window.dispatchEvent(new Event('mdmtable')); } );
+}
+window.addEventListener('DOMContentLoaded',dispatchEvents);
+
+    } catch(e) {
+        printErrors(e);
+        throw e;
+    }
+})()
+</script>
+
+</head>
+<body class="mdmreportpage {{INS_ADDEDCLASSES}}">
+<header class="header">
+    <div class="container">
+        <p>{{INS_PAGEHEADER}}</p>
+    </div>
+</header>
+<div class="main">
+    <div class="container">
+        <h1>{{INS_HEADING}}</h1>
+        <div class="mdmreport-banner mdmreport-banner-global">{{INS_BANNER}}</div>
+        <div class="error error-banner" id="error_banner"></div>
+        <div class="mdmreport-layout-plugin-placeholder mdmreport-banners-wrapper" id="mdmreport_plugin_placeholder"></div><div class="mdmreport-toc-placeholder mdmreport-banners-wrapper mdmreport-banners-wrapper-noborders" id="mdmreport_toc_placeholder"></div><h2 style="display: none;">Sections</h2>
+
 """
 
-TEMPLATE_HTML_DIFF_SCRIPTS = r""
-
-TEMPLATE_HTML_DIFF_STYLES = r"""
-<style>
-</style>
-    """
-
-TEMPLATE_HTML_COPYBANNER = r"""
-AP
-    """
+TEMPLATE_HTML_END = r"""
+        </div>
+    </div>
+    <footer class="footer">
+        <div class="container">AP</div>
+    </footer>
+</body>
+</html>
+"""
 
 TEMPLATE_HTML_TABLE_BEGIN = r"""
 <div class="wrapper mdmreport-section-wrapper mdmreport-wrapper-section-{{TABLE_ID}}">
 <h3 class="mdmreport-table-title">Section {{TABLE_NAME}}</h3>{{INS_TABBANNER}}
 <div class="mdmreport-table-wrapper"><table class="mdmreport-table mdmreport-table-section-{{TABLE_ID}}"><tbody>
+
 """
 
 TEMPLATE_HTML_TABLE_END = r"""
 </tbody></table></div></div>
 """
 
-TEMPLATE_HTML_BEGIN = r"""
-
-<!doctype html>
-<html lang="">
-<head>
-      <meta charset="UTF-8">
-      <meta http-equiv="X-UA-Compatible" content="IE=edge">
-      <meta name="viewport" content="width=device-width">
-      <title>{{{{INS_TITLE}}}}</title>
-      <style>{TEMPLATE_HTML_CSS_NORMALIZECSS}</style>
-      <style>
-      {TEMPLATE_HTML_STYLES}
-      {TEMPLATE_HTML_STYLES_TABLE}
-      </style>
-      <script>window.reportType = '{{{{INS_REPORTTYPE}}}}';</script>
-      {ADD_SCRIPTS}
-</head>
-<body class="mdmreportpage {{{{INS_ADDEDCLASSES}}}}">
-<header class="header">
-    <div class="container">
-        <p>{{{{INS_PAGEHEADER}}}}</p>
-    </div>
-</header>
-<div class="main">
-    <div class="container">
-        <h1>{{{{INS_HEADING}}}}</h1>
-        <div class="mdmreport-banner mdmreport-banner-global">{{{{INS_BANNER}}}}</div>
-        <div class="error error-banner" id="error_banner"></div>
-        <div class="mdmreport-layout-plugin-placeholder mdmreport-banners-wrapper" id="mdmreport_plugin_placeholder"></div><div class="mdmreport-toc-placeholder mdmreport-banners-wrapper mdmreport-banners-wrapper-noborders" id="mdmreport_toc_placeholder"></div><h2 style="display: none;">Sections</h2>
-    """.format(
-        TEMPLATE_HTML_CSS_NORMALIZECSS = TEMPLATE_HTML_CSS_NORMALIZECSS,
-        TEMPLATE_HTML_STYLES = TEMPLATE_HTML_STYLES,
-        TEMPLATE_HTML_STYLES_TABLE = TEMPLATE_HTML_STYLES_TABLE,
-        ADD_SCRIPTS = '{allscripts}{diffstyles}{diffscripts}'.format(allscripts=TEMPLATE_HTML_SCRIPTS,diffscripts=TEMPLATE_HTML_DIFF_SCRIPTS,diffstyles=TEMPLATE_HTML_DIFF_STYLES),
-        # INS_TITLE = fields_File_INS_TITLE,
-        # INS_REPORTTYPE = fields_INS_REPORTTYPE,
-        # INS_HEADING = fields_File_INS_HEADING,
-        # INS_BANNER = ''.join( [ '<p>{content}</p>'.format(content=preptext_html(content)) for content in fields_File_ReportInfo ] )
-    )
-
-TEMPLATE_HTML_END = r"""
-        </div>
-    </div>
-    <footer class="footer">
-        <div class="container">{TEMPLATE_HTML_COPYBANNER}</div>
-    </footer>
-</body>
-</html>
-    """.format(
-        TEMPLATE_HTML_COPYBANNER = TEMPLATE_HTML_COPYBANNER
-    )
-    

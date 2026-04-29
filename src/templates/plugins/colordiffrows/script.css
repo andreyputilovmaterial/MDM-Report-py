@@ -1,0 +1,53 @@
+
+    /* === add diff classes to the begginning of every line in pre tags in the report plugin === */
+.mdmreport-table tr td pre {
+
+}
+.mdmreport-table tr td pre p {
+    margin: 0 0 0 0;
+    padding: 0;
+    border-left: 1em solid #E5D8B4;
+}
+.mdmreport-table tr td pre p.mdmreport-l-c {
+    border-left: 1em solid #ff9632;
+}
+.mdmreport-table tr td pre p.mdmreport-l-a, .mdmreport-table tr td pre p.mdmreport-l-c.mdmreport-l-a {
+    border-left: 1em solid #6bc795;
+}
+.mdmreport-table tr td pre p.mdmreport-l-r, .mdmreport-table tr td pre p.mdmreport-l-c.mdmreport-l-r {
+    border-left: 1em solid #f59278;
+}
+/* and classes for controls */
+.mdmreport-table tr td pre {
+    position: relative;
+}
+.mdmreport-precontrolplugin-control {
+    display: none;
+    position: absolute;
+    width: 2em;
+    height: 1em;
+    left: -0.5em;
+    font-weight: 900;
+    color: #fff;
+    text-align: center;
+    line-height: 1em;
+    cursor: pointer;
+}
+
+.mdmreport-precontrolplugin-control-prev {
+}
+
+/*.mdmreport-precontrolplugin-control-prev:before
+{
+    display: inline;
+    content: "S";
+}*/
+
+.mdmreport-precontrolplugin-control-next {
+}
+
+/*.mdmreport-precontrolplugin-control-next:before
+{
+    display: inline;
+    content: "S";
+}*/

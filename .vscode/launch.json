@@ -1,0 +1,59 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: MDD HTML Report for diff on diff",
+            "type": "python",
+            "request": "launch",
+            "program": "src/launcher.py",
+            "console": "integratedTerminal",
+            "args": ["--program","report","--inpfile","tests\\current\\test_data\\report.diff.report.diff.p2600752_-auto_---20260406-v5---20260410-v14--.mdd.json"],
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Excel Diff Report Test",
+            "type": "python",
+            "request": "launch",
+            "program": "src/launcher.py",
+            "console": "integratedTerminal",
+            "args": ["--program","report","--inpfile","tests\\current\\test_data\\report.diff.R2-3-40-0-8-1-3-4-9- WGT BannerMOC_Us_Total.xlsx.json"],
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Excel Diff Report Test on cmp from flatout maps",
+            "type": "python",
+            "request": "launch",
+            "program": "src/launcher.py",
+            "console": "integratedTerminal",
+            "args": ["--program","report","--inpfile","tests\\current\\test_data\\report.diff.mdd_map_-R2401582.xlsx_filled_with_script-R2401582_annaverpinsky-.xlsx.json"],
+            "justMyCode": true
+        },
+        {
+            "name": "Python: MDD HTML Report Test",
+            "type": "python",
+            "request": "launch",
+            "program": "src/launcher.py",
+            "console": "integratedTerminal",
+            "args": ["--program","report","--inpfile","tests\\current\\test_data\\p2301763_prevauto_20240111_clean.mdd.json"],
+            "justMyCode": true
+        },
+        {
+            "name": "Python: MDD Excel Report Test",
+            "type": "python",
+            "request": "launch",
+            "program": "src/launcher.py",
+            "console": "integratedTerminal",
+            "args": ["--program","report_excel","--inpfile","tests\\current\\test_data\\p2301763_prevauto_20240111_clean.mdd.json"],
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Build html template",
+            "type": "python",
+            "request": "launch",
+            "program": "build_compiled_template.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": true
+        },
+    ]
+}

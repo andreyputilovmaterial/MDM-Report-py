@@ -1,0 +1,35 @@
+
+.toc-section-row {
+    margin-left: -0.65em;
+}
+.mdmreport-showhidesections-plugin .toc-section-row .toc-section-plainlink {
+    display: none;
+}
+.mdmreport-showhidesections-plugin .toc-section-row .toc-section-hyperlink {
+    display: inline-block;
+}
+.mdmreport-showhidesections-plugin .toc-section-row.toc-section-inactive .toc-section-plainlink {
+    display: inline-block;
+}
+.mdmreport-showhidesections-plugin .toc-section-row.toc-section-inactive .toc-section-hyperlink {
+    display: none;
+}
+.toc-section-highlighted {
+    background: #ffe49c;
+}
+.mdmreport-showhidesections-plugin .toc-statistics {
+    display: inline-block;
+    color: rgba(0,0,0,.5);
+    padding-left: 1em;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    overflow-x: hidden;
+    line-height: 1.1em;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.toc-statistics .mdmdiff-inlineoverlay-added {
+    color: #000;
+    background: transparent;
+    text-decoration: underline;
+}
