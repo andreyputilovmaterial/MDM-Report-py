@@ -5,6 +5,7 @@
 # Outputs / generated artifacts
 dist/
 build/
+TEMPLATE_COMPILED/
 
 # Reports generated from real data
 report.*
