@@ -25,11 +25,11 @@ else:
 
 
 def call_report_html_program(*argcs,**kwargs):
-    return report_html_create.entry_point({'arglist_strict':False})
+    return report_html_create.entry_point(*argcs,**kwargs)
 
-def call_templatetest_program(*argcs,**kwargs):
-    # return report_html_create.print_test()
-    pass
+# def call_templatetest_program(*argcs,**kwargs):
+#     # return report_html_create.print_test()
+#     pass
 
 def call_test_program(*argcs,**kwargs):
     msg = '''
@@ -45,7 +45,7 @@ run_programs = {
     'report': call_report_html_program,
     'report_html': call_report_html_program,
     'test': call_test_program,
-    'templatetest': call_templatetest_program,
+    # 'templatetest': call_templatetest_program,
 }
 
 

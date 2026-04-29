@@ -973,7 +973,7 @@ def produce_html(inp):
 
 
 
-def entry_point(config={}):
+def entry_point(*argcs,**kwargs):
     try:
         time_start = datetime.now()
         script_name = 'mdmtoolsap html report script'
@@ -994,12 +994,12 @@ def entry_point(config={}):
             type=str,
             required=False
         )
-        args = None
-        args_rest = None
-        if( ('arglist_strict' in config) and (not config['arglist_strict']) ):
-            args, args_rest = parser.parse_known_args()
-        else:
-            args = parser.parse_args()
+        # args = None
+        # args_rest = None
+        # if( ('arglist_strict' in config) and (not config['arglist_strict']) ):
+        #     args, args_rest = parser.parse_known_args()
+        # else:
+        args = parser.parse_args(*argcs,**kwargs)
         input_map_filename = None
         if args.inpfile:
             input_map_filename = Path(args.inpfile)
@@ -1059,4 +1059,4 @@ def entry_point(config={}):
 
 
 if __name__ == '__main__':
-    entry_point({'arglist_strict':True})
+    entry_point()
