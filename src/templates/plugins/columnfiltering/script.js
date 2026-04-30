@@ -135,13 +135,13 @@
                 }));});
                 // pluginHolderEl.append(bannerEl); // we don't want the user to press "add", we are just adding it, it's so nice to have, it is now added automatically
                 setTimeout(addElementsToTables_TableFilters,400);
-                window.addEventListener('mdmreport_table',wrapErrors(addElementsToTables_TableFilters));
+                window.addEventListener('mdmtable',wrapErrors(addElementsToTables_TableFilters));
             }
             initAddingControlBlock();
-            document.removeEventListener('DOMContentLoaded',addControlBlock_TableFilters);
+            document.removeEventListener('mdmdocument',addControlBlock_TableFilters);
         } catch(e) {
             printErrors(e);
             throw e;
         }
     }
-    window.addEventListener('DOMContentLoaded',wrapErrors(addControlBlock_TableFilters));
+    window.addEventListener('mdmdocument',wrapErrors(addControlBlock_TableFilters));
