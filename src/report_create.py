@@ -1,4 +1,5 @@
 # import os, time, re, sys
+from ast import Import
 from datetime import datetime
 # from dateutil import tz
 import argparse
@@ -25,30 +26,44 @@ def is_in_pinliner():
 
 
 
-CONFIG_USE_COMPILED_TEMPLATE = is_in_pinliner()
+should_prefer_src_template_import = not is_in_pinliner()
+did_import_template = False
 
 
 
-if CONFIG_USE_COMPILED_TEMPLATE:
+
+if should_prefer_src_template_import:
+    try:
+        if __name__ == '__main__':
+            # run as a program
+            import report_html_template
+            did_import_template = True
+        elif '.' in __name__:
+            # package
+            from . import report_html_template
+            did_import_template = True
+        else:
+            # included with no parent package
+            import report_html_template
+            did_import_template = True
+    except ImportError:
+        did_import_template = False
+        pass
+
+
+if not did_import_template:
     if __name__ == '__main__':
         # run as a program
         from TEMPLATE_COMPILED import TEMPLATE as report_html_template
+        did_import_template = True
     elif '.' in __name__:
         # package
         from .TEMPLATE_COMPILED import TEMPLATE as report_html_template
+        did_import_template = True
     else:
         # included with no parent package
         from TEMPLATE_COMPILED import TEMPLATE as report_html_template
-else:
-    if __name__ == '__main__':
-        # run as a program
-        import report_html_template
-    elif '.' in __name__:
-        # package
-        from . import report_html_template
-    else:
-        # included with no parent package
-        import report_html_template
+        did_import_template = True
 
 
 
