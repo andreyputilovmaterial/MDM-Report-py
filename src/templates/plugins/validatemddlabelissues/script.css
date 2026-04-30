@@ -2,3 +2,4 @@
     /* .mdmreport-plugin-validate-labels { }
     .mdmreport-plugin-validate-labels-validated { } */
     .mdmreport-plugin-validate-labels-alertissues, .mdmrep-plgn-labelxmlerr { text-decoration-line: underline; text-decoration-style: dashed; text-decoration-color: #db4069; text-decoration-offset: 2px; }
+    .mdmreport-wrapper-section-routing .mdmrep-plgn-labelxmlerr { text-decoration: none; color: inherit; }
