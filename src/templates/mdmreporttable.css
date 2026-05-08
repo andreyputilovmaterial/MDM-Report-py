@@ -181,18 +181,18 @@ td.mdmreport-contentcell label {
 .mdmdiff-in-diff .mdmdiff-inlineoverlay-added {
     /*background: #6bc795;*/
     background: none;
-    border-bottom: 4px solid #2c7d51;
+    outline: 4px solid #2c7d51;
 }
 .mdmdiff-in-diff .mdmdiff-inlineoverlay-removed {
     /* background: #f59278; */
     background: none;
-    border-bottom: 4px solid #df5c39;
+    outline: 4px solid #ef3c19;
 }
 .mdmdiff-in-diff .mdmdiff-inlineoverlay-diff, .mdmdiff-in-diff .mdmdiff-inlineoverlay-added.mdmdiff-inlineoverlay-removed, .mdmdiff-in-diff .mdmdiff-inlineoverlay-added .mdmdiff-inlineoverlay-removed, .mdmdiff-in-diff .mdmdiff-inlineoverlay-removed .mdmdiff-inlineoverlay-added {
     /* background: #edbf45; */
     /* background: repeating-linear-gradient(45deg, #6bc795, #6bc795 6px, #f59278 7px, #f59278 12px); */
     background: none;
-    border-bottom: 4px solid #000;
+    outline: 4px solid #000;
     position: relative;
 }
 .mdmdiff-in-diff .mdmdiff-inlineoverlay-underlying-added {
