@@ -58,8 +58,8 @@ PLUGIN_SHOWHIDESECTIONS_JS = resources.files("src.templates.plugins.showhidesect
 PLUGIN_SHOWHIDESECTIONS_CSS = resources.files("src.templates.plugins.showhidesections").joinpath("script.css").read_text()
 
 # plugins
-PLUGIN_COLORDIFFROWS_JS = resources.files("src.templates.plugins.colordiffrows").joinpath("script.js").read_text()
-PLUGIN_COLORDIFFROWS_CSS = resources.files("src.templates.plugins.colordiffrows").joinpath("script.css").read_text()
+PLUGIN_FORMATPREOUTPUTS_JS = resources.files("src.templates.plugins.format_pre_outputs").joinpath("script.js").read_text()
+PLUGIN_FORMATPREOUTPUTS_CSS = resources.files("src.templates.plugins.format_pre_outputs").joinpath("script.css").read_text()
 
 # plugins
 PLUGIN_VALIDATEMDDLABELISSUES_JS = resources.files("src.templates.plugins.validatemddlabelissues").joinpath("script.js").read_text()
@@ -127,10 +127,10 @@ plugins = [
         'js': PLUGIN_SHOWHIDESECTIONS_JS,
     },
     {
-        'name': 'colordiffrows',
-        'description': 'Add css styles to rows',
-        'css': PLUGIN_COLORDIFFROWS_CSS,
-        'js': PLUGIN_COLORDIFFROWS_JS,
+        'name': 'formatpreoutputs',
+        'description': 'Splitting pre outputs into individual lines with detailed css classes and control elements to switch to next and prev',
+        'css': PLUGIN_FORMATPREOUTPUTS_CSS,
+        'js': PLUGIN_FORMATPREOUTPUTS_JS,
     },
     {
         'name': 'validatemddlabelissues',

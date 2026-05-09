@@ -189,9 +189,7 @@ def html_sanitize_value_general(inp_value,flags=[]):
             _payload = html_sanitize_htmlattribute(inp_value,flags=list(set(flags)-set([flag])))
             return '<span class="mdmreport-txt-ellipsis" title="Click to expand file" data-role="ellipsis" data-ellipsis="{d}"><span class="mdmreport-txt-ellipsis-1">...</span><span class="mdmreport-txt-ellipsis-2"><span class="mdmreport-txt-ellipsis-br"></span><span class="mdmreport-txt-ellipsis-mainline"> @@ +{n} characters @@</span><span class="mdmreport-txt-ellipsis-br"></span></span><span class="mdmreport-txt-ellipsis-3">...</span></span>'.format(d=_payload,n=len(_payload))
     result = None
-    if False:
-        pass
-    elif isinstance(inp_value,int) or isinstance(inp_value,float):
+    if   isinstance(inp_value,int) or isinstance(inp_value,float):
         result = html_sanitize_value_general('{f}'.format(f=inp_value),flags) 
     elif not inp_value:
         result = ''
