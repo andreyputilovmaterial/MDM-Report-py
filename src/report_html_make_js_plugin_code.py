@@ -1,4 +1,7 @@
 
+from .minify_assets import minify_js, minify_css
+
+
 
 def sanitize_comment(s):
     return f'{s}'.replace('*/','*-/')
@@ -17,13 +20,22 @@ def make_syntax(plugin):
     description = plugin['description']
     js = plugin['js']
     css = plugin['css']
-    scripts = r'''
-<style>
+    def process_pipeins(scripts):
+        return scripts.replace(
+            '{{NAME}}', sanitize_comment(sanitize_identifier(name))
+        ).replace(
+            '{{DESCRIPTION}}', sanitize_comment(description)
+        ).replace(
+            '{{JS}}', js
+        ).replace(
+            '{{CSS}}', css
+        )
+    css_scripts = r'''
     /* {{NAME}} - css */
     /* {{DESCRIPTION}} */
 {{CSS}}
-</style>
-<script>
+'''
+    js_scripts = r'''
     /* {{NAME}} - js */
     /* {{DESCRIPTION}} */
 (function(){
@@ -67,15 +79,19 @@ def make_syntax(plugin):
         printErrors(e);
         throw e;
     }
-})()
+})();
+'''
+    desc_comment = process_pipeins(r'''
+    <!-- {{NAME}} - css & js -->
+    <!-- {{DESCRIPTION}} -->
+''')
+    scripts = f'''
+{desc_comment}
+<style>
+{minify_css(process_pipeins(css_scripts))}
+</style>
+<script>
+{minify_js(process_pipeins(js_scripts))}
 </script>
 '''
-    return scripts.replace(
-        '{{NAME}}', sanitize_comment(sanitize_identifier(name))
-    ).replace(
-        '{{DESCRIPTION}}', sanitize_comment(description)
-    ).replace(
-        '{{JS}}', js
-    ).replace(
-        '{{CSS}}', css
-    )
+    return scripts
