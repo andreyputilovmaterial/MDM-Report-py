@@ -365,7 +365,7 @@
                                 const linkurl = getJiraUrl(possibleItemName);
                                 const linkEl = document.createElement('a');
                                 linkEl.setAttribute('href',linkurl);
-                                linkEl.setAttribute('_target','blank');
+                                linkEl.setAttribute('target','_blank');
                                 linkEl.textContent = decodeURIComponent(linkurl);
                                 colAddEl.append(linkEl);
                             }
