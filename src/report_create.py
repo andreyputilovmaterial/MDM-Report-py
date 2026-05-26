@@ -672,6 +672,10 @@ enchancement_plugins = [
         'on_col_after': enchancement_plugin__validate_labels__on_col_after,
     }
 ]
+try:
+    assert all(re.match(r'^\w[\w\-/]*\w$',plugin.get('name')) for plugin in enchancement_plugins), 'Plugins do not pass validation for plugin name, please check'
+except Exception as e:
+    raise Exception(f'Plugins do not pass validation for plugin name, please check: {e}') from e
 
 
 
@@ -691,7 +695,7 @@ def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[],other_cols_ref=[]
 
         if not('skip_plugin_enchancement' in flags):
             for plugin in enchancement_plugins:
-                if plugin['enabled']:
+                if plugin.get('enabled') and f':disable-plugin:{plugin.get("name")}' not in flags:
                     if 'on_col_before' in plugin:
                         result_upd,flags_upd = plugin['on_col_before'](col,col_index,flags,column_specs,other_cols_ref)
                         col = result_upd
@@ -714,7 +718,7 @@ def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[],other_cols_ref=[]
 
         if not('skip_plugin_enchancement' in flags):
             for plugin in enchancement_plugins:
-                if plugin['enabled']:
+                if plugin.get('enabled') and f':disable-plugin:{plugin.get("name")}' not in flags:
                     if 'on_col_after' in plugin:
                         result_upd = plugin['on_col_after'](result_formatted,col,col_index,flags,column_specs,other_cols_ref)
                         result_formatted = result_upd
@@ -751,7 +755,7 @@ def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
 
         if not('skip_plugin_enchancement' in flags):
             for plugin in enchancement_plugins:
-                if plugin['enabled']:
+                if plugin.get('enabled') and f':disable-plugin:{plugin.get("name")}' not in flags:
                     if 'on_row_before' in plugin:
                         row_upd,flags_upd = plugin['on_row_before'](row,flags,column_specs,other_cols_ref=row)
                         row = row_upd
@@ -771,7 +775,7 @@ def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
         
         if not('skip_plugin_enchancement' in flags):
             for plugin in enchancement_plugins:
-                if plugin['enabled']:
+                if plugin.get('enabled') and f':disable-plugin:{plugin.get("name")}' not in flags:
                     if 'on_row_after' in plugin:
                         result_upd = plugin['on_row_after'](result_formatted,row,flags,column_specs,other_cols_ref=row)
                         result_formatted = result_upd
@@ -817,7 +821,7 @@ def prep_htmlmarkup_section(section_obj,column_specs_global,column_titles,flags=
 
         if not('skip_plugin_enchancement' in flags):
             for plugin in enchancement_plugins:
-                if plugin['enabled']:
+                if plugin.get('enabled') and f':disable-plugin:{plugin.get("name")}' not in flags:
                     if 'on_table_before' in plugin:
                         result_upd,column_specs_upd,flags_upd = plugin['on_table_before'](rows,column_specs_localcopy,flags)
                         rows = result_upd
@@ -832,7 +836,7 @@ def prep_htmlmarkup_section(section_obj,column_specs_global,column_titles,flags=
 
         if not('skip_plugin_enchancement' in flags):
             for plugin in enchancement_plugins:
-                if plugin['enabled']:
+                if plugin.get('enabled') and f':disable-plugin:{plugin.get("name")}' not in flags:
                     if 'on_table_after' in plugin:
                         result_upd = plugin['on_table_after'](result_formatted,table_id,rows,column_specs_localcopy,flags)
                         result_formatted = result_upd
@@ -850,7 +854,9 @@ def prep_htmlmarkup_section(section_obj,column_specs_global,column_titles,flags=
 # that's the meaningful entry point
 # that's what this script does - gets input data from json and produces html
 
-def produce_html(inp):
+def produce_html(inp,config={}):
+
+    config = {**(config or {})}
 
     result_ins_htmlmarkup_title = '???'
     result_ins_htmlmarkup_heading = '???'
@@ -898,6 +904,7 @@ def produce_html(inp):
     if reporttype in ['MDD','diff']:
         flags += [f'reporttype-{reporttype}']
     flags += [ f':inp-data:{flag}' for flag in inp_data_flags ]
+    flags += [ f':disable-plugin:{name}' for name in (config.get('plugins_to_disable') or []) ]
     report_data_sections = []
     section_ids_used = []
     for section_obj in ( inp['sections'] if 'sections' in inp else [] ):
@@ -1007,6 +1014,15 @@ def entry_point(*argcs,**kwargs):
             type=str,
             required=False
         )
+        parser.add_argument(
+            '--disable-plugin',
+            help='Disable certain functionality',
+            action='append',
+            default=[],
+            choices=[s.get('name') for s in enchancement_plugins],
+            required=False
+        )
+
         # args = None
         # args_rest = None
         # if( ('arglist_strict' in config) and (not config['arglist_strict']) ):
@@ -1036,10 +1052,20 @@ def entry_point(*argcs,**kwargs):
                 # just a more descriptive message to the end user
                 # can happen if the tool is started two times in parallel and it is writing to the same json simultaneously
                 raise TypeError('Diff: Can\'t read input file as JSON: {msg}'.format(msg=e))
+        
+        config = {
+            'script_name': script_name,
+            'script_started': time_start,
+            'output_format': config_output_format,
+            'inp_filename': f'{input_map_filename}',
+            'plugins_to_disable': [plugin_name for plugin_name in (args.disable_plugin or [])],
+        }
+        
+        assert all(s in [s.get('name') for s in enchancement_plugins] for s in config.get('plugins_to_disable')), f'--disable-plugin option is wrong: an entry is not a plugin name'
 
         result = None
         if config_output_format=='html':
-            result = produce_html(inpfile_map_in_json)
+            result = produce_html(inpfile_map_in_json,config)
         else:
             raise ValueError('report.py: unsupported output format: {fmt}'.format(fmt=config_output_format))
         
