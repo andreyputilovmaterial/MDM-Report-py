@@ -8,10 +8,10 @@
       {{TEMPLATE_HTML_CSS_NORMALIZECSS}}
       {{TEMPLATE_HTML_STYLES}}
       {{TEMPLATE_HTML_STYLES_TABLE}}
-      <script>window.reportType = '{{INS_REPORTTYPE}}';</script>
+      <script>window.reportType = '{{INS_REPORTTYPE}}';window.reportScriptVersion = '{{INS_SCRIPTVERSION}}';</script>
       {{ADD_ASSETS}}
 </head>
-<body class="mdmreportpage {{INS_ADDEDCLASSES}}">
+<body class="mdmreportpage {{INS_ADDEDCLASSES}}" data-script-version="{{INS_SCRIPTVERSION}}">
 <header class="header">
     <div class="container">
         <p>{{INS_PAGEHEADER}}</p>

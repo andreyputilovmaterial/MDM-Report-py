@@ -1,6 +1,6 @@
 # import os, time, re, sys
 from ast import Import
-from datetime import datetime
+from datetime import datetime, timezone
 # from dateutil import tz
 import argparse
 from pathlib import Path
@@ -65,6 +65,17 @@ if not did_import_template:
         from GENERATED import TEMPLATE as report_html_template
         did_import_template = True
 
+
+
+if __name__ == '__main__':
+    # run as a program
+    from GENERATED._VERSION import _VERSION as script_version
+elif '.' in __name__:
+    # package
+    from .GENERATED._VERSION import _VERSION as script_version
+else:
+    # included with no parent package
+    from GENERATED._VERSION import _VERSION as script_version
 
 
 
@@ -902,7 +913,9 @@ def produce_html(inp,config={}):
     flags = []
     reporttype = html_sanitize_text(inp['report_type']) if 'report_type' in inp else None
     if reporttype in ['MDD','diff']:
-        flags += [f'reporttype-{reporttype}']
+        flags += [f'reporttype-{reporttype}'] # older format sent in flags, for generating css classes in <body>
+    flags += [ f':reporttype:{reporttype}' ] # newer format sent in flags, should be like something universal
+    flags += [ f':scriptversion:{config.get("script_version").strip()}' ]
     flags += [ f':inp-data:{flag}' for flag in inp_data_flags ]
     flags += [ f':disable-plugin:{name}' for name in (config.get('plugins_to_disable') or []) ]
     report_data_sections = []
@@ -968,6 +981,13 @@ def produce_html(inp,config={}):
     )
     result = result.replace(
         '{{INS_REPORTTYPE}}', sanitize_cssfield(result_ins_htmlmarkup_reporttype)
+    )
+    result = result.replace(
+        '{{INS_SCRIPTVERSION}}', sanitize_cssfield(config.get('script_version','???'))
+    )
+    # <span class="mdmreport-role-date" data-role="date">2026-05-27T22:37:56Z</span>
+    result = result.replace(
+        '{{NOW}}', html_sanitize_value_general(f"{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}",flags=['role-date'])
     )
     result = result.replace(
         '{{INS_ADDEDCLASSES}}', ' ' + ' '.join([ sanitize_cssfield(s) for s in result_ins_cssclasses])
@@ -1055,6 +1075,7 @@ def entry_point(*argcs,**kwargs):
         
         config = {
             'script_name': script_name,
+            'script_version': script_version.strip(),
             'script_started': time_start,
             'output_format': config_output_format,
             'inp_filename': f'{input_map_filename}',
