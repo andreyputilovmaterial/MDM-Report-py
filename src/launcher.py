@@ -20,6 +20,11 @@ else:
 
 
 
+# STDOUT_COLOR_RED = "\033[91m"
+STDOUT_COLOR_RED = "\033[31m"
+STDOUT_COLOR_RESET = "\033[0m"
+STDOUT_COLOR_GREEN = "\033[32m"
+
 
 
 
@@ -86,9 +91,9 @@ def main():
         print('',file=sys.stderr)
         print('',file=sys.stderr)
         print('',file=sys.stderr)
-        print('Error:',file=sys.stderr)
+        print(f'{STDOUT_COLOR_RED}Error:{STDOUT_COLOR_RESET}',file=sys.stderr)
         print('',file=sys.stderr)
-        print('{e}'.format(e=e),file=sys.stderr)
+        print('{STDOUT_COLOR_RED}{e}{STDOUT_COLOR_RESET}',file=sys.stderr)
         print('',file=sys.stderr)
         exit(1)
 

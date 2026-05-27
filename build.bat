@@ -13,7 +13,7 @@ ECHO -
 ECHO Update program version
 ECHO '''For auto-generated files''' > src\GENERATED\__init__.py
 ECHO # THIS IS AUTO-GENERATED > src\GENERATED\_VERSION.py
-python -c"from datetime import datetime; print(f'# {datetime.now()}')" >> src\GENERATED\_VERSION.py
+python -c "from datetime import datetime; print(f'# {datetime.now()}')" >> src\GENERATED\_VERSION.py
 ECHO _VERSION = ''' >> src\GENERATED\_VERSION.py
 git describe --tags --dirty >> src\GENERATED\_VERSION.py
 ECHO ''' >> src\GENERATED\_VERSION.py
@@ -40,52 +40,8 @@ ECHO launcher.main() >> dist/mdmtoolsap_bundle.py
 ECHO # print('out of mdmtoolsap_bundle') >> dist/mdmtoolsap_bundle.py
 
 PUSHD dist
-@REM COPY ..\run_calling_bundle_mdd.bat .\run_diff_mdd.bat
-@REM COPY ..\run_calling_bundle_aligned_diffs_mdd.bat .\run_diff_aligned_workflows_mdds.bat
-@REM COPY ..\run_calling_bundle_mdd_report.bat .\run_mdd_report.bat
-@REM COPY ..\run_calling_bundle_mdd_report_in_excel.bat .\run_mdd_report_in_excel.bat
-@REM COPY ..\run_calling_bundle_textfile.bat .\run_diff_textfile.bat
-@REM COPY ..\run_calling_bundle_msmarkitdown.bat .\run_diff_msmarkitdown.bat
-@REM COPY ..\run_calling_bundle_excel.bat .\run_diff_excel.bat
-@REM COPY ..\run_calling_bundle_excel_wholedirectory.bat .\run_diff_excel_wholedirectory.bat
-@REM COPY ..\run_calling_bundle_spss.bat .\run_diff_spss.bat
-@REM @REM REN mdmtoolsap_bundle.py mdmtoolsap.py
-@REM @REM powershell -Command "(gc 'run_diff_mdd.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap.py' | Out-File -encoding 'Default' 'run_diff_mdd.bat'"
-@REM @REM powershell -Command "(gc 'run_diff_mdd_routing.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap.py' | Out-File -encoding 'Default' 'run_diff_mdd_routing.bat'"
-@REM @REM @REM powershell -Command "(gc 'run_diff_mdd_with_translations.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap.py' | Out-File -encoding 'Default' 'run_diff_mdd_with_translations.bat'"
-@REM @REM powershell -Command "(gc 'run_mdd_report.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap.py' | Out-File -encoding 'Default' 'run_mdd_report.bat'"
-@REM powershell -Command "(gc 'run_diff_mdd.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap_bundle.py' | Out-File -encoding 'Default' 'run_diff_mdd.bat'"
-@REM powershell -Command "(gc 'run_diff_aligned_workflows_mdds.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap_bundle.py' | Out-File -encoding 'Default' 'run_diff_aligned_workflows_mdds.bat'"
-@REM powershell -Command "(gc 'run_mdd_report.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap_bundle.py' | Out-File -encoding 'Default' 'run_mdd_report.bat'"
-@REM powershell -Command "(gc 'run_mdd_report_in_excel.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap_bundle.py' | Out-File -encoding 'Default' 'run_mdd_report_in_excel.bat'"
-@REM powershell -Command "(gc 'run_diff_textfile.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap_bundle.py' | Out-File -encoding 'Default' 'run_diff_textfile.bat'"
-@REM powershell -Command "(gc 'run_diff_msmarkitdown.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap_bundle.py' | Out-File -encoding 'Default' 'run_diff_msmarkitdown.bat'"
-@REM powershell -Command "(gc 'run_diff_excel.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap_bundle.py' | Out-File -encoding 'Default' 'run_diff_excel.bat'"
-@REM powershell -Command "(gc 'run_diff_excel_wholedirectory.bat' -encoding 'Default') -replace '(run_calling_bundle_excel)', 'run_diff_excel' | Out-File -encoding 'Default' 'run_diff_excel_wholedirectory.bat'"
-@REM powershell -Command "(gc 'run_diff_excel_wholedirectory.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap_bundle.py' | Out-File -encoding 'Default' 'run_diff_excel_wholedirectory.bat'"
-@REM powershell -Command "(gc 'run_diff_spss.bat' -encoding 'Default') -replace '(dist[/\\])?mdmtoolsap_bundle.py', 'mdmtoolsap_bundle.py' | Out-File -encoding 'Default' 'run_diff_spss.bat'"
-@REM REM COPY .\run_diff_mdd.bat .\run_diff_mdd_routing.bat
-@REM REM powershell -Command "(gc 'run_diff_mdd_routing.bat' -encoding 'Default') -replace '--config-features\s+\w[\w,]*\w', '--config-features label' | Out-File -encoding 'Default' 'run_diff_mdd_routing.bat'"
-@REM REM powershell -Command "(gc 'run_diff_mdd_routing.bat' -encoding 'Default') -replace '--config-section\s+\w[\w,]*\w', '--config-section routing' | Out-File -encoding 'Default' 'run_diff_mdd_routing.bat'"
-@REM REM powershell -Command "(gc 'run_diff_mdd_routing.bat' -encoding 'Default') -replace '--program diff', '--program diff --output-filename-suffix .routing' | Out-File -encoding 'Default' 'run_diff_mdd_routing.bat'"
-@REM REM powershell -Command "(gc 'run_diff_mdd_routing.bat' -encoding 'Default') -replace '^(?:\s*?ECHO\s*?-\s*?`r?`n)?\s*?ECHO\b\s*?(?:2|4)\s*?\.\s*?generate\s+html\s*?`r?`n\s*?python\b\s*?[^`r?`n]*?\.py\s+--program\s+report[^`r?`n]*?\s*?`r?`n(?:\s*?if\b\s*?%ERRORLEVEL%[^`r?`n]*?\s*?`r?`n', '' | Out-File -encoding 'Default' 'run_diff_mdd_routing.bat'"
-@REM @REM COPY .\run_diff_mdd.bat .\run_diff_mdd_with_translations.bat
-@REM @REM powershell -Command "(gc 'run_diff_mdd_with_translations.bat' -encoding 'Default') -replace '--config-features\s+\w[\w,]*\w', '--config-features label,attributes,properties,translations' | Out-File -encoding 'Default' 'run_diff_mdd_with_translations.bat'"
 POPD
 
-@REM ECHO Clear up ..\test_pinliner_results\...
-@REM PUSHD ..\test_pinliner_results
-@REM DEL /F /Q *
-@REM FOR /D %%G IN (*) DO RMDIR /S /Q %%G
-@REM POPD
-
-@REM ECHO Bring the mdmtoolsap_bundle to ..\test_pinliner_results\...
-@REM COPY dist\mdmtoolsap_bundle.py ..\test_pinliner_results\
-
-@REM PUSHD ..\test_pinliner_results
-@REM Echo within ..\test_pinliner_results\
-@REM REM python
-@REM python mdmtoolsap_bundle.py --program test
 @REM DEL *.pyc
 @REM IF EXIST __pycache__ (
 @REM DEL /F /Q __pycache__\*

@@ -13,6 +13,14 @@ import xml.etree.ElementTree as ET # for enchancement_plugin__validate_labels__o
 from importlib import resources
 
 
+# STDOUT_COLOR_RED = "\033[91m"
+STDOUT_COLOR_RED = "\033[31m"
+STDOUT_COLOR_RESET = "\033[0m"
+STDOUT_COLOR_GREEN = "\033[32m"
+
+
+
+
 
 def is_in_pinliner():
     for p in sys.meta_path:
@@ -611,10 +619,10 @@ def enchancement_plugin__validate_labels__on_col_after(result_formatted,col,col_
         # try:
         #     return is_mdd_report_type(flags) and re.match(r'^\s*(?:label|langcode).*',column_specs[col_index])
         # except:
-        #     print('Failed at col == {c}'.format(c=repr(col)),file=sys.stderr)
-        #     print('Failed at column_specs == {c}'.format(c=repr(column_specs)),file=sys.stderr)
-        #     print('Failed at flags == {c}'.format(c=repr(flags)),file=sys.stderr)
-        #     raise Exception('mdmrep validate labels plugin: failed when executing a regexp on col: {c}'.format(c=repr(col)))
+        #     print(f'{STDOUT_COLOR_RED}Failed at col == {repr(col)}{STDOUT_COLOR_RESET}',file=sys.stderr)
+        #     print(f'{STDOUT_COLOR_RED}Failed at column_specs == {repr(column_specs)}{STDOUT_COLOR_RESET}',file=sys.stderr)
+        #     print(f'{STDOUT_COLOR_RED}Failed at flags == {repr(flags)}{STDOUT_COLOR_RESET}',file=sys.stderr)
+        #     raise Exception(f'mdmrep validate labels plugin: failed when executing a regexp on col: {repr(col)}')
     def get_flat_text(html):
         root = ET.fromstring(html)
         return ''.join(root.itertext())
@@ -624,7 +632,7 @@ def enchancement_plugin__validate_labels__on_col_after(result_formatted,col,col_
             ET.fromstring(f"<root>{snippet}</root>")
             return True
         except ET.ParseError as e:
-            # print("Parse error:", e,file=sys.stderr)
+            # print(f"{STDOUT_COLOR_RED}Parse error: {e}{STDOUT_COLOR_RESET}",file=sys.stderr)
             return False
     try:
         if is_label_column(result_formatted,col,col_index,flags,column_specs,other_cols_ref):
@@ -636,7 +644,7 @@ def enchancement_plugin__validate_labels__on_col_after(result_formatted,col,col_
             if len(css_classes_add)>0:
                 m = re.match(r'^(\s*?<\s*?(?:td|th)(?:\s*?\w+\s*?=\s*?["\'].*?["\'])*?\s*?>)(.*)(<\s*?/\s*?(?:td|th)\s*?>\s*?)$',result_formatted,flags=re.I)
                 if not m:
-                    print(f'DEBUG: plugin: mdmrep validate plugin: could not parse <td> markup: {result_formatted}',file=sys.stderr)
+                    print(f'{STDOUT_COLOR_RED}DEBUG: plugin: mdmrep validate plugin: could not parse <td> markup: {result_formatted}{STDOUT_COLOR_RESET}',file=sys.stderr)
                     raise Exception('mdmrep validate plugin: could not parse <td> markup')
                 result_outer_begin = m[1]
                 result_inner = m[2]
@@ -647,7 +655,7 @@ def enchancement_plugin__validate_labels__on_col_after(result_formatted,col,col_
         else:
             return result_formatted
     except Exception as e:
-        print(f'mdmrep validate labels plugin: failed: {e}',file=sys.stderr)
+        print(f'{STDOUT_COLOR_RED}mdmrep validate labels plugin: failed: {e}{STDOUT_COLOR_RESET}',file=sys.stderr)
         err_msg = 'ERROR'
         try:
             err_msg = f'{e}'
@@ -1111,9 +1119,9 @@ def entry_point(*argcs,**kwargs):
         print('',file=sys.stderr)
         print('',file=sys.stderr)
         print('',file=sys.stderr)
-        print('Error:',file=sys.stderr)
+        print(f'{STDOUT_COLOR_RED}Error:{STDOUT_COLOR_RESET}',file=sys.stderr)
         print('',file=sys.stderr)
-        print('{e}'.format(e=e),file=sys.stderr)
+        print('{STDOUT_COLOR_RED}{e}{STDOUT_COLOR_RESET}',file=sys.stderr)
         print('',file=sys.stderr)
         exit(1)
 
