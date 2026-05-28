@@ -1066,9 +1066,9 @@ def entry_point(*argcs,**kwargs):
         if args.output_format:
             config_output_format = args.output_format
 
-        print('{script_name}: script started at {dt}'.format(dt=time_start,script_name=script_name))
+        print(f'{script_name}: script started at {time_start}')
 
-        #print('{script_name}: reading {fname}'.format(fname=input_map_filename,script_name=script_name))
+        #print(f'{script_name}: reading {input_map_filename}')
         if not(Path(input_map_filename).is_file()):
             raise FileNotFoundError('file not found: {fname}'.format(fname=input_map_filename))
         
@@ -1099,12 +1099,12 @@ def entry_point(*argcs,**kwargs):
             raise ValueError('report.py: unsupported output format: {fmt}'.format(fmt=config_output_format))
         
         result_fname = ( Path(input_map_filename).parents[0] / '{basename}{ext}'.format(basename=re.sub(r'\.json\s*?$','','{n}'.format(n=Path(input_map_filename).name),flags=re.I),ext='.html') if Path(input_map_filename).is_file() else re.sub(r'^\s*?(.*?)(?:\.json)?\s*?$',lambda m: '{base}{added}'.format(base=m[1],added='.html'),'{path}'.format(path=input_map_filename)) )
-        print('{script_name}: saving as "{fname}"'.format(fname=result_fname,script_name=script_name))
+        print(f'{script_name}: {STDOUT_COLOR_GREEN}saving as "{result_fname}"{STDOUT_COLOR_RESET}')
         with open(result_fname, "w") as outfile:
             outfile.write(result)
 
         time_finish = datetime.now()
-        print('{script_name}: finished at {dt} (elapsed {duration})'.format(dt=time_finish,duration=time_finish-time_start,script_name=script_name))
+        print(f'{script_name}: finished at {time_finish} (elapsed {time_finish-time_start})')
     except Exception as e:
         # the program is designed to be user-friendly
         # that's why we reformat error messages a little bit
