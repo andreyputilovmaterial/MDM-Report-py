@@ -154,33 +154,159 @@ def sanitize_text_extract_filename(s):
 def html_sanitize_value_astext(inp_value,flags=[]):
     return html_sanitize_text(inp_value,flags)
 
+# def html_sanitize_value_asproperties(inp_value,flags=[]):
+#     # removing css classes for property coloring - reduced memory consumption a lot; AP 10/12/2024
+#     # unsuppress to have properties colored
+#     # ins_partbegin = '<span class="mdmreport-prop-fieldname">'
+#     # ins_partconjunction =  '</span> = "<span class="mdmreport-prop-fieldvalue">'
+#     # ins_partend = '</span>"'
+#     ins_partbegin = ''
+#     ins_partconjunction =  ' = "'
+#     ins_partend = '"'
+#     if 'format_semicolon' in flags:
+#         ins_partbegin = ''
+#         ins_partconjunction =  ': '
+#         ins_partend = ''
+#     result = '{part_begin}{part_iterate}{part_end}'.format(
+#         part_begin = '<p class="mdmreport-prop-row">',
+#         part_iterate = ', </p><p class="mdmreport-prop-row">'.join([
+#             '{ins_partbegin}{fieldname}{ins_partconjunction}{fieldvalue}{ins_partend}'.format(
+#                 fieldname = html_sanitize_text(row['name']),
+#                 fieldvalue = html_sanitize_value_general(row['value'],[]+flags+['format-escapequotes-vbsstyle']),
+#                 ins_partbegin = ins_partbegin,
+#                 ins_partconjunction = ins_partconjunction,
+#                 ins_partend = ins_partend
+#             ) for row in inp_value
+#         ]),
+#         part_end = '</p>'
+#     )
+#     return result
+
 def html_sanitize_value_asproperties(inp_value,flags=[]):
+    def _err(msg):
+        raise Exception(f'Error: html_sanitize_value_asproperties: {msg}')
+    def make_outer_txt(
+        inp_value,
+        patterns,
+        make_row_txt,
+        flags,
+    ):
+        pattern_global_begin, pattern_global_end, pattern_junction_outer, *patterns_rest = patterns
+        txt = ''
+        txt += pattern_global_begin
+        items = [row for row in inp_value] # sorry we need for the look ahead for the counter to know which is last
+        for i,row in enumerate(items):
+            txt_thisrow = ''
+            is_first = i==0
+            is_last = i==len(items)-1
+            if not is_last:
+                txt_thisrow += pattern_junction_outer
+            txt_thisrow += make_row_txt(row,(is_first,is_last),patterns_rest,flags)
+            txt += txt_thisrow
+        txt += pattern_global_end
+        return txt
+    def make_row_txt(
+        inp_value,
+        first_or_last,
+        patterns,
+        # make_propname_txt,
+        # make_propvalue_txt,
+        flags,
+    ):
+        fieldname = html_sanitize_text(inp_value['name'])
+        fieldvalue = html_sanitize_value_general(inp_value['value'],[]+flags+['format-escapequotes-vbsstyle'])
+        fieldrole = inp_value.get('role',None)
+        fieldflag = f'role-{fieldrole}' if fieldrole else ''
+        is_first, is_last = first_or_last
+        pattern_junction_inner, pattern_row_begin, pattern_row_prop_begin, pattern_row_prop_end, pattern_row_propvalue_conjunction, pattern_row_value_begin, pattern_row_value_end, pattern_row_end = patterns
+        txt = ''
+        txt += pattern_row_begin
+        txt += pattern_row_prop_begin
+        txt += fieldname
+        txt += pattern_row_prop_end
+        txt += pattern_row_propvalue_conjunction
+        txt += pattern_row_value_begin
+        txt += fieldvalue
+        txt += pattern_row_value_end
+        txt += ( pattern_junction_inner if not is_last else '' )
+        txt += pattern_row_end
+        if (fieldflag=='role-time') or (fieldflag=='role-date') or (fieldflag=='role-datetime'):
+            txt =  f'<span class="mdmreport-role-date" data-role="date">{txt}</span>'
+        elif fieldflag=='role-added':
+            txt = f'<span class="mdmdiff-inlineoverlay-added">{txt}</span>'
+        elif fieldflag=='role-removed':
+            txt = f'<span class="mdmdiff-inlineoverlay-removed">{txt}</span>'
+        elif fieldflag=='role-source_added':
+            txt = f'<span class="mdmdiff-inlineoverlay-underlying-added">{txt}</span>'
+        elif fieldflag=='role-source_removed':
+            txt = f'<span class="mdmdiff-inlineoverlay-underlying-removed">{txt}</span>'
+        elif fieldflag=='role-sronly':
+            txt = f'<span class="mdmreport-sronly">{txt}</span>'
+        elif fieldflag=='role-label':
+            txt = f'<span class="mdmreport-label-pseudo" data-added="{txt}"></span>'
+        elif fieldflag=='role-ellipsis':
+            # TODO: ellipsis?
+            txt = txt
+        return txt
     # removing css classes for property coloring - reduced memory consumption a lot; AP 10/12/2024
-    # unsuppress to have properties colored
-    # ins_partbegin = '<span class="mdmreport-prop-fieldname">'
-    # ins_partconjunction =  '</span> = "<span class="mdmreport-prop-fieldvalue">'
-    # ins_partend = '</span>"'
-    ins_partbegin = ''
-    ins_partconjunction =  ' = "'
-    ins_partend = '"'
-    if 'format_semicolon' in flags:
-        ins_partbegin = ''
-        ins_partconjunction =  ': '
-        ins_partend = ''
-    result = '{part_begin}{part_iterate}{part_end}'.format(
-        part_begin = '<p class="mdmreport-prop-row">',
-        part_iterate = ', </p><p class="mdmreport-prop-row">'.join([
-            '{ins_partbegin}{fieldname}{ins_partconjunction}{fieldvalue}{ins_partend}'.format(
-                fieldname = html_sanitize_text(row['name']),
-                fieldvalue = html_sanitize_value_general(row['value'],[]+flags+['format-escapequotes-vbsstyle']),
-                ins_partbegin = ins_partbegin,
-                ins_partconjunction = ins_partconjunction,
-                ins_partend = ins_partend
-            ) for row in inp_value
-        ]),
-        part_end = '</p>'
+    format_option_colorsytxhlight = False
+    format_option_syntax = "customproperties" if 'format_semicolon' not in flags else 'semicolon'
+    pattern_global_begin = None
+    pattern_global_end = None
+    pattern_junction_outer = None
+    pattern_junction_inner = None
+    pattern_row_begin = None
+    pattern_row_prop_begin = None
+    pattern_row_prop_end = None
+    pattern_row_propvalue_conjunction = None
+    pattern_row_value_begin = None
+    pattern_row_value_end = None
+    pattern_row_end = None
+    if format_option_syntax=='customproperties':
+        pattern_global_begin = ''
+        pattern_global_end = ''
+        pattern_junction_outer = ''
+        pattern_junction_inner = ', '
+        pattern_row_begin = '<p class="mdmreport-prop-row">'
+        pattern_row_prop_begin = ''+('<span class="mdmreport-prop-fieldname">' if format_option_colorsytxhlight else '')+''
+        pattern_row_prop_end = ''+('</span>' if format_option_colorsytxhlight else '')+''
+        pattern_row_propvalue_conjunction = ' = '
+        pattern_row_value_begin = '"'+('<span class="mdmreport-prop-fieldvalue">' if format_option_colorsytxhlight else '')+''
+        pattern_row_value_end = ''+('</span>' if format_option_colorsytxhlight else '')+'"'
+        pattern_row_end = '</p>'
+    elif format_option_syntax=='semicolon':
+        pattern_global_begin = ''
+        pattern_global_end = ''
+        pattern_junction_outer = ''
+        pattern_junction_inner = ''
+        pattern_row_begin = '<p class="mdmreport-prop-row">'
+        pattern_row_prop_begin = ''+('<span class="mdmreport-prop-fieldname">' if format_option_colorsytxhlight else '')+''
+        pattern_row_prop_end = ''+('</span>' if format_option_colorsytxhlight else '')+''
+        pattern_row_propvalue_conjunction = ': '
+        pattern_row_value_begin = ''+('<span class="mdmreport-prop-fieldvalue">' if format_option_colorsytxhlight else '')+''
+        pattern_row_value_end = ''+('</span>' if format_option_colorsytxhlight else '')+''
+        pattern_row_end = '</p>'
+    else:
+        return  _err(f'unknown format spec: format_option_syntax == "{format_option_syntax}"')
+    return make_outer_txt(
+        inp_value,
+        (
+            pattern_global_begin,
+            pattern_global_end,
+            pattern_junction_outer,
+            pattern_junction_inner,
+            pattern_row_begin,
+            pattern_row_prop_begin,
+            pattern_row_prop_end,
+            pattern_row_propvalue_conjunction,
+            pattern_row_value_begin,
+            pattern_row_value_end,
+            pattern_row_end,
+            ),
+        make_row_txt,
+        # lambda inp_value, first_or_last, patterns: make_row_txt(inp_value, first_or_last, patterns, make_propname_txt, make_propvalue_txt),
+        flags,
     )
-    return result
 
 def html_sanitize_value_general(inp_value,flags=[]):
     # it's recursive!
