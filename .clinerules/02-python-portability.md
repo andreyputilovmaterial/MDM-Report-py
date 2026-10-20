@@ -59,6 +59,25 @@ Existing examples in this repo:
   string literals into `src/lib/mdmreadpy/src/lib/mdmreportpy/src/GENERATED/TEMPLATE.py`,
   which `report_create.py` imports when running inside the pinliner bundle.
 
+### How template assets are embedded in `mdmreportpy`
+
+The report generator uses a two-path approach for its HTML/CSS/JS templates:
+
+- **Development time:** `report_html_template.py` loads the files under
+  `src/templates/` with `importlib.resources` (`resources.files("src.templates")`)
+  and minifies them in memory.
+- **Build time:** `build_compiled_template.py` imports the source package
+  (`from src import report_html_template`), then writes the assembled strings as
+  literals into `src/GENERATED/TEMPLATE.py`.
+- **Runtime inside the pinliner bundle:** `report_create.py` first tries to import the
+  source `report_html_template`; when that fails (a bundle has no filesystem resource
+  files) it falls back to `from GENERATED import TEMPLATE as report_html_template`.
+
+The hardcoded `src` package name used by `resources.files("src.templates")` and by
+`build_compiled_template.py` is part of this technique (the template package is named
+`src` in this repo). It is intentional, though it means the subtree is not relocatable
+under a different package name without updating those references.
+
 ## When inspecting source code
 
 Any code under a `GENERATED` folder is **generated output, not maintained source code**:
