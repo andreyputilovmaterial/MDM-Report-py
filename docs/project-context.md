@@ -1,14 +1,18 @@
 # Project Context — MDM-HTMLReport-py (`mdmreportpy`)
 
-> Last updated: 2026-10-20
+> Last updated: 2026-10-23
 > Status: initial capture. Architecture + design decisions + review findings are
 > recorded here. The **input JSON format spec is still to be formalized** (see
 > "Roadmap").
+>
+> **Convention:** read this file at the start of every task and update it at the end,
+> so it stays the permanently updated context of the current work (see
+> `.clinerules/00-project-context.md`).
 
 ## 1. What this package does
 
 `mdmreportpy` turns JSON (produced by sibling tools in the same global project — e.g.
-`otherformatsreadpy_txt/reader_plain.py`, the MDD reader, the MDD diff tool) into a
+`otherformatsreadpy_txt/reader_plain.py` or `src/lib/mdmreadpy/src/lib/mdmreportpy`, the MDD reader, the MDD diff tool) into a
 single, **fully self-contained HTML "report"**.
 
 Requirements the output must satisfy:
