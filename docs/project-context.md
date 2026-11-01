@@ -3,8 +3,9 @@
 > Last updated: 2026-11-02
 > Status: backend plugins extracted to `src/plugins/` with a uniform hook contract
 > (`PluginContext` + `run_plugins`); sanitization helpers extracted to
-> `src/common_functions.py`; tests added. The **input JSON format spec is still to
-> be formalized** (see "Roadmap").
+> `src/common_functions.py`; tests added. Documentation reorganized: the input JSON
+> and rich-text content specs were split out of `docs/architecture.md` into
+> `docs/report-json-format.md` and `docs/rich-text-format.md`.
 >
 > **Convention:** read this file at the start of every task and update it at the end,
 > so it stays the permanently updated context of the current work (see
@@ -49,6 +50,10 @@ The top-level package is literally named `src` in this repo (the `src/` folder u
 | `build_compiled_template.py` | Writes `src/GENERATED/TEMPLATE.py` from the assembled template strings (for the pinliner bundle). |
 
 ## 4. Input JSON format (draft — to be formalized)
+
+The stable specs now live in `docs/report-json-format.md` (report shape) and
+`docs/rich-text-format.md` (cell/header content). This section remains the working
+draft.
 
 This is an initial sketch, not yet a spec. It will be tightened in the next step using
 real examples from the sibling producers.
@@ -226,11 +231,31 @@ Each finding records the reasoning, the decision, and the next action.
   undecided.
 - **Action:** record as an open style decision; normalize opportunistically.
 
+### 18. Extra non-standard properties on a rich-text segment — allowed; must not be a blocker, not guaranteed to work
+- **Reasoning:** the HTML renderer (`html_sanitize_value_general`,
+  `htmlattr_sanitize_value_general`) ignores keys other than `text`/`parts`/`role`, so
+  `{"text":"hello","role":"added","my_custom_property":123}` renders as an `added`
+  segment. The plain-text helper `sanitize_text_general` (used by `diff_add_classes`)
+  requires `len(nonstd_keys)==0` and would stringify such an object instead.
+- **Decision (2026-11-02):** extra non-standard properties are **allowed and must not be
+  a blocker** in any tool (HTML report, diff, Excel, …), but are **not guaranteed to
+  work** — a consumer may ignore, drop, or leave them untouched. In the HTML report they
+  must not become visible text; in the diff they are not guaranteed to produce anything
+  meaningful and must only not crash/block. `role` (and other such properties) is not
+  semantically diffable: diffing `{"text":"aaa","role":"label"}` vs
+  `{"text":"aab","role":"sronly"}` has no meaningful `added`/`removed` representation of
+  `role` — a rich-text `role` with `added`/`removed` parts would be neither `label` nor
+  `sronly` and would lose its meaning. Recorded in `docs/rich-text-format.md`.
+- **Action:** align `sanitize_text_general`'s `is_diff_segment_dict` with the renderer
+  (drop the `nonstd_keys` check).
+
 ## 7. Roadmap
 
 1. **Documentation (this file).** Record architecture, decisions, findings. *(this step)*
-2. **Formalize the JSON input format spec.** Work through real examples from the
-   sibling producers; document every accepted cell-content shape and role.
+2. **Formalize the JSON input format spec.** Split into stable specs
+   (`docs/report-json-format.md`, `docs/rich-text-format.md`) on 2026-11-02. Still to
+   do: work through real examples from the sibling producers and finalize the exact
+   role list.
 3. **Extract `common_functions.py`** — done (2026-11-02). Small confirmed bugs
    (#3, #4, #5, #7, #9) still open.
 4. **Add tests.** Done (2026-11-02): `tests/test_common_functions.py`,
@@ -245,8 +270,10 @@ Each finding records the reasoning, the decision, and the next action.
 
 ## 8. Open questions
 
-- Exact, complete list of accepted cell-content shapes and `role` values (to be
-  settled in step 2).
+- Exact, complete list of accepted cell-content shapes and `role` values (now drafted
+  in `docs/rich-text-format.md`; still to be validated against real producer output).
+- Whether `sanitize_text_general` should be relaxed to accept extra non-standard
+  properties on a segment (finding #18 says yes — action pending).
 - Whether `sanitize_idfield` is needed or can be removed/merged with
   `sanitize_cssfield`.
 - Whether the memory-saving `<table>` split needs to be made more robust.

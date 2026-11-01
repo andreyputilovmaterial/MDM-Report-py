@@ -57,5 +57,8 @@ technique.
 
 ## Documentation
 
-- [Architecture & input JSON format](docs/architecture.md) — stable reference for
-  developers.
+- [Architecture](docs/architecture.md) — package layout, plugin layers, build/template
+  embedding.
+- [Report JSON format](docs/report-json-format.md) — the JSON "report" shape.
+- [Rich-text content format](docs/rich-text-format.md) — cell/header content shapes and
+  `role` semantics.

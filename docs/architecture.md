@@ -1,8 +1,14 @@
-# MDM-HTMLReport-py — architecture & input JSON format
+# MDM-HTMLReport-py — architecture
 
 Stable reference. Living working-memory notes (findings, roadmap, open questions) live
 in `docs/project-context.md`, which is updated on every agent run and is not linked
 from user-facing docs.
+
+The input JSON format is specified in two companion files:
+
+- `docs/report-json-format.md` — the JSON "report" shape this package consumes.
+- `docs/rich-text-format.md` — the rich-text shapes used for cell values and
+  `column_headers`.
 
 ## 1. Where it fits
 
@@ -29,45 +35,7 @@ HTML. It does not know or care which reader produced the JSON. Producers include
 | `src/templates/` | HTML/CSS/JS assets, incl. `plugins/*/script.{js,css}`. |
 | `build_compiled_template.py` | Writes `src/GENERATED/TEMPLATE.py` for the pinliner bundle. |
 
-## 3. Input JSON format
-
-```
-{
-  "report_type": "MDD" | "diff" | "TextFile" | ...,
-  "source_file": "...",                       # single-input reports
-  "source_left": "...", "source_right": "...",  # diff reports
-  "report_datetime_utc": "...",
-  "report_datetime_local": "...",
-  "source_file_metadata": [ {"name": ..., "value": ..., "role": ...} ],
-  "report_scheme": {
-    "columns": [...],
-    "column_headers": {...},
-    "flags": [...]
-  },
-  "sections": [
-    {
-      "name": "...",
-      "title": "...",            # optional display title (falls back to name)
-      "columns": [...],          # optional per-section column override
-      "column_headers": {...},   # optional per-section title override
-      "statistics": "...",       # optional banner
-      "content": [ { "colname": <cell>, ... }, ... ]
-    }
-  ]
-}
-```
-
-Cell values may be strings, lists, `{"text": ...}`, `{"parts": [...]}`, or property
-lists `[{"name": ..., "value": ...}, ...]`. A `role` field carries formatting semantics
-(`added`, `removed`, `date`, `label`, `sronly`, `noshowdiff`, ...).
-
-`column_headers` values (global and per-section) accept the same rich-text shapes as
-cell values: a plain string, a list of parts, or a `{"text", "role"}` /
-`{"parts": [...]}` segment. Headers are sanitized through the same pipeline as cells;
-only the built-in roles receive special markup, so custom roles render as plain text
-unless handled by a backend plugin or a role handler.
-
-## 4. Plugin layers (intentional)
+## 3. Plugin layers (intentional)
 
 - **Frontend JS plugins** (interactivity): beautifydates, aligncolwidths, expandable,
   showhidecolumns, jira, columnfiltering, showhidesections, formatpreoutputs,
@@ -84,7 +52,7 @@ unless handled by a backend plugin or a role handler.
   - `page_wrap_tables_for_memory_saving` (any report).
   Disable with `--disable-plugin <name>`.
 
-## 5. Build / template embedding
+## 4. Build / template embedding
 
 Templates are read at development time via `importlib.resources`, compiled to
 `src/GENERATED/TEMPLATE.py` at build time, and the runtime falls back to `GENERATED`
