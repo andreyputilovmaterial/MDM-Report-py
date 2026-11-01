@@ -1,9 +1,10 @@
 # Project Context — MDM-HTMLReport-py (`mdmreportpy`)
 
-> Last updated: 2026-10-23
-> Status: initial capture. Architecture + design decisions + review findings are
-> recorded here. The **input JSON format spec is still to be formalized** (see
-> "Roadmap").
+> Last updated: 2026-11-02
+> Status: backend plugins extracted to `src/plugins/` with a uniform hook contract
+> (`PluginContext` + `run_plugins`); sanitization helpers extracted to
+> `src/common_functions.py`; tests added. The **input JSON format spec is still to
+> be formalized** (see "Roadmap").
 >
 > **Convention:** read this file at the start of every task and update it at the end,
 > so it stays the permanently updated context of the current work (see
@@ -37,7 +38,9 @@ The top-level package is literally named `src` in this repo (the `src/` folder u
 
 | Module | Role |
 | --- | --- |
-| `src/report_create.py` | Main entry (`entry_point`) and `produce_html()`. Input parsing, text sanitization, plugin dispatch, HTML rendering, CLI. Currently a ~1256-line monolith. |
+| `src/report_create.py` | Main entry (`entry_point`) and `produce_html()`. Input parsing, plugin dispatch, HTML rendering, CLI. |
+| `src/common_functions.py` | Shared text/HTML sanitization + formatting helpers (pure functions). |
+| `src/plugins/` | Backend enhancement plugins. `base.py` holds the contract (`PluginContext`, `run_plugins`, hook points); each plugin lives in its own module and registers handlers per hook. |
 | `src/report_html_template.py` | Loads + minifies templates and JS plugin assets at import time; builds `TEMPLATE_HTML_*` strings and the `plugins` list. |
 | `src/report_html_make_js_plugin_code.py` | Wraps each JS plugin in an IIFE with shared error-handling helpers (`printErrors`, `wrapErrors`). |
 | `src/minify_assets.py` | Optional minification via `csscompressor` / `rjsmin` (graceful no-op if missing). |
@@ -181,9 +184,11 @@ Each finding records the reasoning, the decision, and the next action.
   everything that cannot appear in a class. It may be cosmetically improved later but
   is not a priority.
 
-### 11. Two plugin systems with different names/controllability — intentional
+### 11. Two plugin systems — intentional, backend now has a uniform contract
 - **Decision:** the split is deliberate (backend transforms vs frontend
-  interactivity). No change; document only.
+  interactivity). Backend plugins now live in `src/plugins/`, attach to named hook
+  points, and mutate a `PluginContext` (see `src/plugins/base.py`). Frontend JS
+  plugins remain in `src/templates/plugins/`.
 
 ### 12. `resources.files("src.templates")` portability — clarified, not a defect
 - **Reasoning:** the hardcoded `src` package name is part of the asset-embedding
@@ -196,7 +201,7 @@ Each finding records the reasoning, the decision, and the next action.
   section today, fragile if a nested/banner `<table>` ever appears.
 - **Action:** review and decide whether a more robust split or a guard is needed.
 
-### 14. `combine_attributes_into_master_name_col` mutates rows in place — open (to review later)
+### 14. `mdd_combine_attributes` mutates rows in place — open (to review later)
 - **Reasoning:** currently mutates to remove the attribute column; may be required for
   the column-removal behavior.
 - **Decision:** prefer a clean non-mutating function if possible; to be reviewed.
@@ -220,12 +225,14 @@ Each finding records the reasoning, the decision, and the next action.
 1. **Documentation (this file).** Record architecture, decisions, findings. *(this step)*
 2. **Formalize the JSON input format spec.** Work through real examples from the
    sibling producers; document every accepted cell-content shape and role.
-3. **Extract `common_functions.py`** and fix the small confirmed bugs (#3, #4, #5, #7,
-   #9).
-4. **Add tests.** Unit tests for the pure sanitization/format functions + a golden-file
-   test (small JSON fixture → assert HTML structure).
-5. **Refactor.** Split `report_create.py`; normalize the identifier/sanitizer helpers
-   (#8); shorten verbose class names (#16); review open items (#13, #14).
+3. **Extract `common_functions.py`** — done (2026-11-02). Small confirmed bugs
+   (#3, #4, #5, #7, #9) still open.
+4. **Add tests.** Done (2026-11-02): `tests/test_common_functions.py`,
+   `tests/test_backend_plugins.py`. A golden-file HTML test is still open.
+5. **Refactor.** `report_create.py` split done (2026-11-02): plugins extracted to
+   `src/plugins/` with a uniform hook contract. Remaining: normalize the
+   identifier/sanitizer helpers (#8), shorten verbose class names (#16), review
+   open items (#13, #14).
 
 ## 8. Open questions
 
@@ -234,5 +241,5 @@ Each finding records the reasoning, the decision, and the next action.
 - Whether `sanitize_idfield` is needed or can be removed/merged with
   `sanitize_cssfield`.
 - Whether the memory-saving `<table>` split needs to be made more robust.
-- Whether `combine_attributes_into_master_name_col` can be made non-mutating.
+- Whether `mdd_combine_attributes` can be made non-mutating.
 - Quote style convention (single vs double) and final stance on f-strings.

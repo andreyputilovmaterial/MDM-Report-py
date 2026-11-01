@@ -1,16 +1,11 @@
 # import os, time, re, sys
-from ast import Import
 from datetime import datetime, timezone
 # from dateutil import tz
 import argparse
 from pathlib import Path
 import re
 import json
-import html
 import traceback, sys
-import xml.etree.ElementTree as ET # for enchancement_plugin__validate_labels__on_col_after
-
-from importlib import resources
 
 
 # STDOUT_COLOR_RED = "\033[91m"
@@ -88,749 +83,52 @@ else:
 
 
 
-# helper text prep functions first
-
-def is_property_list(data):
-    try:
-        if isinstance(data,list) and ([(True if ('name' in dict.keys(item) and 'value' in dict.keys(item)) else False) for item in data].count(True)==len(data)):
-            return True
-        return False
-    except:
-        return False
-
-def sanitize_text_normalizelinebreaks(inp_value):
-    return re.sub(r'\r','\n',re.sub(r'\r?\n','\n',inp_value))
-
-def html_sanitize_text(inp_value,flags=[]):
-    result = inp_value
-    if not isinstance(result,str):
-        raise Exception('when html_sanitize_text() called input must be of str type')
-    if 'format-escapequotes-vbsstyle' in flags:
-        result = result.replace('"','""')
-    result = sanitize_text_normalizelinebreaks(result)
-    # basic clean up - basic conversion escaping all tags
-    result =  html.escape('{result}'.format(result=result))
-    result = result.replace('\n','<br />')
-    if 'format-escapequotes-htmlentity' in flags:
-        result = result.replace('"','&quot;')
-    special_pattern = '<<KEYWORD>>'
-    special_pattern = html.escape(special_pattern)
-    
-    # TODO: remove deprecated code
-    result = result.replace(special_pattern.replace('KEYWORD','ADDED'),'<span class="mdmdiff-inlineoverlay-added">').replace(special_pattern.replace('KEYWORD','REMOVED'),'<span class="mdmdiff-inlineoverlay-removed">').replace(special_pattern.replace('KEYWORD','ENDADDED'),'</span>').replace(special_pattern.replace('KEYWORD','ENDREMOVED'),'</span>')
-    for keyword in ['ADDED','REMOVED','ENDADDED','ENDREMOVED']:
-        if special_pattern.replace('KEYWORD',keyword) in result:
-            raise Exception('Text insert markers found: should be deprecated (found: "{aaa}" in "{bbb}")'.format(aaa=special_pattern.replace('KEYWORD',keyword),bbb=result))
-    # # some replacement to add syntax so that dates are formatted
-    # # if there'result some certain markup - that shouln't be escape
-    # # it should be printed as markup so that js works and converts UTC dates to local time
-    # result = re.sub(r'&lt;&lt;DATE:(.*?)&gt;&gt;',lambda m:'<span class="mdmreport-role-date" data-role="date">{d}</span>'.format(d=m[1]),result)
-    # and one more transformation - some parts
-    # (called "scripting" - including MDD syntax for all MDD items and routing syntax)
-    # so these parts include raw multi-line text - we'll normalize line breaks
-    
-    result = re.sub('([^\t\r\n\x20-\x7E])',lambda m: '&#{n};'.format(n=ord(m[1])),result)
-    return result
-
-def html_sanitize_htmlattribute(s,flags=None):
-    flags = (flags or []) + ['format-escapequotes-htmlentity'] # ['format-escapequotes-htmlentity','format-html-linebreaksallowed']
-    return html_sanitize_text(html_sanitize_value_general(s,flags),flags)
-
-def html_sanitize_text_date(s):
-    #return '<<DATE:{d}>>'.format(d=s)
-    return {'parts':[{'text':s,'role':'date'}]}
-
-def sanitize_idfield(s):
-    return re.sub(r'-+','-',re.sub(r'^-*','',re.sub(r'-*$','',re.sub(r'[^\w\-\.]','-',s))))
-
-def sanitize_cssfield(s):
-    return re.sub(r'-+','-',re.sub(r'^-*','',re.sub(r'-*$','',re.sub(r'[^\w\-]','-',s))))
-
-def sanitize_text_extract_filename(s):
-    return re.sub(r'^.*[/\\](.*?)\s*?$',lambda m: m[1],'{sstr}'.format(sstr=s))
 
 
-
-def html_sanitize_value_astext(inp_value,flags=[]):
-    return html_sanitize_text(inp_value,flags)
-
-# def html_sanitize_value_asproperties(inp_value,flags=[]):
-#     # removing css classes for property coloring - reduced memory consumption a lot; AP 10/12/2024
-#     # unsuppress to have properties colored
-#     # ins_partbegin = '<span class="mdmreport-prop-fieldname">'
-#     # ins_partconjunction =  '</span> = "<span class="mdmreport-prop-fieldvalue">'
-#     # ins_partend = '</span>"'
-#     ins_partbegin = ''
-#     ins_partconjunction =  ' = "'
-#     ins_partend = '"'
-#     if 'format_semicolon' in flags:
-#         ins_partbegin = ''
-#         ins_partconjunction =  ': '
-#         ins_partend = ''
-#     result = '{part_begin}{part_iterate}{part_end}'.format(
-#         part_begin = '<p class="mdmreport-prop-row">',
-#         part_iterate = ', </p><p class="mdmreport-prop-row">'.join([
-#             '{ins_partbegin}{fieldname}{ins_partconjunction}{fieldvalue}{ins_partend}'.format(
-#                 fieldname = html_sanitize_text(row['name']),
-#                 fieldvalue = html_sanitize_value_general(row['value'],[]+flags+['format-escapequotes-vbsstyle']),
-#                 ins_partbegin = ins_partbegin,
-#                 ins_partconjunction = ins_partconjunction,
-#                 ins_partend = ins_partend
-#             ) for row in inp_value
-#         ]),
-#         part_end = '</p>'
-#     )
-#     return result
-
-def html_sanitize_value_asproperties(inp_value,flags=[]):
-    def _err(msg):
-        raise Exception(f'Error: html_sanitize_value_asproperties: {msg}')
-    def make_outer_txt(
-        inp_value,
-        patterns,
-        make_row_txt,
-        flags,
-    ):
-        pattern_global_begin, pattern_global_end, pattern_junction_outer, *patterns_rest = patterns
-        txt = ''
-        txt += pattern_global_begin
-        items = [row for row in inp_value] # sorry we need for the look ahead for the counter to know which is last
-        for i,row in enumerate(items):
-            txt_thisrow = ''
-            is_first = i==0
-            is_last = i==len(items)-1
-            if not is_last:
-                txt_thisrow += pattern_junction_outer
-            txt_thisrow += make_row_txt(row,(is_first,is_last),patterns_rest,flags)
-            txt += txt_thisrow
-        txt += pattern_global_end
-        return txt
-    def make_row_txt(
-        inp_value,
-        first_or_last,
-        patterns,
-        # make_propname_txt,
-        # make_propvalue_txt,
-        flags,
-    ):
-        fieldname = html_sanitize_text(inp_value['name'])
-        fieldvalue = html_sanitize_value_general(inp_value['value'],[]+flags+['format-escapequotes-vbsstyle'])
-        fieldrole = inp_value.get('role',None)
-        fieldflag = f'role-{fieldrole}' if fieldrole else ''
-        is_first, is_last = first_or_last
-        pattern_junction_inner, pattern_row_begin, pattern_row_prop_begin, pattern_row_prop_end, pattern_row_propvalue_conjunction, pattern_row_value_begin, pattern_row_value_end, pattern_row_end = patterns
-        txt = ''
-        txt += pattern_row_begin
-        txt += pattern_row_prop_begin
-        txt += fieldname
-        txt += pattern_row_prop_end
-        txt += pattern_row_propvalue_conjunction
-        txt += pattern_row_value_begin
-        txt += fieldvalue
-        txt += pattern_row_value_end
-        txt += ( pattern_junction_inner if not is_last else '' )
-        txt += pattern_row_end
-        if (fieldflag=='role-time') or (fieldflag=='role-date') or (fieldflag=='role-datetime'):
-            txt =  f'<span class="mdmreport-role-date" data-role="date">{txt}</span>'
-        elif fieldflag=='role-added':
-            txt = f'<span class="mdmdiff-inlineoverlay-added">{txt}</span>'
-        elif fieldflag=='role-removed':
-            txt = f'<span class="mdmdiff-inlineoverlay-removed">{txt}</span>'
-        elif fieldflag=='role-source_added':
-            txt = f'<span class="mdmdiff-inlineoverlay-underlying-added">{txt}</span>'
-        elif fieldflag=='role-source_removed':
-            txt = f'<span class="mdmdiff-inlineoverlay-underlying-removed">{txt}</span>'
-        elif fieldflag=='role-sronly':
-            txt = f'<span class="mdmreport-sronly">{txt}</span>'
-        elif fieldflag=='role-label':
-            txt = f'<span class="mdmreport-label-pseudo" data-added="{txt}"></span>'
-        elif fieldflag=='role-ellipsis':
-            # TODO: ellipsis?
-            txt = txt
-        return txt
-    # removing css classes for property coloring - reduced memory consumption a lot; AP 10/12/2024
-    format_option_colorsytxhlight = False
-    format_option_syntax = "customproperties" if 'format_semicolon' not in flags else 'semicolon'
-    pattern_global_begin = None
-    pattern_global_end = None
-    pattern_junction_outer = None
-    pattern_junction_inner = None
-    pattern_row_begin = None
-    pattern_row_prop_begin = None
-    pattern_row_prop_end = None
-    pattern_row_propvalue_conjunction = None
-    pattern_row_value_begin = None
-    pattern_row_value_end = None
-    pattern_row_end = None
-    if format_option_syntax=='customproperties':
-        pattern_global_begin = ''
-        pattern_global_end = ''
-        pattern_junction_outer = ''
-        pattern_junction_inner = ', '
-        pattern_row_begin = '<p class="mdmreport-prop-row">'
-        pattern_row_prop_begin = ''+('<span class="mdmreport-prop-fieldname">' if format_option_colorsytxhlight else '')+''
-        pattern_row_prop_end = ''+('</span>' if format_option_colorsytxhlight else '')+''
-        pattern_row_propvalue_conjunction = ' = '
-        pattern_row_value_begin = '"'+('<span class="mdmreport-prop-fieldvalue">' if format_option_colorsytxhlight else '')+''
-        pattern_row_value_end = ''+('</span>' if format_option_colorsytxhlight else '')+'"'
-        pattern_row_end = '</p>'
-    elif format_option_syntax=='semicolon':
-        pattern_global_begin = ''
-        pattern_global_end = ''
-        pattern_junction_outer = ''
-        pattern_junction_inner = ''
-        pattern_row_begin = '<p class="mdmreport-prop-row">'
-        pattern_row_prop_begin = ''+('<span class="mdmreport-prop-fieldname">' if format_option_colorsytxhlight else '')+''
-        pattern_row_prop_end = ''+('</span>' if format_option_colorsytxhlight else '')+''
-        pattern_row_propvalue_conjunction = ': '
-        pattern_row_value_begin = ''+('<span class="mdmreport-prop-fieldvalue">' if format_option_colorsytxhlight else '')+''
-        pattern_row_value_end = ''+('</span>' if format_option_colorsytxhlight else '')+''
-        pattern_row_end = '</p>'
-    else:
-        return  _err(f'unknown format spec: format_option_syntax == "{format_option_syntax}"')
-    return make_outer_txt(
-        inp_value,
-        (
-            pattern_global_begin,
-            pattern_global_end,
-            pattern_junction_outer,
-            pattern_junction_inner,
-            pattern_row_begin,
-            pattern_row_prop_begin,
-            pattern_row_prop_end,
-            pattern_row_propvalue_conjunction,
-            pattern_row_value_begin,
-            pattern_row_value_end,
-            pattern_row_end,
-            ),
-        make_row_txt,
-        # lambda inp_value, first_or_last, patterns: make_row_txt(inp_value, first_or_last, patterns, make_propname_txt, make_propvalue_txt),
-        flags,
-    )
-
-def html_sanitize_value_general(inp_value,flags=[]):
-    # it's recursive!
-    if isinstance(inp_value,dict) and 'role' in inp_value and inp_value['role']:
-        flag_add = 'role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',f"{inp_value['role']}"))
-        if not (flag_add in flags):
-            return html_sanitize_value_general({**inp_value,**{'role':None}},flags=[]+flags+[flag_add])
-    for flag in flags:
-        if (flag=='role-time') or (flag=='role-date') or (flag=='role-datetime'):
-            return '<span class="mdmreport-role-date" data-role="date">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
-        elif flag=='role-added':
-            return '<span class="mdmdiff-inlineoverlay-added">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
-        elif flag=='role-removed':
-            return '<span class="mdmdiff-inlineoverlay-removed">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
-        elif flag=='role-source_added':
-            return '<span class="mdmdiff-inlineoverlay-underlying-added">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
-        elif flag=='role-source_removed':
-            return '<span class="mdmdiff-inlineoverlay-underlying-removed">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
-        elif flag=='role-sronly':
-            return '<span class="mdmreport-sronly">{d}</span>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
-        elif flag=='role-label':
-            # return '<label>{d}</label>'.format(d=html_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
-            return '<span class="mdmreport-label-pseudo" data-added="{f}"></span>'.format(f=htmlattr_sanitize_value_general(inp_value,flags=list(set(flags)-set([flag]))))
-        elif flag=='role-ellipsis':
-            _payload = html_sanitize_htmlattribute(inp_value,flags=list(set(flags)-set([flag])))
-            return '<span class="mdmreport-txt-ellipsis" title="Click to expand file" data-role="ellipsis" data-ellipsis="{d}"><span class="mdmreport-txt-ellipsis-1">...</span><span class="mdmreport-txt-ellipsis-2"><span class="mdmreport-txt-ellipsis-br"></span><span class="mdmreport-txt-ellipsis-mainline"> @@ +{n} characters @@</span><span class="mdmreport-txt-ellipsis-br"></span></span><span class="mdmreport-txt-ellipsis-3">...</span></span>'.format(d=_payload,n=len(_payload))
-    result = None
-    if   isinstance(inp_value,int) or isinstance(inp_value,float):
-        result = html_sanitize_value_general('{f}'.format(f=inp_value),flags) 
-    elif not inp_value:
-        result = ''
-    elif is_property_list(inp_value):
-        result = html_sanitize_value_asproperties(inp_value,flags)
-    elif isinstance(inp_value,list):
-        flag_role_add = []
-        result = ''.join(html_sanitize_value_general(piece,(flags or [])+flag_role_add) for piece in inp_value)
-    elif isinstance(inp_value,dict) and 'parts' in dict.keys(inp_value):
-        flag_role_add = ['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',f"{inp_value['role']}"))] if 'role' in inp_value and inp_value['role'] else []
-        result = html_sanitize_value_general(inp_value['parts'],(flags or [])+flag_role_add)
-        # result = ''.join( html_sanitize_value_general(part['text'],[]+flags+(['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',part['role']))] if 'role' in part else [])) if isinstance(part,dict) and 'text' in dict.keys(part) else html_sanitize_value_general(part,flags) for part in inp_value['parts'] )
-    elif isinstance(inp_value,dict) and 'text' in dict.keys(inp_value):
-        result = html_sanitize_value_general(inp_value['text'],flags)
-    elif isinstance(inp_value,str):
-        result =  html_sanitize_value_astext(inp_value,flags)
-    elif isinstance(inp_value,dict) or isinstance(inp_value,list):
-        result =  html_sanitize_value_astext(json.dumps(inp_value),flags)
-    elif ('{fmt}'.format(fmt=inp_value)==inp_value):
-        result =  html_sanitize_value_astext(inp_value,flags)
-    else:
-        result =  html_sanitize_value_astext(json.dumps(inp_value),flags)
-    return result
-
-def htmlattr_sanitize_value_general(inp_value,flags=[]):
-    def is_empty(s):
-        if isinstance(s,int) or isinstance(s,int):
-            return False
-        elif not s:
-            return True
-        else:
-            return False
-    for flag in flags:
-        if flag=='role-sronly':
-            return ''
-        elif flag=='role-added' and not ('role-noshowdiff' in flags):
-            return '[+added: {i}]'.format(i=htmlattr_sanitize_value_general({**inp_value,'role':None},[f for f in flags if not (flag==f)]))
-        elif flag=='role-removed' and not ('role-noshowdiff' in flags):
-            return '[-removed: {i}]'.format(i=htmlattr_sanitize_value_general({**inp_value,'role':None},[f for f in flags if not (flag==f)]))
-        # TODO: do we need to handle other roles here? Maybe bring it to a dedicated fn?
-    if isinstance(inp_value,dict) and 'role' in inp_value and inp_value['role']:
-        return htmlattr_sanitize_value_general({**inp_value,'role':None},flags=[]+flags+['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',inp_value['role']))])
-    if isinstance(inp_value,str):
-        # return inp_value.replace('\\','\\\\').replace('"','\\"').replace('\n','\n') # lol funny
-        return inp_value.replace('"','&#34;') # .replace('\n','&#13;')
-    elif isinstance(inp_value,int) or isinstance(inp_value,float):
-        return htmlattr_sanitize_value_general('{f}'.format(f=inp_value))
-    elif not inp_value:
-        return ''
-    elif isinstance(inp_value,list):
-        return ',\n'.join([p for p in [htmlattr_sanitize_value_general(part,flags=flags) for part in inp_value] if not is_empty(p)])
-    elif isinstance(inp_value,dict) and 'text' in inp_value:
-        return htmlattr_sanitize_value_general(inp_value['text'],flags)
-    elif isinstance(inp_value,dict) and 'name' in inp_value and 'value' in inp_value:
-        return '{prop} = &#34;{val}&#34;'.format(prop=htmlattr_sanitize_value_general(inp_value['name'],flags),val=htmlattr_sanitize_value_general(inp_value['value'],flags))
-    elif isinstance(inp_value,dict) and 'parts' in inp_value:
-        # return ''.join([p for p in [htmlattr_sanitize_value_general(part,flags=flags) for part in inp_value['parts']] if not is_empty(p)])
-        flag_role_add = ['role-{cssclasspart}'.format(cssclasspart=re.sub(r'^\s*?(?:role-\s*?)?','',inp_value['role']))] if 'role' in inp_value and inp_value['role'] else []
-        return htmlattr_sanitize_value_general(inp_value['parts'],(flags or []) + flag_role_add)
-    else:
-        return htmlattr_sanitize_value_general('{f}'.format(f=inp_value))
-
-def html_sanitize_tablecellcontents(inp_value,flags=[]):
-    result = None
-    if isinstance(inp_value,int) or isinstance(inp_value,float):
-        return html_sanitize_tablecellcontents('{f}'.format(f=inp_value),flags)
-    elif not inp_value:
-        return ''
-    result = html_sanitize_value_general(inp_value,[flag for flag in flags if flag!='format_syntax'])
-    if 'format_syntax' in flags:
-        result = '<pre>{content}</pre>'.format(content=sanitize_text_normalizelinebreaks(result)) # it's already done globally at the first line of html_sanitize_value_astext which should have been already called
-    return result
-
-
-def sanitize_text_general(inp_value,flags=[]):
-    def is_property_list(input):
-        try:
-            if isinstance(input,list) and ([(True if ('name' in dict.keys(item) and 'value' in dict.keys(item)) else False) for item in input].count(True)==len(input)):
-                return True
-            return False
-        except:
-            return False
-    def is_diff_segment_dict(input):
-        if isinstance(input,dict):
-            has_payload_textfield = 'text' in input
-            has_payload_partsfield = 'parts' in input and isinstance(input['parts'],list)
-            has_payload = has_payload_textfield or has_payload_partsfield
-            has_conflicting_payloads = has_payload_textfield and has_payload_partsfield
-            all_keys = input.keys()
-            nonstd_keys = set(all_keys) - {'text','parts','role'}
-            if has_payload and not has_conflicting_payloads and (len(nonstd_keys)==0):
-                return True
-        return False
-    def is_empty(input):
-        if input==0:
-            return False
-        elif is_diff_segment_dict(input):
-            if not input:
-                return True
-            if 'text' in input and not is_empty(input['text']):
-                return False
-            if 'parts' in input and not is_empty(input['parts']):
-                return False
-            return True
-        elif isinstance(input,dict):
-            return not input
-        elif is_property_list(input):
-            if not input:
-                return True
-            result = True
-            for piece in input:
-                result = result and is_empty(piece['value'])
-            return result
-        elif isinstance(input,list):
-            if not input:
-                return True
-            result = True
-            for piece in input:
-                result = result and is_empty(piece)
-            return result
-        else:
-            # attention
-            # empty list, empty dict evaluates to empty
-            return not input
-    if is_empty(inp_value):
-        return ''
-    elif is_property_list(inp_value):
-        def esc(s):
-            return f'{s}'.replace('"','""')
-        return '[ '+', '.join([f'{record["name"]} = "{esc(record["value"])}"' for record in inp_value])+' ]'
-    elif is_diff_segment_dict(inp_value) and 'text' in inp_value:
-        return sanitize_text_general(inp_value['text'])
-    elif is_diff_segment_dict(inp_value) and 'parts' in inp_value:
-        return sanitize_text_general(inp_value['parts'])
-    elif isinstance(inp_value,list):
-        return ''.join([sanitize_text_general(s) for s in inp_value])
-    else:
-        return f'{inp_value}'
-
-
-
-
-
-
-# and now, we list "plugins"
-# pieces of modules that add certain unnecessary transformations to the report
-# to make it more beautiful
-
-# earlier I was doing such transformations in JS - right within page when it loads
-# now I decided to bring it to earlier stage, when the file is processed, when it is created, in python
-# I thought it is more efficient - final HTML is already prepared and optimized
-# but in fact, what these "beautiful" transformations do is that they add more formatting
-# which still increases memory usage
-# any additional html tag increases memory consumption, especially if it has added styles
-# (not necessary inline styles, global styles, but still - it is rendered differently - it takes more memory)
-
-
-
-# this fancy "plugin" removes the "attributes" column and adds attributes as grey (<label> tag) to the "name" column
-# it looks absolutely perfect aesthetically
-# but is increasing memory consumption - report for merged disney BES MDD takes 2 GB in chrome memory witout these "labels" and 3 GB with this transformation performed
-# UPD: wow, I reloaded the page and it now takes 1.6 GB of memory; chrome is like unpredictable - it includes that "labels" added to "name" column and the page takes 1.6 GB
-
-def enchancement_plugin__combine_attributes_into_master_name_col__on_table_before(rows,column_specs,flags=[]):
-    def is_column_id_for_attribute_column(col_id):
-        return re.match(r'^.*?\b(?:attribute)(?:s)?\b\s*?(?:\s*?.*?)?\s*?$',re.sub(r'_',' ',col_id))
-    def is_empty(s):
-        if isinstance(s,int) or isinstance(s,float):
-            return False
-        elif not s:
-            return True
-        else:
-            return False
-    # def is_column_id_for_name_column(col_id):
-    #     return re.match(r'^.*?\bname\s*?$',re.sub(r'_',' ',col_id))
-    col_id_name = column_specs.index('name') if 'name' in column_specs else -1
-    col_ids_atts = []
-    for i,col in enumerate(column_specs):
-        if is_column_id_for_attribute_column(col):
-            col_ids_atts.append(i)
-    is_active = ( not ('plugin_combine_attributes_already_called' in flags) ) and ( (col_id_name>=0) and (len(col_ids_atts)>0) )
-    if is_active:
-        columns = []
-        if len(rows)>0:
-            columns = [ col for col in rows[0] ]
-        rows_upd = []
-        row_exclusions = col_ids_atts
-        for row in rows:
-            name_col_updated_parts = []
-            check_duplicates = []
-            for col_id_att in col_ids_atts:
-                col_att_data = row[col_id_att]
-                row[col_id_att] = None
-                if not is_empty(col_att_data):
-                    col_att_data_formatted = col_att_data
-                    col_att_data_fingerprint = json.dumps(col_att_data_formatted)
-                    col_att_data_is_duplicate = col_att_data_fingerprint in check_duplicates
-                    col_att_data_matchingcol = columns[col_id_att] #  column_specs[col_id_att]
-                    if not col_att_data_is_duplicate:
-                        check_duplicates.append(col_att_data_fingerprint)
-                    name_col_updated_parts.append({
-                        'content': col_att_data_formatted,
-                        'fingerprint': col_att_data_fingerprint,
-                        'is_duplicate': col_att_data_is_duplicate,
-                        'matching_col': col_att_data_matchingcol,
-                        'data': col_att_data,
-                    })
-
-            name_col_upd_data = {'parts':[
-                row[col_id_name]
-            ]}
-            name_col_updated_parts_excluding_duplicates = [p for p in name_col_updated_parts if not p['is_duplicate'] ]
-            for def_add in name_col_updated_parts_excluding_duplicates:
-                add_col_label = True
-                if len(name_col_updated_parts_excluding_duplicates)==1:
-                    add_col_label = False
-                if def_add['matching_col']==def_add['data']:
-                    add_col_label = False
-                add_parts = []
-                add_parts.append({'text':{'text':', with ','role':'sronly'},'role':'label'})
-                if add_col_label:
-                    add_parts.append({'text':def_add['matching_col'] + '\n','role':'label'})
-                add_parts.append(def_add['content'])
-                name_col_upd_data['parts'].append({'role':'label','text':{'role':'noshowdiff','parts':add_parts}})
-            row[col_id_name] = name_col_upd_data
-            row_filtered = [ col for i,col in enumerate(row) if not (i in row_exclusions) ]
-            rows_upd.append(row_filtered)
-        rows = rows_upd
-        column_specs = [ col for i,col in enumerate(column_specs) if not (i in row_exclusions) ]
-
-    return rows,column_specs,flags
-
-
-def enchancement_plugin__add_diff_classes_per_row__on_row_before(row,flags,column_specs,other_cols_ref=[]):
-    def did_col_change_deep_inspect(data):
-        if isinstance(data,str):
-            if '<<ADDED>>' in data:
-                return True
-            if '<<REMOVED>>' in data:
-                return True
-            return False
-        elif isinstance(data,list):
-            result = False
-            for slice in data:
-                result = result or did_col_change_deep_inspect(slice)
-            return result
-        elif isinstance(data,dict) and 'text' in data:
-            if 'role' in data:
-                if re.match(r'^\s*?(?:role-)?(?:added|removed).*?',f"{data['role']}",flags=re.I):
-                    return True
-            return did_col_change_deep_inspect(data['text'])
-        elif isinstance(data,dict) and 'parts' in data:
-            return did_col_change_deep_inspect(data['parts'])
-        elif isinstance(data,dict) and 'name' in data and 'value' in data:
-            return did_col_change_deep_inspect(data['value'])
-        else:
-            return did_col_change_deep_inspect('{f}'.format(f=data))
-    is_active = ( not ('plugin_add_diff_classes_per_row_already_called' in flags) ) and ( ('flagdiff' in column_specs) )
-    flags_added = []
-    if is_active:
-        is_diff_on_diff = len([flag for flag in flags if re.match(r'^\s*?:inp-data:diff_source_\w+:.*data-type:diff\s*?$',flag)])>0
-        diffflag = sanitize_text_general(row[column_specs.index('flagdiff')])
-        was_row_added = re.match(r'^.*?(?:(?:add)|(?:insert)).*?',diffflag)
-        was_row_removed = re.match(r'^.*?(?:(?:remove)|(?:delete)).*?',diffflag)
-        did_any_col_change = False
-        was_row_moved = re.match(r'^.*?(?:(?:move)).*?',diffflag) and not re.match(r'^.*?(?:(?:remove)).*?',diffflag)
-        was_row_movedfromhere = 'moved from' in diffflag
-        # if was_row_moved:
-        #     did_any_col_change = True
-        for col in other_cols_ref:
-            # TODO: same comment as in "on_col_before" event
-            # do we really need such inspections?
-            # this might be complicted
-            did_any_col_change = did_any_col_change or did_col_change_deep_inspect(col)
-        # if is_diff_on_diff:
-        if was_row_added:
-            flags_added.append('format-cssclass-mdmdiff-added')
-        if was_row_removed:
-            flags_added.append('format-cssclass-mdmdiff-removed')
-        if did_any_col_change:
-            flags_added.append('format-cssclass-mdmdiff-diff')
-        if was_row_moved and not ( was_row_added or was_row_removed or did_any_col_change ):
-            flags_added.append('format-cssclass-mdmdiff-moved')
-            flags_added.append('format-cssclass-mdmdiff-ghost')
-        if was_row_movedfromhere:
-            flags_added.append('format-cssclass-mdmdiff-movedfrom')
-    return row,flags+flags_added
-
-def enchancement_plugin__add_diff_classes_per_row__on_col_before(col_data,col_index=None,flags=[],column_specs=[],other_cols_ref=[]):
-    def did_col_change_deep_inspect(data):
-        if isinstance(data,str):
-            if '<<ADDED>>' in data:
-                return True
-            if '<<REMOVED>>' in data:
-                return True
-            return False
-        elif isinstance(data,list):
-            result = False
-            for slice in data:
-                result = result or did_col_change_deep_inspect(slice)
-            return result
-        elif isinstance(data,dict) and 'text' in data:
-            if 'role' in data and data['role']:
-                if re.match(r'^\s*?(?:role-)?(?:added|removed).*?',f"{data['role']}",flags=re.I):
-                    return True
-            return did_col_change_deep_inspect(data['text'])
-        elif isinstance(data,dict) and 'parts' in data:
-            return did_col_change_deep_inspect(data['parts'])
-        elif isinstance(data,dict) and 'name' in data and 'value' in data:
-            return did_col_change_deep_inspect(data['value'])
-        else:
-            return did_col_change_deep_inspect('{f}'.format(f=data))
-    is_active = ( not ('plugin_add_diff_classes_per_row_already_called' in flags) ) and ( ('flagdiff' in column_specs) )
-    if is_active:
-        is_diff_on_diff = len([flag for flag in flags if re.match(r'^\s*?:inp-data:diff_source_\w+:.*data-type:diff\s*?$',flag)])>0
-        marker_text_append_diffflag_col = ' (changed)'
-        if is_diff_on_diff:
-            marker_text_append_diffflag_col = '' # ' (mismatch)'
-        if column_specs[col_index] == 'flagdiff':
-            row = other_cols_ref
-            diffflag = sanitize_text_general(row[column_specs.index('flagdiff')])
-            was_row_added = re.match(r'^.*?(?:(?:add)|(?:insert)).*?',diffflag)
-            was_row_removed = re.match(r'^.*?(?:(?:remove)|(?:delete)).*?',diffflag)
-            did_any_col_change = False
-            was_row_moved = re.match(r'^.*?(?:(?:move)).*?',diffflag) and not re.match(r'^.*?(?:(?:remove)).*?',diffflag)
-            # if was_row_moved:
-            #     did_any_col_change = True
-            for col in row:
-                # TODO: do we need this?
-                # inspecting the whole row, every column, to see if something changed?
-                # this can be complicated, as cell contents is not always plain text, it can be complicated structures
-                # and checking this iteratively... uuufffhhh no
-                # inspecting {'parts':[...,{'text':'...','role':'added|removed|role-added...'}]}
-                # super complicated
-                did_any_col_change = did_any_col_change or did_col_change_deep_inspect(col)
-            if is_diff_on_diff:
-                did_row_change = did_any_col_change
-            else:
-                did_row_change = did_any_col_change or was_row_moved # changing position is a change too
-                did_row_change = was_row_added or was_row_removed or did_row_change
-            if did_row_change:
-                col_data = {'parts':[col_data,marker_text_append_diffflag_col]}
-    return col_data,flags
-
-
-
-def enchancement_plugin__wrap_tables_for_memory_saving__on_table_after(result_formatted,table_id,rows=None,column_specs_localcopy=None,flags=None):
-    try:
-        
-        TEMPLATE = r"""
-<table class="mdmreport-table mdmreport-table-dummy mdmreport-table-preloaded-hidden-content" id="mdmreport_hidetablememorysaving_outer_{{ID}}"><tbody><tr></tr><tr class="mdmreport-record"><td class="mdmreport-contentcell mdmreport-contentcell-fullwidth">{{CONTENT}}</td></tr></tbody></table>
-"""
-        TEMPLATE_SCRIPT = r"""
-<a href="#!" id="mdmreport_hidetablememorysaving_link_{{ID}}" class="mdmreport-memorysaving-hidetab-link" >Click to load contents</a>
-<script>
-(function(){
-    var data = {{DATA}};
-    const wrapperId = 'mdmreport_hidetablememorysaving_outer_{{ID}}';
-    const linkId = 'mdmreport_hidetablememorysaving_link_{{ID}}';
-    const wrapperEl = document.getElementById(wrapperId);
-    const linkEl = document.getElementById(linkId);
-    linkEl.addEventListener('click',function(event){
-        data = data;
-        /*  wrapperEl.innerHTML = data; */
-        const el = document.createElement('div');
-        el.innerHTML = data;
-        wrapperEl.replaceWith(el);
-        data = null;
-        if(!!window.mdmreportMemorySavingPluginTriggerEvents) Promise.resolve().then(window.mdmreportMemorySavingPluginTriggerEvents)
-        event.preventDefault();
-        return false;
-    });
-})()
-</script>
-"""
-
-        if not table_id:
-            raise ValueError('table id not provided!')
-        
-        pattern_beginning = re.match(r'^(.*?)(<\s*?table\b)(.*)$',result_formatted,flags=re.I|re.M|re.DOTALL)
-        pattern_ending = re.match(r'^(.*)(<\s*?/\s*?table\s*?>)(.*?)$',result_formatted,flags=re.I|re.M|re.DOTALL)
-        if not pattern_beginning or not pattern_ending:
-            raise AttributeError('pattern not found: <table> ... </table>')
-        pattern_beginning = pattern_beginning.start(2)
-        pattern_ending = pattern_ending.start(2) + len(pattern_ending.group(2))
-        
-        part_beginning = result_formatted[0:pattern_beginning]
-        part_body = result_formatted[pattern_beginning:pattern_ending]
-        part_ending = result_formatted[pattern_ending:]
-
-        part_body_encoded = TEMPLATE.replace('{{CONTENT}}',TEMPLATE_SCRIPT).replace('{{ID}}',table_id).replace('{{DATA}}',json.dumps(part_body))
-
-        result_formatted_upd = '' + part_beginning + part_body_encoded + part_ending
-
-        return result_formatted_upd
-    except Exception as e:
-        print('Error: HTML Report: failed when converting tables to collapsible to elaborate on memory saving: {e}'.format(e=e))
-        return result_formatted
-
-
-
-
-def enchancement_plugin__validate_labels__on_col_after(result_formatted,col,col_index,flags,column_specs,other_cols_ref):
-    def is_mdd_report_type(flags):
-        return 'reporttype-diff' in flags
-    def is_label_column(result_formatted,col,col_index,flags,column_specs,other_cols_ref):
-        return re.match(r'^\s*(?:label|langcode).*',column_specs[col_index])
-        # try:
-        #     return is_mdd_report_type(flags) and re.match(r'^\s*(?:label|langcode).*',column_specs[col_index])
-        # except:
-        #     print(f'{STDOUT_COLOR_RED}Failed at col == {repr(col)}{STDOUT_COLOR_RESET}',file=sys.stderr)
-        #     print(f'{STDOUT_COLOR_RED}Failed at column_specs == {repr(column_specs)}{STDOUT_COLOR_RESET}',file=sys.stderr)
-        #     print(f'{STDOUT_COLOR_RED}Failed at flags == {repr(flags)}{STDOUT_COLOR_RESET}',file=sys.stderr)
-        #     raise Exception(f'mdmrep validate labels plugin: failed when executing a regexp on col: {repr(col)}')
-    def get_flat_text(html):
-        root = ET.fromstring(html)
-        return ''.join(root.itertext())
-    def is_xml_compatible(snippet: str) -> bool:
-        try:
-            # Wrap snippet in a dummy root
-            ET.fromstring(f"<root>{snippet}</root>")
-            return True
-        except ET.ParseError as e:
-            # print(f"{STDOUT_COLOR_RED}Parse error: {e}{STDOUT_COLOR_RESET}",file=sys.stderr)
-            return False
-    try:
-        if is_label_column(result_formatted,col,col_index,flags,column_specs,other_cols_ref):
-            css_classes_add = []
-            css_classes_add += [] # ['mdmreport-plugin-validate-labels']
-            # css_classes_add += ['mdmreport-plugin-validate-labels-validated'] if is_xml_compatible(get_flat_text(result_formatted)) else ['mdmreport-plugin-validate-labels-alertissues']
-            css_classes_add += [] if is_xml_compatible(get_flat_text(result_formatted)) else ['mdmrep-plgn-labelxmlerr']
-            css_classes_add = ' '.join(css_classes_add)
-            if len(css_classes_add)>0:
-                m = re.match(r'^(\s*?<\s*?(?:td|th)(?:\s*?\w+\s*?=\s*?["\'].*?["\'])*?\s*?>)(.*)(<\s*?/\s*?(?:td|th)\s*?>\s*?)$',result_formatted,flags=re.I)
-                if not m:
-                    print(f'{STDOUT_COLOR_RED}DEBUG: plugin: mdmrep validate plugin: could not parse <td> markup: {result_formatted}{STDOUT_COLOR_RESET}',file=sys.stderr)
-                    raise Exception('mdmrep validate plugin: could not parse <td> markup')
-                result_outer_begin = m[1]
-                result_inner = m[2]
-                result_outer_end = m[3]
-                return f'{result_outer_begin}<span class="{css_classes_add}">{result_inner}</span>{result_outer_end}'
-            else:
-                return result_formatted
-        else:
-            return result_formatted
-    except Exception as e:
-        print(f'{STDOUT_COLOR_RED}mdmrep validate labels plugin: failed: {e}{STDOUT_COLOR_RESET}',file=sys.stderr)
-        err_msg = 'ERROR'
-        try:
-            err_msg = f'{e}'
-            err_msg = html_sanitize_text(err_msg)
-        except:
-            err_msg = 'ERROR'
-        return f'<span class="mdmreport-plugin-validate-labels-error">{err_msg}</span>{result_formatted}'
-        # return results_formatted
-
-
-
-enchancement_plugins = [
-    {
-        'name': 'combine_attributes_into_master_name_col',
-        'enabled': True,
-        # 'on_col_before': enchancement_plugin__combine_attributes_into_master_name_col__on_col_before,
-        'on_table_before': enchancement_plugin__combine_attributes_into_master_name_col__on_table_before,
-    },
-    {
-        'name': 'enchancement_plugin__add_diff_classes_per_row__on_row_before',
-        'enabled': True,
-        'on_row_before': enchancement_plugin__add_diff_classes_per_row__on_row_before,
-        'on_col_before': enchancement_plugin__add_diff_classes_per_row__on_col_before,
-    },
-    {
-        'name': 'enchancement_plugin__wrap_tables_for_memory_saving__on_table_after',
-        'enabled': True,
-        'on_table_after': enchancement_plugin__wrap_tables_for_memory_saving__on_table_after,
-    },
-    {
-        'name': 'enchancement_plugin__validate_labels__on_col_after',
-        'enabled': True,
-        'on_col_after': enchancement_plugin__validate_labels__on_col_after,
-    }
-]
+# sanitization / formatting helpers, extracted into common_functions
 try:
-    assert all(re.match(r'^\w[\w\-/]*\w$',plugin.get('name')) for plugin in enchancement_plugins), 'Plugins do not pass validation for plugin name, please check'
-except Exception as e:
-    raise Exception(f'Plugins do not pass validation for plugin name, please check: {e}') from e
+    from . import common_functions
+except ImportError:
+    import common_functions
+
+# re-export helper names so existing call sites stay unchanged
+for _name in (
+    'is_property_list', 'sanitize_text_normalizelinebreaks', 'html_sanitize_text',
+    'html_sanitize_htmlattribute', 'html_sanitize_text_date', 'sanitize_idfield',
+    'sanitize_cssfield', 'sanitize_text_extract_filename', 'html_sanitize_value_astext',
+    'html_sanitize_value_asproperties', 'html_sanitize_value_general',
+    'htmlattr_sanitize_value_general', 'html_sanitize_tablecellcontents',
+    'sanitize_text_general',
+):
+    globals()[_name] = getattr(common_functions, _name)
 
 
 
-
-
-
-
-
-
-
+# backend enhancement plugins, extracted into plugins/
+try:
+    from .plugins import (
+        enhancement_plugins,
+        run_plugins,
+        PluginContext,
+        HOOK_TABLE_BEFORE,
+        HOOK_ROW_BEFORE,
+        HOOK_COL_BEFORE,
+        HOOK_COL_AFTER,
+        HOOK_ROW_AFTER,
+        HOOK_TABLE_AFTER,
+    )
+except ImportError:
+    from plugins import (
+        enhancement_plugins,
+        run_plugins,
+        PluginContext,
+        HOOK_TABLE_BEFORE,
+        HOOK_ROW_BEFORE,
+        HOOK_COL_BEFORE,
+        HOOK_COL_AFTER,
+        HOOK_ROW_AFTER,
+        HOOK_TABLE_AFTER,
+    )
 
 # and now 2 main function - to prep column markup and row markup - the main things that we have in the report
 
@@ -838,13 +136,10 @@ def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[],other_cols_ref=[]
     
     try:
 
-        if not('skip_plugin_enchancement' in flags):
-            for plugin in enchancement_plugins:
-                if plugin.get('enabled') and f':disable-plugin:{plugin.get("name")}' not in flags:
-                    if 'on_col_before' in plugin:
-                        result_upd,flags_upd = plugin['on_col_before'](col,col_index,flags,column_specs,other_cols_ref)
-                        col = result_upd
-                        flags = list(set([]+flags+flags_upd))
+        ctx = PluginContext(flags=flags, column_specs=column_specs, col=col, col_index=col_index, other_cols_ref=other_cols_ref)
+        run_plugins(enhancement_plugins, HOOK_COL_BEFORE, ctx)
+        col = ctx.col
+        flags = ctx.flags
         
         col_css_classes = ['mdmreport-contentcell']
         if sanitize_cssfield( column_specs[col_index] ):
@@ -861,12 +156,9 @@ def prep_htmlmarkup_col(col,col_index,flags=[],column_specs=[],other_cols_ref=[]
             otherattrs = ' data-columnid="{colid}"'.format(colid=sanitize_cssfield( column_specs[col_index] ) if sanitize_cssfield( column_specs[col_index] ) else '') if 'header' in flags else ''
         )
 
-        if not('skip_plugin_enchancement' in flags):
-            for plugin in enchancement_plugins:
-                if plugin.get('enabled') and f':disable-plugin:{plugin.get("name")}' not in flags:
-                    if 'on_col_after' in plugin:
-                        result_upd = plugin['on_col_after'](result_formatted,col,col_index,flags,column_specs,other_cols_ref)
-                        result_formatted = result_upd
+        ctx.result_formatted = result_formatted
+        run_plugins(enhancement_plugins, HOOK_COL_AFTER, ctx)
+        result_formatted = ctx.result_formatted
 
         return result_formatted
     
@@ -898,13 +190,10 @@ def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
         if len(row)>len(column_specs):
             raise Exception('producing html markup for the row: number of items in a row is bigger than number of columns, we can\'t handle it')
 
-        if not('skip_plugin_enchancement' in flags):
-            for plugin in enchancement_plugins:
-                if plugin.get('enabled') and f':disable-plugin:{plugin.get("name")}' not in flags:
-                    if 'on_row_before' in plugin:
-                        row_upd,flags_upd = plugin['on_row_before'](row,flags,column_specs,other_cols_ref=row)
-                        row = row_upd
-                        flags = list(set([]+flags+flags_upd))
+        ctx = PluginContext(flags=flags, column_specs=column_specs, row=row, other_cols_ref=row)
+        run_plugins(enhancement_plugins, HOOK_ROW_BEFORE, ctx)
+        row = ctx.row
+        flags = ctx.flags
         
         col_css_classes = ['mdmreport-record']
         if 'row-header' in flags:
@@ -918,12 +207,9 @@ def prep_htmlmarkup_row(row,flags=[],column_specs=[]):
             added_css_classes = ' '.join(col_css_classes)
         )
         
-        if not('skip_plugin_enchancement' in flags):
-            for plugin in enchancement_plugins:
-                if plugin.get('enabled') and f':disable-plugin:{plugin.get("name")}' not in flags:
-                    if 'on_row_after' in plugin:
-                        result_upd = plugin['on_row_after'](result_formatted,row,flags,column_specs,other_cols_ref=row)
-                        result_formatted = result_upd
+        ctx.result_formatted = result_formatted
+        run_plugins(enhancement_plugins, HOOK_ROW_AFTER, ctx)
+        result_formatted = ctx.result_formatted
         
         return result_formatted
     
@@ -964,14 +250,11 @@ def prep_htmlmarkup_section(section_obj,column_specs_global,column_titles,flags=
         if 'statistics' in section_obj:
                 ins_banner = '<div class="mdmreport-banner mdmreport-banner-table-details mdmreport-banner-table-details-statistics"><p>Statistics: </p>{body}</div>'.format( body = html_sanitize_tablecellcontents( section_obj['statistics'], flags=['format_semicolon'] ) )
 
-        if not('skip_plugin_enchancement' in flags):
-            for plugin in enchancement_plugins:
-                if plugin.get('enabled') and f':disable-plugin:{plugin.get("name")}' not in flags:
-                    if 'on_table_before' in plugin:
-                        result_upd,column_specs_upd,flags_upd = plugin['on_table_before'](rows,column_specs_localcopy,flags)
-                        rows = result_upd
-                        column_specs_localcopy = column_specs_upd
-                        flags = list(set([]+flags+flags_upd))
+        ctx = PluginContext(flags=flags, column_specs=column_specs_localcopy, rows=rows)
+        run_plugins(enhancement_plugins, HOOK_TABLE_BEFORE, ctx)
+        rows = ctx.rows
+        column_specs_localcopy = ctx.column_specs
+        flags = ctx.flags
         
         result_formatted = '{table_begin}{table_contents}{table_end}'.format(
             table_begin = report_html_template.TEMPLATE_HTML_TABLE_BEGIN.replace('{{TABLE_NAME}}',html_sanitize_tablecellcontents(table_name)).replace('{{TABLE_ID}}',sanitize_cssfield(table_id)).replace('{{INS_TABBANNER}}',ins_banner),
@@ -979,12 +262,10 @@ def prep_htmlmarkup_section(section_obj,column_specs_global,column_titles,flags=
             table_end = report_html_template.TEMPLATE_HTML_TABLE_END
         )
 
-        if not('skip_plugin_enchancement' in flags):
-            for plugin in enchancement_plugins:
-                if plugin.get('enabled') and f':disable-plugin:{plugin.get("name")}' not in flags:
-                    if 'on_table_after' in plugin:
-                        result_upd = plugin['on_table_after'](result_formatted,table_id,rows,column_specs_localcopy,flags)
-                        result_formatted = result_upd
+        ctx.table_id = table_id
+        ctx.result_formatted = result_formatted
+        run_plugins(enhancement_plugins, HOOK_TABLE_AFTER, ctx)
+        result_formatted = ctx.result_formatted
         
         return result_formatted
     
@@ -1173,7 +454,7 @@ def entry_point(*argcs,**kwargs):
             help='Disable certain functionality',
             action='append',
             default=[],
-            choices=[s.get('name') for s in enchancement_plugins],
+            choices=[s.get('name') for s in enhancement_plugins],
             required=False
         )
 
@@ -1216,7 +497,7 @@ def entry_point(*argcs,**kwargs):
             'plugins_to_disable': [plugin_name for plugin_name in (args.disable_plugin or [])],
         }
         
-        assert all(s in [s.get('name') for s in enchancement_plugins] for s in config.get('plugins_to_disable')), f'--disable-plugin option is wrong: an entry is not a plugin name'
+        assert all(s in [s.get('name') for s in enhancement_plugins] for s in config.get('plugins_to_disable')), f'--disable-plugin option is wrong: an entry is not a plugin name'
 
         result = None
         if config_output_format=='html':

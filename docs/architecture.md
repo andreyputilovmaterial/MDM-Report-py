@@ -19,7 +19,9 @@ HTML. It does not know or care which reader produced the JSON. Producers include
 
 | Path | Role |
 | --- | --- |
-| `src/report_create.py` | Main entry (`produce_html`, `entry_point`). Input parsing, text sanitization, plugin dispatch, HTML rendering, CLI. |
+| `src/report_create.py` | Main entry (`produce_html`, `entry_point`). Input parsing, plugin dispatch, HTML rendering, CLI. |
+| `src/common_functions.py` | Shared text/HTML sanitization and formatting helpers (pure functions). |
+| `src/plugins/` | Backend enhancement plugins + the plugin contract (`base.py`: `PluginContext`, `run_plugins`, hook-point constants). |
 | `src/report_html_template.py` | Loads and minifies HTML/CSS/JS templates and builds the JS plugin list at import time. |
 | `src/report_html_make_js_plugin_code.py` | Wraps each JS plugin in an IIFE with shared error handling (`printErrors`, `wrapErrors`). |
 | `src/minify_assets.py` | Optional CSS/JS minification (`csscompressor` / `rjsmin`), graceful no-op if missing. |
@@ -63,10 +65,18 @@ lists `[{"name": ..., "value": ...}, ...]`. A `role` field carries formatting se
 
 - **Frontend JS plugins** (interactivity): beautifydates, aligncolwidths, expandable,
   showhidecolumns, jira, columnfiltering, showhidesections, formatpreoutputs,
-  validatemddlabelissues, diffondiffshowallrows, common.
-- **Backend Python "enhancement plugins"** (transforms before HTML is written):
-  combine-attributes-into-master-name, add-diff-classes, wrap-tables-for-memory-saving,
-  validate-labels. Disable with `--disable-plugin`.
+  validatemddlabelissues, diffondiffshowallrows, common. Live in
+  `src/templates/plugins/<name>/`.
+- **Backend Python plugins** (transforms before/while HTML is written). Live in
+  `src/plugins/`; each registers handlers for one or more named hook points
+  (`on_table_before`, `on_row_before`, `on_col_before`, `on_col_after`,
+  `on_row_after`, `on_table_after`) and mutates a `PluginContext`. Domain-prefixed
+  names:
+  - `mdd_combine_attributes` (MDD reports),
+  - `mdd_validate_labels` (MDD reports),
+  - `diff_add_classes` (diff reports),
+  - `page_wrap_tables_for_memory_saving` (any report).
+  Disable with `--disable-plugin <name>`.
 
 ## 5. Build / template embedding
 

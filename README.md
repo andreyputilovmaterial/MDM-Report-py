@@ -44,7 +44,9 @@ Options:
 
 - `--output-format html` — the default and currently the only implemented format here;
   Excel export lives in the sibling `mdmexcelreportpy`.
-- `--disable-plugin NAME` (repeatable) — disable a backend enhancement plugin.
+- `--disable-plugin NAME` (repeatable) — disable a backend enhancement plugin:
+  `mdd_combine_attributes`, `mdd_validate_labels`, `diff_add_classes`,
+  `page_wrap_tables_for_memory_saving`.
 
 ## Build
 
