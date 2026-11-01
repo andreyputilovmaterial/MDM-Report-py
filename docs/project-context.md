@@ -90,6 +90,12 @@ Cell content (inside a row) supports several shapes, to be specified precisely l
 
 A "property list" is a special array shape: `[{"name": ..., "value": ...}, ...]`.
 
+`column_headers` values (global and per-section) follow the same rich-text shapes as
+cell content. **Decision (2026-11-02):** rich-text column headers are supported — a
+header may be a string, a list, a `{parts:[...]}` wrapper, or a `{text, role}` segment,
+and consumers may filter/style parts by `role`. Custom roles currently render as plain
+text (no built-in markup) unless a backend plugin or role handler is added.
+
 ## 5. Design decisions (current philosophy)
 
 - **Two plugin layers (intentional).** Prefer minimal core code, but the final result
@@ -233,6 +239,9 @@ Each finding records the reasoning, the decision, and the next action.
    `src/plugins/` with a uniform hook contract. Remaining: normalize the
    identifier/sanitizer helpers (#8), shorten verbose class names (#16), review
    open items (#13, #14).
+6. **Rich-text column headers.** Support the `parts`/`role` shape in `column_headers`
+   end-to-end (the renderer already tolerates it; add handling for custom roles as
+   needed). *(decision recorded 2026-11-02)*
 
 ## 8. Open questions
 

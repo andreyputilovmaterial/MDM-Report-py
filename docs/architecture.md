@@ -61,6 +61,12 @@ Cell values may be strings, lists, `{"text": ...}`, `{"parts": [...]}`, or prope
 lists `[{"name": ..., "value": ...}, ...]`. A `role` field carries formatting semantics
 (`added`, `removed`, `date`, `label`, `sronly`, `noshowdiff`, ...).
 
+`column_headers` values (global and per-section) accept the same rich-text shapes as
+cell values: a plain string, a list of parts, or a `{"text", "role"}` /
+`{"parts": [...]}` segment. Headers are sanitized through the same pipeline as cells;
+only the built-in roles receive special markup, so custom roles render as plain text
+unless handled by a backend plugin or a role handler.
+
 ## 4. Plugin layers (intentional)
 
 - **Frontend JS plugins** (interactivity): beautifydates, aligncolwidths, expandable,
