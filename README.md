@@ -44,6 +44,9 @@ Options:
 
 - `--output-format html` — the default and currently the only implemented format here;
   Excel export lives in the sibling `mdmexcelreportpy`.
+- `--output-filename PATH` — set the output file name (and path) explicitly. When
+  provided it is used verbatim (no `.html` is appended); otherwise the name is derived
+  from the input JSON file.
 - `--disable-plugin NAME` (repeatable) — disable a backend enhancement plugin:
   `mdd_combine_attributes`, `mdd_validate_labels`, `diff_add_classes`,
   `page_wrap_tables_for_memory_saving`.

@@ -450,6 +450,12 @@ def entry_point(*argcs,**kwargs):
             required=False
         )
         parser.add_argument(
+            '--output-filename',
+            help='Set preferred output file name, with path',
+            type=str,
+            required=False
+        )
+        parser.add_argument(
             '--disable-plugin',
             help='Disable certain functionality',
             action='append',
@@ -505,8 +511,11 @@ def entry_point(*argcs,**kwargs):
         else:
             raise ValueError('report.py: unsupported output format: {fmt}'.format(fmt=config_output_format))
         
-        result_fname = ( Path(input_map_filename).parents[0] / '{basename}{ext}'.format(basename=re.sub(r'\.json\s*?$','','{n}'.format(n=Path(input_map_filename).name),flags=re.I),ext='.html') if Path(input_map_filename).is_file() else re.sub(r'^\s*?(.*?)(?:\.json)?\s*?$',lambda m: '{base}{added}'.format(base=m[1],added='.html'),'{path}'.format(path=input_map_filename)) )
-        print(f'{script_name}: {STDOUT_COLOR_GREEN}saving as "{result_fname}"{STDOUT_COLOR_RESET}')
+        if args.output_filename:
+            result_fname = Path(args.output_filename)
+        else:
+            result_fname = ( Path(input_map_filename).parents[0] / '{basename}{ext}'.format(basename=re.sub(r'\.json\s*?$','','{n}'.format(n=Path(input_map_filename).name),flags=re.I),ext='.html') if Path(input_map_filename).is_file() else re.sub(r'^\s*?(.*?)(?:\.json)?\s*?$',lambda m: '{base}{added}'.format(base=m[1],added='.html'),'{path}'.format(path=input_map_filename)) )
+        print(f'{script_name}: saving as {STDOUT_COLOR_GREEN}"{result_fname}"{STDOUT_COLOR_RESET}')
         with open(result_fname, "w") as outfile:
             outfile.write(result)
 
