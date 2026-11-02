@@ -63,5 +63,17 @@ COPY /Y README.md dist\README.md
 COPY /Y requirements.txt dist\requirements.txt
 ECHO Done
 
+ECHO -
+ECHO -
+ECHO Copy and adapt run_init scripts to dist...
+powershell -NoProfile -Command ^
+"$c = Get-Content 'run_init.bat' -Encoding 'Default'; ^
+$c = $c -replace 'src\\lib', 'optional_dependencies'; ^
+Set-Content 'dist\run_init.bat' $c -Encoding 'Default'; ^
+$c = Get-Content 'run_init.sh' -Encoding 'Default'; ^
+$c = $c -replace 'src/lib', 'optional_dependencies'; ^
+Set-Content 'dist\run_init.sh' $c -Encoding 'Default'; "
+ECHO Done
+
 ECHO End
 

@@ -1,6 +1,10 @@
 # Project Context — MDM-HTMLReport-py (`mdmreportpy`)
 
 > Last updated: 2026-11-02
+> (2026-11-02) Packaging: `requirements.txt` now lists `csscompressor`/`rjsmin`
+> (optional, minification only); `build.bat`/`build.sh` copy `run_init.bat`/`run_init.sh`
+> into `dist/` (`run_init` prepares a `.venv` and installs base + optional requirements).
+> The three launch strategies are documented in `README.md`.
 > Status: backend plugins extracted to `src/plugins/` with a uniform hook contract
 > (`PluginContext` + `run_plugins`); sanitization helpers extracted to
 > `src/common_functions.py`; tests added. Documentation reorganized: the input JSON

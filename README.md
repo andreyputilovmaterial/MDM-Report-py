@@ -40,6 +40,31 @@ Or through the universal launcher:
 python src/launcher.py --program report --inpfile path/to/report.json
 ```
 
+### Three ways to launch
+
+As everywhere in this toolchain, the program can be started three equivalent ways:
+
+1. **Single-file bundle** (distribution). `build.bat`/`build.sh` produce
+   `dist/mdmtoolsap_bundle.py` and append `from src import launcher; launcher.main()`.
+   Prepare the environment with `run_init`, then run the bundle with the venv Python:
+
+   ```
+   run_init.sh
+   ./.venv/bin/python dist/mdmtoolsap_bundle.py --program report --inpfile path/to/report.json
+   ```
+
+2. **Direct module** (development). Run the entry-point module directly:
+
+   ```
+   python src/report_create.py --inpfile path/to/report.json
+   ```
+
+3. **Launcher proxy** (development). Run the universal dispatcher directly:
+
+   ```
+   python src/launcher.py --program report --inpfile path/to/report.json
+   ```
+
 Options:
 
 - `--output-format html` — the default and currently the only implemented format here;

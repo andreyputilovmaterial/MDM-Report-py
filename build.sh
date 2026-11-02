@@ -50,4 +50,13 @@ cp README.md dist/README.md
 cp requirements.txt dist/requirements.txt
 echo "Done"
 
+echo "-"
+echo "-"
+echo "Copy and adapt run_init scripts to dist..."
+sed -e 's#src/lib#optional_dependencies#g' run_init.sh > dist/run_init.sh
+sed -e 's#src\\lib#optional_dependencies#g' run_init.bat > dist/run_init.bat
+chmod +x dist/run_init.sh
+chmod +x dist/run_init.bat
+echo "Done"
+
 echo "End"

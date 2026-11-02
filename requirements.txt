@@ -1,2 +1,9 @@
 # Runtime dependencies (pip-installable packages), one per line.
 # Install with:  pip install -r requirements.txt
+#
+# These are optional and used only for minification of the embedded CSS/JS. If
+# they are missing, the report still renders but the assets are emitted
+# un-minified (with a one-time warning).
+
+csscompressor
+rjsmin
