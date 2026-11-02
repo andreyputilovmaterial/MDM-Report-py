@@ -1,6 +1,12 @@
 # Project Context — MDM-HTMLReport-py (`mdmreportpy`)
 
 > Last updated: 2026-11-02
+> (2026-11-02) Regression guard: added `tests/test_bundle_excludes_pinliner.py`, which
+> runs the `pinliner ... src` build step and asserts the bundle's `inliner_packages`
+> table contains no module named `*pinliner*` or `*src_dev_build*` (pinliner is
+> build-time-only and must never be shipped). Pinliner walks the package tree rather than
+> scanning imports, so `src_dev_build/` stays out only because it has no `__init__.py`.
+
 > (2026-11-02) Packaging: `requirements.txt` now lists `csscompressor`/`rjsmin`
 > (optional, minification only); `build.bat`/`build.sh` copy `run_init.bat`/`run_init.sh`
 > into `dist/` (`run_init` prepares a `.venv` and installs base + optional requirements).
