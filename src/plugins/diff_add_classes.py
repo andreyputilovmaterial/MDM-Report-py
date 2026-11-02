@@ -10,10 +10,6 @@ except ImportError:
 
 def _did_col_change_deep_inspect(data):
     if isinstance(data, str):
-        if '<<ADDED>>' in data:
-            return True
-        if '<<REMOVED>>' in data:
-            return True
         return False
     elif isinstance(data, list):
         result = False

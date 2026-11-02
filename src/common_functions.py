@@ -31,18 +31,6 @@ def html_sanitize_text(inp_value,flags=[]):
     result = result.replace('\n','<br />')
     if 'format-escapequotes-htmlentity' in flags:
         result = result.replace('"','&quot;')
-    special_pattern = '<<KEYWORD>>'
-    special_pattern = html.escape(special_pattern)
-    
-    # TODO: remove deprecated code
-    result = result.replace(special_pattern.replace('KEYWORD','ADDED'),'<span class="mdmdiff-inlineoverlay-added">').replace(special_pattern.replace('KEYWORD','REMOVED'),'<span class="mdmdiff-inlineoverlay-removed">').replace(special_pattern.replace('KEYWORD','ENDADDED'),'</span>').replace(special_pattern.replace('KEYWORD','ENDREMOVED'),'</span>')
-    for keyword in ['ADDED','REMOVED','ENDADDED','ENDREMOVED']:
-        if special_pattern.replace('KEYWORD',keyword) in result:
-            raise Exception('Text insert markers found: should be deprecated (found: "{aaa}" in "{bbb}")'.format(aaa=special_pattern.replace('KEYWORD',keyword),bbb=result))
-    # # some replacement to add syntax so that dates are formatted
-    # # if there'result some certain markup - that shouln't be escape
-    # # it should be printed as markup so that js works and converts UTC dates to local time
-    # result = re.sub(r'&lt;&lt;DATE:(.*?)&gt;&gt;',lambda m:'<span class="mdmreport-role-date" data-role="date">{d}</span>'.format(d=m[1]),result)
     # and one more transformation - some parts
     # (called "scripting" - including MDD syntax for all MDD items and routing syntax)
     # so these parts include raw multi-line text - we'll normalize line breaks
@@ -55,7 +43,6 @@ def html_sanitize_htmlattribute(s,flags=None):
     return html_sanitize_text(html_sanitize_value_general(s,flags),flags)
 
 def html_sanitize_text_date(s):
-    #return '<<DATE:{d}>>'.format(d=s)
     return {'parts':[{'text':s,'role':'date'}]}
 
 def sanitize_idfield(s):

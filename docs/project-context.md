@@ -1,6 +1,12 @@
 # Project Context — MDM-HTMLReport-py (`mdmreportpy`)
 
-> Last updated: 2026-11-02
+> Last updated: 2026-11-03
+> (2026-11-03) Removed the deprecated `<<ADDED>>` / `<<REMOVED>>` / `<<ENDADDED>>` /
+> `<<ENDREMOVED>>` / `<<DATE:...>>` / `<<KEYWORD>>` text-marker handling from
+> `common_functions.html_sanitize_text` (plus the leftover date-marker comment in
+> `html_sanitize_text_date`) and the old string-marker detection in
+> `plugins/diff_add_classes`. Rich-text `role` is now the only diff/date markup.
+> Closes GitHub issue #13 (together with the root repo `diff_engine` cleanup).
 > (2026-11-02) Regression guard: added `tests/test_bundle_excludes_pinliner.py`, which
 > runs the `pinliner ... src` build step and asserts the bundle's `inliner_packages`
 > table contains no module named `*pinliner*` or `*src_dev_build*` (pinliner is
@@ -195,7 +201,6 @@ Each finding records the reasoning, the decision, and the next action.
 ### 9. Dead / duplicated code — confirmed cleanup candidates
 - Duplicate `is_property_list` (module level + inside `sanitize_text_general`).
 - Commented-out first version of `html_sanitize_value_asproperties`.
-- Dead `special_pattern = '<<KEYWORD>>'` code in `html_sanitize_text`.
 - `html.escape('{result}'.format(result=result))` → `html.escape(result)`.
 - **Action:** remove during the shared-helper extraction, covered by the new tests.
 

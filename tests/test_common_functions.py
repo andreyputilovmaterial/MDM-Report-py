@@ -19,6 +19,14 @@ class TestSanitizeHelpers(unittest.TestCase):
     def test_html_sanitize_text_newlines_to_br(self):
         self.assertEqual(cf.html_sanitize_text('a\nb'), 'a<br />b')
 
+    def test_html_sanitize_text_treats_deprecated_markers_as_plain_text(self):
+        # The old <<ADDED>>/<<REMOVED>> text markers are deprecated; they must no
+        # longer be rewritten into diff spans, just HTML-escaped like normal text.
+        self.assertEqual(
+            cf.html_sanitize_text('<<ADDED>>x<<ENDADDED>>'),
+            '&lt;&lt;ADDED&gt;&gt;x&lt;&lt;ENDADDED&gt;&gt;',
+        )
+
     def test_sanitize_cssfield(self):
         self.assertEqual(cf.sanitize_cssfield('My Column!'), 'My-Column')
 
