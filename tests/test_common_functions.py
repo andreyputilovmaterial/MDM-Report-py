@@ -51,5 +51,38 @@ class TestSanitizeHelpers(unittest.TestCase):
         self.assertEqual(cf.sanitize_text_general(42), '42')
 
 
+class TestRichTextValues(unittest.TestCase):
+    def test_html_sanitize_raw_string(self):
+        self.assertEqual(cf.html_sanitize_value_general('Item name'), 'Item name')
+
+    def test_html_sanitize_segment_text(self):
+        self.assertEqual(cf.html_sanitize_value_general({'text': 'Item name'}), 'Item name')
+
+    def test_html_sanitize_segment_with_role(self):
+        self.assertEqual(
+            cf.html_sanitize_value_general({'text': 'x', 'role': 'added'}),
+            '<span class="mdmdiff-inlineoverlay-added">x</span>',
+        )
+
+    def test_html_sanitize_parts_with_context_and_added(self):
+        value = {'parts': [{'role': 'context', 'text': 'Item name'}, {'role': 'added', 'text': ' (updated)'}]}
+        self.assertEqual(
+            cf.html_sanitize_value_general(value),
+            'Item name<span class="mdmdiff-inlineoverlay-added"> (updated)</span>',
+        )
+
+    def test_html_sanitize_list_of_segments(self):
+        value = [{'text': 'A'}, {'text': 'B', 'role': 'removed'}]
+        self.assertEqual(
+            cf.html_sanitize_value_general(value),
+            'A<span class="mdmdiff-inlineoverlay-removed">B</span>',
+        )
+
+    def test_sanitize_text_general_flattens_rich_text(self):
+        # Exact shape the diff tool emits for a side-by-side column header.
+        value = {'parts': [{'role': 'context', 'text': 'Item name'}, {'text': ' (Left file)'}]}
+        self.assertEqual(cf.sanitize_text_general(value), 'Item name (Left file)')
+
+
 if __name__ == '__main__':
     unittest.main()
