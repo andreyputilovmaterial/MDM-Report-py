@@ -59,4 +59,10 @@ chmod +x dist/run_init.sh
 chmod +x dist/run_init.bat
 echo "Done"
 
+echo "-"
+echo "-"
+echo "Verify the bundle: run --program done..."
+python dist/mdmtoolsap_bundle.py --program done || fail
+echo "Done"
+
 echo "End"

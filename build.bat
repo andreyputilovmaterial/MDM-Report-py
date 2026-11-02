@@ -75,5 +75,12 @@ $c = $c -replace 'src/lib', 'optional_dependencies'; ^
 Set-Content 'dist\run_init.sh' $c -Encoding 'Default'; "
 ECHO Done
 
+ECHO -
+ECHO -
+ECHO Verify the bundle: run --program done...
+python dist\mdmtoolsap_bundle.py --program done
+if %ERRORLEVEL% NEQ 0 ( echo ERROR: Failure && pause && exit /b %errorlevel% )
+ECHO Done
+
 ECHO End
 

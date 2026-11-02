@@ -2,21 +2,16 @@
 import argparse
 # from pathlib import Path
 import traceback, sys
+import importlib
 
 
 
 
 
 
-if __name__ == '__main__':
-    # run as a program
-    import report_create as report_html_create
-elif '.' in __name__:
-    # package
-    from . import report_create as report_html_create
-else:
-    # included with no parent package
-    import report_create as report_html_create
+# Entry-point modules are imported lazily inside their ``call_*`` handlers via
+# :func:`_import_module`, so ``--program done`` works as a dependency-free smoke
+# test in a fresh checkout.
 
 
 
@@ -29,7 +24,19 @@ STDOUT_COLOR_GREEN = "\033[32m"
 
 
 
+def _import_module(flat_name):
+    # Lazily import an entry-point module; mirrors the three-way conditional
+    # import used by entry-point scripts.
+    if __name__ == '__main__':
+        return importlib.import_module(flat_name)
+    elif '.' in __name__:
+        return importlib.import_module('.' + flat_name, package=__package__)
+    else:
+        return importlib.import_module(flat_name)
+
+
 def call_report_html_program(*argcs,**kwargs):
+    report_html_create = _import_module('report_create')
     return report_html_create.entry_point(*argcs,**kwargs)
 
 # def call_templatetest_program(*argcs,**kwargs):
@@ -43,6 +50,10 @@ hello, world!
     print(msg)
     return True
 
+def call_done_program(*argcs,**kwargs):
+    print(f'{STDOUT_COLOR_GREEN}done{STDOUT_COLOR_RESET}')
+    return True
+
 
 
 
@@ -50,6 +61,7 @@ run_programs = {
     'report': call_report_html_program,
     'report_html': call_report_html_program,
     'test': call_test_program,
+    'done': call_done_program,
     # 'templatetest': call_templatetest_program,
 }
 

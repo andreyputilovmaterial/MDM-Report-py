@@ -1,6 +1,11 @@
 # Project Context — MDM-HTMLReport-py (`mdmreportpy`)
 
 > Last updated: 2026-11-03
+> (2026-11-03) Launcher smoke test: added a dependency-free ``--program done`` (prints
+> ``done`` in green) to ``src/launcher.py`` plus ``tests/test_done_program.py``.
+> ``report_create`` is now imported lazily via ``_import_module`` so ``done`` loads
+> without any build artifacts or optional dependencies. `build.sh`/`build.bat` now
+> finish with `python dist/mdmtoolsap_bundle.py --program done` to smoke-test the bundle.
 > (2026-11-03) Removed the deprecated `<<ADDED>>` / `<<REMOVED>>` / `<<ENDADDED>>` /
 > `<<ENDREMOVED>>` / `<<DATE:...>>` / `<<KEYWORD>>` text-marker handling from
 > `common_functions.html_sanitize_text` (plus the leftover date-marker comment in
