@@ -1,6 +1,12 @@
 # Project Context — MDM-HTMLReport-py (`mdmreportpy`)
 
 > Last updated: 2026-11-03
+> (2026-11-03) Added `tests/fixtures/` with committed example *inputs* (`*.mdd.json`
+> from `mdmreadpy`/the diff tool) and example *outputs* (`*.mdd.html`), plus
+> `tests/test_fixtures.py` re-rendering each input via `produce_html`. A local
+> `.gitignore` re-includes `report.diff.*` (the parent `report.*` rule would drop the
+> diff fixtures).
+
 > (2026-11-03) Launcher smoke test: added a dependency-free ``--program done`` (prints
 > ``done`` in green) to ``src/launcher.py`` plus ``tests/test_done_program.py``.
 > ``report_create`` is now imported lazily via ``_import_module`` so ``done`` loads
