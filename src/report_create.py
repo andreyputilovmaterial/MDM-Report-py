@@ -283,6 +283,7 @@ def prep_htmlmarkup_section(section_obj,column_specs_global,column_titles,flags=
 def produce_html(inp,config={}):
 
     config = {**(config or {})}
+    script_version = (config.get('script_version') or '').strip() or '?'
 
     result_ins_htmlmarkup_title = '???'
     result_ins_htmlmarkup_heading = '???'
@@ -330,7 +331,7 @@ def produce_html(inp,config={}):
     if reporttype in ['MDD','diff']:
         flags += [f'reporttype-{reporttype}'] # older format sent in flags, for generating css classes in <body>
     flags += [ f':reporttype:{reporttype}' ] # newer format sent in flags, should be like something universal
-    flags += [ f':scriptversion:{config.get("script_version").strip()}' ]
+    flags += [ f':scriptversion:{script_version}' ]
     flags += [ f':inp-data:{flag}' for flag in inp_data_flags ]
     flags += [ f':disable-plugin:{name}' for name in (config.get('plugins_to_disable') or []) ]
     report_data_sections = []
@@ -398,7 +399,7 @@ def produce_html(inp,config={}):
         '{{INS_REPORTTYPE}}', sanitize_cssfield(result_ins_htmlmarkup_reporttype)
     )
     result = result.replace(
-        '{{INS_SCRIPTVERSION}}', sanitize_cssfield(config.get('script_version','???'))
+        '{{INS_SCRIPTVERSION}}', sanitize_cssfield(script_version) or '?'
     )
     # <span class="mdmreport-role-date" data-role="date">2026-05-27T22:37:56Z</span>
     result = result.replace(

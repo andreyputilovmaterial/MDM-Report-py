@@ -173,6 +173,13 @@ class TestEndToEnd(unittest.TestCase):
         self.assertIn('mdmreport_hidetablememorysaving_outer', html_out)
         self.assertIn('<table', html_out)
 
+    def test_produce_html_defaults_missing_script_version_to_question_mark(self):
+        from src import report_create
+        # An empty config must not crash, and the version falls back to '?'.
+        html_out = report_create.produce_html(self._fixture(), config={})
+        self.assertIn('<html', html_out)
+        self.assertIn('data-script-version="?"', html_out)
+
     def test_disable_plugin(self):
         from src import report_create
         html_out = report_create.produce_html(
