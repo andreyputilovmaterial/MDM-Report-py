@@ -1,6 +1,13 @@
 # Project Context — MDM-HTMLReport-py (`mdmreportpy`)
 
-> Last updated: 2026-11-03
+> Last updated: 2026-11-04
+> (2026-11-04) Adopted `docs/maintenance-log.md` and applied its entry-point import
+> convention: entry-point modules (`src/launcher.py`, `src/report_create.py`) now select
+> imports on `__package__` (two-branch) instead of the old three-branch `__name__` split.
+> Updated the pinliner submodule to `7152465` and switched `build.sh`/`build.bat` to
+> `--main src.launcher --main-attr main` (no more appending `launcher.main()`). Plain-script
+> invocation is dropped — use `python -m src.<module>`. Updated
+> `.clinerules/02-python-portability.md`, `README.md`, and `tests/test_done_program.py`.
 > (2026-11-03) Added `tests/fixtures/` with committed example *inputs* (`*.mdd.json`
 > from `mdmreadpy`/the diff tool) and example *outputs* (`*.mdd.html`), plus
 > `tests/test_fixtures.py` re-rendering each input via `produce_html`. A local

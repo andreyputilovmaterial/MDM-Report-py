@@ -37,16 +37,12 @@ did_import_template = False
 
 if should_prefer_src_template_import:
     try:
-        if __name__ == '__main__':
-            # run as a program
-            import report_html_template
-            did_import_template = True
-        elif '.' in __name__:
-            # package
+        if __package__:
+            # package context
             from . import report_html_template
             did_import_template = True
         else:
-            # included with no parent package
+            # flat context: no parent package
             import report_html_template
             did_import_template = True
     except ImportError:
@@ -55,29 +51,22 @@ if should_prefer_src_template_import:
 
 
 if not did_import_template:
-    if __name__ == '__main__':
-        # run as a program
-        from GENERATED import TEMPLATE as report_html_template
-        did_import_template = True
-    elif '.' in __name__:
-        # package
+    if __package__:
+        # package context
         from .GENERATED import TEMPLATE as report_html_template
         did_import_template = True
     else:
-        # included with no parent package
+        # flat context: no parent package
         from GENERATED import TEMPLATE as report_html_template
         did_import_template = True
 
 
 
-if __name__ == '__main__':
-    # run as a program
-    from GENERATED._VERSION import _VERSION as script_version
-elif '.' in __name__:
-    # package
+if __package__:
+    # package context
     from .GENERATED._VERSION import _VERSION as script_version
 else:
-    # included with no parent package
+    # flat context: no parent package
     from GENERATED._VERSION import _VERSION as script_version
 
 
