@@ -1,92 +1,435 @@
+/* =====================================================================
+   common.css — global, reusable styles (the "skin")
+
+   Load order:
+     1. normalize.css
+     2. common.css            (this file)
+     3. mdmreporttable.css    (the report feature domain)
+     4. plugin script.css/js  (per-plugin styles)
+
+   Modular spacing scale (base unit = 30px):
+     3x    = 90px    (--mdm-space-3x)
+     2x    = 60px    (--mdm-space-2x)
+     1.5x  = 45px    (--mdm-space-1-5x)
+     1x    = 30px    (--mdm-space)
+     0.75x = 22.5px  (--mdm-space-0-75x)
+     0.5x  = 15px    (--mdm-space-0-5x)
+     0.25x = 7.5px   (--mdm-space-0-25x)
+     0.125x= 3.75px  (--mdm-space-0-125x)
+
+   Naming:
+     mdm-*        generic reusable domains (buttons, links, tables, utilities)
+     mdmreport-*  the report feature domain (banners, diff tables) — lives in
+                  mdmreporttable.css, not here
+     unprefixed   a few truly-global layout blocks (.container, .header, ...)
+   ===================================================================== */
+
+/* Modular scale + shared tokens */
+:root {
+    --mdm-space-3x: 90px;
+    --mdm-space-2x: 60px;
+    --mdm-space-1-5x: 45px;
+    --mdm-space: 30px;
+    --mdm-space-0-75x: 22.5px;
+    --mdm-space-0-5x: 15px;
+    --mdm-space-0-25x: 7.5px;
+    --mdm-space-0-125x: 3.75px;
+
+    --mdm-border-color: #d0d0d0;
+    --mdm-border-color-dark: #444;
+    --mdm-border-radius: 4px;
+    --mdm-transition: 350ms ease;
+
+    /* Primary action colour: a neutral grey — no bright accent. */
+    --mdm-color-primary: #555;
+    --mdm-color-primary-hover: #444;
+
+    /* Semantic colours follow the report's own palette. */
+    --mdm-color-confirm: #217346;
+    --mdm-color-confirm-hover: #1a5c38;
+    --mdm-color-reject: #c0392b;
+    --mdm-color-reject-hover: #96281b;
+    --mdm-color-muted: #666;
+    --mdm-color-error: #cc0000;
+
+    --mdm-color-link: #217346;
+    --mdm-color-link-hover: #1a5c38;
+    --mdm-color-green: #217346;
+    --mdm-color-green-hover: #1a5c38;
+    --mdm-color-blue: #5b9bd5;
+    --mdm-color-blue-hover: #2f6fa8;
+
+    /* Report highlight palette (yellow, used for changed rows / TOC). */
+    --mdm-color-highlight: #ffe49c;
+    --mdm-color-highlight-soft: #fff5da;
+}
+
+/* Base */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
 
 body {
     font-size: 14px;
-    Font-family: "Helvetica";
+    font-family: "Helvetica", "Arial", sans-serif;
 }
-* {
-    box-sizing: border-box;
+
+.clearfix::after,
+.mdm-u-clearfix::after {
+    content: "";
+    display: block;
+    clear: both;
 }
-.clearfix:after {
-   content: " "; /* Older browser do not support empty content */
-   visibility: hidden;
-   display: block;
-   height: 0;
-   clear: both;
-}
-.error {
-    color: #cc0000;
-    font-weight: 500;
-}
+
+/* Layout */
 .container {
-    margin: 0 15px 0;
+    margin: 0 var(--mdm-space-0-5x);
 }
-@media all and (min-width: 1300px) {
-    .container {
-        margin: 0 auto 0;
-        width: 1200px;
-    }
+@media (min-width: 500px) {
+    .container { margin: 0 var(--mdm-space); }
 }
-@media all and (min-width: 1650px) {
-    .container {
-        margin: 0 auto 0;
-        width: 1500px;
-    }
+@media (min-width: 750px) {
+    .container { margin: 0 var(--mdm-space-1-5x); }
 }
-@media all and (min-width: 1800px) {
-    .container {
-        margin: 0 auto 0;
-        width: 1700px;
-    }
+@media (min-width: 1300px) {
+    .container { margin: 0 auto; width: 1200px; }
 }
+@media (min-width: 1650px) {
+    .container { margin: 0 auto; width: 1500px; }
+}
+@media (min-width: 1800px) {
+    .container { margin: 0 auto; width: 1700px; }
+}
+
+.header {
+    padding: var(--mdm-space-0-5x) 0;
+    border-bottom: 1px solid #eee;
+}
+.footer {
+    padding: var(--mdm-space-0-5x) 0;
+    border-top: 1px solid #eee;
+}
+.main {
+    padding: var(--mdm-space-0-5x) 0;
+}
+.wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+}
+.section {
+    margin-bottom: var(--mdm-space);
+}
+
+/* Typography */
 h1 {
     font-weight: 700;
     font-size: 32px;
     color: #333;
     margin: 0;
-    padding: 0px 0 30px;
+    padding: 0 0 var(--mdm-space);
 }
 h2 {
     font-weight: 700;
     font-size: 21px;
     color: #222;
     margin: 0;
-    padding: 22.5px 0 7.5px;
+    padding: var(--mdm-space-0-5x) 0 var(--mdm-space-0-25x);
 }
 h3 {
     font-weight: 700;
     font-size: 17px;
     color: #111;
     margin: 0;
-    padding: 22.5px 0 7.5px;
+    padding: var(--mdm-space-0-5x) 0 var(--mdm-space-0-25x);
 }
-.header {
-    padding: 15px 0 15px;
-    border-bottom: 1px solid #eee;
+ul,
+ol {
+    padding: 0 0 0 var(--mdm-space-0-5x);
+    margin: var(--mdm-space-0-25x) 0 var(--mdm-space-0-5x);
+    list-style-type: "–  ";
 }
-.footer {
-    padding: 15px 0 15px;
-    border-top: 1px solid #eee;
+p + ul,
+p + ol {
+    margin-top: -1em;
 }
-.main {
-    padding: 15px 0 15px;
+ul > li,
+ol > li {
+    padding: 2px 0;
 }
-.wrapper {
-    width: 100%; max-width: 100%; overflow-x: auto;
+
+/* Links */
+.mdm-link,
+.mdm-link-green,
+.mdm-link-blue,
+.mdm-link-red,
+.mdm-link-muted {
+    outline: none;
+    text-decoration: none;
+    transition: color var(--mdm-transition);
 }
-.mdmreport-banner {
-    display: block; position: relative; padding: 1em; margin: 0 0 1em; border: #ddd solid 1px;
+.mdm-link {
+    color: var(--mdm-color-link);
 }
-.mdmreport-banners-wrapper-noborders .mdmreport-banner {
-    padding: 0;
+.mdm-link:hover,
+.mdm-link:focus {
+    color: var(--mdm-color-link-hover);
+    outline: none;
+}
+.mdm-link-green { color: var(--mdm-color-green); }
+.mdm-link-green:hover,
+.mdm-link-green:focus { color: var(--mdm-color-green-hover); }
+.mdm-link-blue { color: var(--mdm-color-blue); }
+.mdm-link-blue:hover,
+.mdm-link-blue:focus { color: var(--mdm-color-blue-hover); }
+.mdm-link-red { color: var(--mdm-color-reject); }
+.mdm-link-red:hover,
+.mdm-link-red:focus { color: var(--mdm-color-reject-hover); }
+.mdm-link-muted { color: var(--mdm-color-muted); }
+.mdm-link-muted:hover,
+.mdm-link-muted:focus { color: #333; }
+
+/* a link that looks like plain surrounding text */
+.mdm-link-unstyled,
+.link-unstyled,
+.mdm-link-unstyled:link,
+.mdm-link-unstyled:visited,
+.link-unstyled:link,
+.link-unstyled:visited {
+    color: inherit;
+    text-decoration: none;
+    outline: none;
     border: none;
+    cursor: pointer;
+    transition: color var(--mdm-transition);
 }
-.mdmreport-banners-wrapper-noborders .mdmreport-banner h3 {
-    margin-top: 0;
+.mdm-link-unstyled:hover,
+.link-unstyled:hover {
+    text-decoration: underline;
 }
-.mdmreport-contentcell-fullwidth {
+
+/* a link that stays underlined like ordinary body text */
+.mdm-link-underline {
+    color: inherit;
+    text-decoration: underline;
+    outline: none;
+    transition: color var(--mdm-transition);
+}
+
+/* Buttons */
+.mdm-btn {
+    display: inline-block;
+    vertical-align: middle;
+    text-align: center;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    box-sizing: border-box;
+    margin: 0;
+    border: 1px solid var(--mdm-border-color);
+    border-radius: var(--mdm-border-radius);
+    background: #fff;
+    color: #333;
+    font: inherit;
+    line-height: 1.2;
+    padding: 0.35em 0.8em;
+    text-decoration: none;
+    transition: border-color var(--mdm-transition), background var(--mdm-transition);
+}
+.mdm-btn:hover,
+.mdm-btn:focus {
+    border-color: var(--mdm-border-color-dark);
+    outline: none;
+}
+.mdm-btn:active {
+    background: #f2f2f2;
+}
+
+.mdm-btn-primary {
+    background: var(--mdm-color-primary);
+    border-color: var(--mdm-color-primary);
+    color: #fff;
+}
+.mdm-btn-primary:hover,
+.mdm-btn-primary:focus {
+    background: var(--mdm-color-primary-hover);
+    border-color: var(--mdm-color-primary-hover);
+    color: #fff;
+}
+
+.mdm-btn-secondary {
+    background: transparent;
+}
+
+.mdm-btn-confirm {
+    background: var(--mdm-color-confirm);
+    border-color: var(--mdm-color-confirm);
+    color: #fff;
+}
+.mdm-btn-confirm:hover,
+.mdm-btn-confirm:focus {
+    background: var(--mdm-color-confirm-hover);
+    border-color: var(--mdm-color-confirm-hover);
+    color: #fff;
+}
+
+.mdm-btn-reject {
+    background: var(--mdm-color-reject);
+    border-color: var(--mdm-color-reject);
+    color: #fff;
+}
+.mdm-btn-reject:hover,
+.mdm-btn-reject:focus {
+    background: var(--mdm-color-reject-hover);
+    border-color: var(--mdm-color-reject-hover);
+    color: #fff;
+}
+
+.mdm-btn-close {
+    background: transparent;
+    color: var(--mdm-color-muted);
+}
+
+.mdm-btn-large {
+    padding: 0.6em 1.4em;
+    font-size: 16px;
+}
+
+.mdm-btn-block {
+    display: block;
     width: 100%;
-    min-width: 100%;
 }
-.mdmreport-table-dummy .mdmreport-record .mdmreport-contentcell {
-    padding: 7.5px 7.5px 7.5px 15px;
+
+/* a button/input that looks like a plain text link */
+.mdm-btn-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--mdm-color-primary);
+    font: inherit;
+    line-height: inherit;
+    text-align: left;
+    cursor: pointer;
+    text-decoration: none;
+}
+.mdm-btn-link:hover {
+    color: var(--mdm-color-primary-hover);
+    text-decoration: underline;
+}
+
+/* a button/input that looks like plain surrounding text */
+.mdm-btn-unstyled {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: none;
+}
+.mdm-btn-unstyled:hover {
+    text-decoration: underline;
+}
+
+/* a compact inline link-button (kept for compatibility) */
+.mdm-link-inline-btn,
+.mdm-link-inline-btn:link,
+.mdm-link-inline-btn:visited {
+    display: inline-block;
+    padding: 2px var(--mdm-space-0-5x) 4px;
+    border: 1px solid currentColor;
+    border-radius: var(--mdm-border-radius);
+    color: inherit;
+    text-decoration: none;
+    outline: none;
+    line-height: inherit;
+    cursor: pointer;
+    transition: all var(--mdm-transition);
+}
+.mdm-link-inline-btn:hover {
+    color: #111;
+}
+
+/* Tables */
+/* Global default: a table with no classes is borderless and airy. */
+table tr td,
+table tr th {
+    padding: var(--mdm-space-0-25x);
+    vertical-align: top;
+    text-align: left;
+}
+table tr td:first-child,
+table tr th:first-child {
+    padding-left: 0;
+}
+table tr td:last-child,
+table tr th:last-child {
+    padding-right: 0;
+}
+
+/* Basic bordered table (thin, light-grey). */
+.mdm-table {
+    border-collapse: collapse;
+    width: 100%;
+    border: 1px solid #e0e0e0;
+}
+.mdm-table th,
+.mdm-table td {
+    border: 1px solid #e0e0e0;
+    padding: var(--mdm-space-0-25x);
+    vertical-align: top;
+    text-align: left;
+}
+
+/* Explicit borderless table. */
+.mdm-table-noborder th,
+.mdm-table-noborder td {
+    border: none;
+    padding: var(--mdm-space-0-25x);
+    vertical-align: top;
+    text-align: left;
+}
+
+/* Utilities */
+.hidden,
+.mdm-u-hidden {
+    display: none;
+}
+.error,
+.mdm-u-text-error {
+    color: var(--mdm-color-error);
+    font-weight: 500;
+}
+.mdm-u-text-muted {
+    color: var(--mdm-color-muted);
+}
+.mdm-u-nowrap {
+    white-space: nowrap;
+}
+.pre,
+.mdm-u-pre {
+    white-space: pre;
+}
+.mdm-u-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* embedded frames fill their container */
+iframe {
+    width: 100%;
+    border: none;
+    height: 70vh;
 }

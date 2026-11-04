@@ -1,6 +1,19 @@
 # Project Context — MDM-HTMLReport-py (`mdmreportpy`)
 
 > Last updated: 2026-11-04
+> (2026-11-04) Standardized the frontend skin. `src/templates/common.css` is now the
+> cross-project reusable "lib" skin: `--mdm-*` tokens, base/layout/typography, generic
+> `mdm-link-*` / `mdm-btn-*` / `mdm-table` / `mdm-u-*` classes, and unprefixed globals
+> (`.container`, `.header`, ...). The report feature domain (`mdmreport-*`, `mdmdiff-*`)
+> was consolidated into `src/templates/mdmreporttable.css` (banners, tables, controls,
+> diff overlays), modernized to the shared `::before`/`:has()`/token form. Colour tokens
+> now follow the report's own palette: primary action is a neutral grey `#555` (no
+> purple), confirm/green/link use the report's `#217346`, and yellow highlights
+> (`#ffe49c` / `#fff5da`) became `--mdm-color-highlight*`. `body` keeps `Helvetica`.
+> Load order stays `normalize.css` → `common.css` → `mdmreporttable.css` → plugin css/js.
+> Class names in the generated markup are unchanged; shortening them remains open
+> (finding #16). All 40 tests pass.
+
 > (2026-11-04) Adopted `docs/maintenance-log.md` and applied its entry-point import
 > convention: entry-point modules (`src/launcher.py`, `src/report_create.py`) now select
 > imports on `__package__` (two-branch) instead of the old three-branch `__name__` split.
