@@ -1,0 +1,11 @@
+# Build-time / development-only dependencies (pip-installable packages), one per line.
+# Install with:  pip install -r requirements-dev.txt
+#
+# These are NOT runtime dependencies and are NOT inlined into the distributed
+# launchers. They are only used at build time (and when the reporter is run
+# directly from the source tree) to minify the embedded CSS/JS of the HTML report.
+# If they are missing, the template is emitted un-minified (with a one-time
+# warning), so they are optional even for development.
+
+csscompressor
+rjsmin

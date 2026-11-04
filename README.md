@@ -22,9 +22,12 @@ Input JSON is produced by, among others:
 
 ## Requirements
 
-- Python 3.
-- Optional, for minification only: `csscompressor` and `rjsmin`. If they are missing,
-  CSS/JS are emitted un-minified (with a one-time warning).
+- Python 3 (standard library only at runtime).
+- Build/development only, for minification: `csscompressor` and `rjsmin` — declared in
+  `requirements-dev.txt` (`pip install -r requirements-dev.txt`). They minify the
+  embedded CSS/JS when the template is built; if they are missing, CSS/JS are emitted
+  un-minified (with a one-time warning). They are **not** runtime dependencies and are
+  **not** installed by the distributed launchers.
 
 ## Usage
 
@@ -81,7 +84,9 @@ Options:
 
 `build.bat` regenerates `src/GENERATED/_VERSION.py`, runs
 `build_compiled_template.py`, and produces the single-file `dist/mdmtoolsap_bundle.py`
-with `pinliner`. See `.clinerules/02-python-portability.md` for the template-embedding
+with `pinliner`. Install the build-only minifiers first with
+`pip install -r requirements-dev.txt` (optional; without them the template is emitted
+un-minified). See `.clinerules/02-python-portability.md` for the template-embedding
 technique.
 
 ## Documentation

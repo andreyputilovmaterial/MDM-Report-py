@@ -1,9 +1,12 @@
 # Runtime dependencies (pip-installable packages), one per line.
 # Install with:  pip install -r requirements.txt
 #
-# These are optional and used only for minification of the embedded CSS/JS. If
-# they are missing, the report still renders but the assets are emitted
-# un-minified (with a one-time warning).
-
-csscompressor
-rjsmin
+# The HTML reporter is intentionally stdlib-only at runtime: it renders an
+# already-produced JSON report using templates that were pre-built (and minified)
+# into `src/GENERATED/TEMPLATE.py` at build time, so it needs no third-party
+# packages to run.
+#
+# Build-time / development-only helpers are NOT listed here. `csscompressor` and
+# `rjsmin` (which minify the embedded CSS/JS when the template is built) live in
+# `requirements-dev.txt`; the build falls back to un-minified assets (with a
+# one-time warning) when they are missing.

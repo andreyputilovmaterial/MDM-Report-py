@@ -1,6 +1,14 @@
 # Project Context — MDM-HTMLReport-py (`mdmreportpy`)
 
 > Last updated: 2026-11-04
+> (2026-11-04) Moved `csscompressor` / `rjsmin` from `requirements.txt` to a new
+> `requirements-dev.txt`: they are build-time-only (they minify the embedded CSS/JS when
+> `build_compiled_template.py` builds `src/GENERATED/TEMPLATE.py`) and must not be inlined
+> into the distributed launchers as optional runtime dependencies. `requirements.txt` is
+> now comment-only (the reporter is stdlib-only at runtime). Updated `README.md` and
+> `docs/architecture.md`.
+>
+
 > (2026-11-04) Standardized the frontend skin. `src/templates/common.css` is now the
 > cross-project reusable "lib" skin: `--mdm-*` tokens, base/layout/typography, generic
 > `mdm-link-*` / `mdm-btn-*` / `mdm-table` / `mdm-u-*` classes, and unprefixed globals

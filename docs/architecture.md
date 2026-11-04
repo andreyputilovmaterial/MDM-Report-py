@@ -56,4 +56,7 @@ HTML. It does not know or care which reader produced the JSON. Producers include
 
 Templates are read at development time via `importlib.resources`, compiled to
 `src/GENERATED/TEMPLATE.py` at build time, and the runtime falls back to `GENERATED`
-inside the pinliner bundle. See `.clinerules/02-python-portability.md`.
+inside the pinliner bundle. Minifying the embedded CSS/JS is a build-time optimization:
+the helpers it uses (`csscompressor` / `rjsmin`) are development-only and declared in
+`requirements-dev.txt` (not `requirements.txt`, so the distributed launchers never
+install them). See `.clinerules/02-python-portability.md`.
