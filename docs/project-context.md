@@ -1,6 +1,14 @@
 # Project Context — MDM-HTMLReport-py (`mdmreportpy`)
 
-> Last updated: 2026-11-04
+> Last updated: 2026-11-05
+> (2026-11-05) Fixed checkbox/radio alignment and Firefox rendering in
+> `src/templates/mdmreporttable.css`. The standardized skin drew the checkbox/radio box
+> on `input::before` (pseudo-elements on `<input>` are not supported in Firefox, and in
+> Chrome the `vertical-align: middle` zero-size input left the box ~half a line-height
+> below the adjacent text). Replaced the custom box with native controls tinted via
+> `accent-color` (works in Chrome/Firefox/Safari); the show/hide-sections plugin's
+> `mdmreport-controls-checkboxfulltext` class is now a documented no-op. All 40 tests pass.
+>
 > (2026-11-04) Moved `csscompressor` / `rjsmin` from `requirements.txt` to a new
 > `requirements-dev.txt`: they are build-time-only (they minify the embedded CSS/JS when
 > `build_compiled_template.py` builds `src/GENERATED/TEMPLATE.py`) and must not be inlined

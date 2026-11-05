@@ -358,56 +358,28 @@ select,
     min-height: var(--mdm-space-2x);
 }
 
-/* checkbox & radio — custom-drawn via ::before */
+/* checkbox & radio — native controls, tinted with accent-color. Pseudo-elements
+   on <input> are not supported in Firefox, so the previous custom-drawn box was
+   both misaligned (Chrome) and invisible (Firefox). Native controls render
+   consistently everywhere. */
 .mdmreport-controls label input[type="checkbox"],
 .mdmreport-controls label input[type="radio"] {
-    appearance: none;
-    -webkit-appearance: none;
+    appearance: auto;
+    -webkit-appearance: auto;
+    -moz-appearance: auto;
     display: inline-block;
-    width: 0;
-    margin: 0 0 0 22.5px;   /* box (15px) + gap (7.5px) */
+    width: auto;
+    height: auto;
+    margin: 0 var(--mdm-space-0-25x) 0 0;   /* gap between control and label text */
     padding: 0;
     border: none;
-    position: relative;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    line-height: normal;
     vertical-align: middle;
-}
-.mdmreport-controls label input[type="checkbox"]::before,
-.mdmreport-controls label input[type="radio"]::before {
-    content: "";
-    display: block;
-    box-sizing: border-box;
-    position: absolute;
-    right: 100%;
-    transform: translateX(-7.5px);
-    width: var(--mdm-space-0-5x);
-    height: var(--mdm-space-0-5x);
-    background: #fff;
-    border: 1px solid var(--mdm-border-color);
-    text-align: center;
-    line-height: 13px;
-    color: #444;
-    font-weight: 600;
-    transition: all var(--mdm-transition);
-}
-.mdmreport-controls label input[type="radio"]::before {
-    border-radius: 50%;
-}
-.mdmreport-controls label input[type="checkbox"]:hover::before,
-.mdmreport-controls label input[type="checkbox"]:focus::before,
-.mdmreport-controls label input[type="radio"]:hover::before,
-.mdmreport-controls label input[type="radio"]:focus::before {
-    border-color: var(--mdm-border-color-dark);
-}
-.mdmreport-controls label input[type="checkbox"]:checked::before {
-    content: "\2713";      /* ✓ */
-    border-color: var(--mdm-color-primary);
-    color: var(--mdm-color-primary);
-}
-.mdmreport-controls label input[type="radio"]:checked::before {
-    content: "\25CF";      /* ● */
-    border-color: var(--mdm-color-primary);
-    color: var(--mdm-color-primary);
-    font-size: 70%;
+    accent-color: var(--mdm-color-primary);
+    cursor: pointer;
 }
 
 /* disabled controls + busy overlay */
@@ -429,27 +401,7 @@ select,
     z-index: 1;
 }
 
-/* checkbox that shows the "Hide"/"Show" text instead of a plain box */
-.mdmreport-controls.mdmreport-controls-checkboxfulltext label input[type="checkbox"],
-.mdmreport-controls .mdmreport-controls-checkboxfulltext label input[type="checkbox"],
-.mdmreport-controls label.mdmreport-controls-checkboxfulltext input[type="checkbox"] {
-    margin-left: 4.85em;
-}
-.mdmreport-controls.mdmreport-controls-checkboxfulltext label input[type="checkbox"]::before,
-.mdmreport-controls .mdmreport-controls-checkboxfulltext label input[type="checkbox"]::before,
-.mdmreport-controls label.mdmreport-controls-checkboxfulltext input[type="checkbox"]::before {
-    content: "\00a0\00a0Hide";
-    width: 4.5em;
-    text-align: center;
-    color: var(--mdm-color-muted);
-    font-family: monospace;
-    font-weight: 400;
-}
-.mdmreport-controls.mdmreport-controls-checkboxfulltext label input[type="checkbox"]:checked::before,
-.mdmreport-controls .mdmreport-controls-checkboxfulltext label input[type="checkbox"]:checked::before,
-.mdmreport-controls label.mdmreport-controls-checkboxfulltext input[type="checkbox"]:checked::before {
-    content: "\2713\00a0Show";
-    border-color: var(--mdm-color-primary);
-    color: var(--mdm-color-primary);
-}
+/* The show/hide-sections plugin still tags its labels with
+   `mdmreport-controls-checkboxfulltext`; with native controls it needs no
+   special styling, so this class is intentionally a no-op. */
 
