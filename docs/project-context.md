@@ -1,6 +1,8 @@
 # Project Context — MDM-HTMLReport-py (`mdmreportpy`)
 
-> Last updated: 2026-11-05
+> Last updated: 2026-11-14
+> (2026-11-14) Added `docs/logs-of-issues.md` — the log for bugs and fixes. It is
+> updated only on explicit user request, never proactively.
 > (2026-11-05) Fixed checkbox/radio alignment and Firefox rendering in
 > `src/templates/mdmreporttable.css`. The standardized skin drew the checkbox/radio box
 > on `input::before` (pseudo-elements on `<input>` are not supported in Firefox, and in
@@ -73,6 +75,9 @@
 > **Convention:** read this file at the start of every task and update it at the end,
 > so it stays the permanently updated context of the current work (see
 > `.clinerules/00-project-context.md`).
+>
+> **Issues log:** `docs/logs-of-issues.md` is the log for bugs and fixes. Update it
+> only on explicit user request — never proactively.
 
 ## 1. What this package does
 
