@@ -99,6 +99,54 @@ class TestMddCombineAttributes(unittest.TestCase):
         self.assertEqual(ctx.column_specs, ['name'])
         self.assertEqual(ctx.rows, rows)
 
+    def test_combine_attributes_with_rich_text_headers_and_property_list_cells(self):
+        # Regression: rich-text column headers (dicts) + property-list attribute
+        # cells must not raise `TypeError: dict + str` (see docs/logs-of-issues.md).
+        rows = [
+            [
+                {'role': 'context', 'text': 'Item name'},
+                {'parts': [{'role': 'context', 'text': 'Item Attributes'}, {'text': ' (Left file)'}]},
+                {'parts': [{'role': 'context', 'text': 'Item Attributes'}, {'text': ' (Right file)'}]},
+            ],
+            [
+                'Q1',
+                [{'name': 'type', 'value': {'role': 'context', 'text': 'plain/long'}}],
+                [{'name': 'type', 'value': {'role': 'context', 'text': 'plain/double'}}],
+            ],
+        ]
+        column_specs = ['name', 'attributes_left', 'attributes_right']
+        ctx = PluginContext(flags=[], column_specs=column_specs, rows=rows)
+        combine_mod.mdd_combine_attributes(ctx)
+        self.assertEqual(ctx.column_specs, ['name'])
+        self.assertEqual(len(ctx.rows[1]), 1)
+        self.assertIn('parts', ctx.rows[1][0])
+
+    def test_combine_attributes_label_uses_plain_text_header(self):
+        rows = [
+            [
+                {'role': 'context', 'text': 'Item name'},
+                {'parts': [{'role': 'context', 'text': 'Item Attributes'}, {'text': ' (Left file)'}]},
+                {'parts': [{'role': 'context', 'text': 'Item Attributes'}, {'text': ' (Right file)'}]},
+            ],
+            [
+                'Q1',
+                [{'name': 'type', 'value': {'role': 'context', 'text': 'plain/long'}}],
+                [{'name': 'type', 'value': {'role': 'context', 'text': 'plain/double'}}],
+            ],
+        ]
+        column_specs = ['name', 'attributes_left', 'attributes_right']
+        ctx = PluginContext(flags=[], column_specs=column_specs, rows=rows)
+        combine_mod.mdd_combine_attributes(ctx)
+
+        combined = ctx.rows[1][0]
+        labels = [p for p in combined['parts'] if isinstance(p, dict) and p.get('role') == 'label']
+        self.assertEqual(len(labels), 2)
+        label_texts = [p['text']['parts'][1]['text'] for p in labels]
+        self.assertEqual(
+            label_texts,
+            ['Item Attributes (Left file)\n', 'Item Attributes (Right file)\n'],
+        )
+
 
 class TestDiffAddClasses(unittest.TestCase):
     def test_row_before_adds_added_class(self):

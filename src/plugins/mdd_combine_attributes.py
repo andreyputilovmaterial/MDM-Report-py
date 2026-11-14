@@ -3,6 +3,11 @@
 import re
 import json
 
+try:
+    from ..common_functions import sanitize_text_general
+except ImportError:
+    from common_functions import sanitize_text_general
+
 
 def mdd_combine_attributes(ctx):
     def is_column_id_for_attribute_column(col_id):
@@ -59,7 +64,8 @@ def mdd_combine_attributes(ctx):
                 add_parts = []
                 add_parts.append({'text': {'text': ', with ', 'role': 'sronly'}, 'role': 'label'})
                 if add_col_label:
-                    add_parts.append({'text': def_add['matching_col'] + '\n', 'role': 'label'})
+                    matching_col_text = sanitize_text_general(def_add['matching_col'])
+                    add_parts.append({'text': matching_col_text + '\n', 'role': 'label'})
                 add_parts.append(def_add['content'])
                 name_col_upd_data['parts'].append({'role': 'label', 'text': {'role': 'noshowdiff', 'parts': add_parts}})
             row[col_id_name] = name_col_upd_data

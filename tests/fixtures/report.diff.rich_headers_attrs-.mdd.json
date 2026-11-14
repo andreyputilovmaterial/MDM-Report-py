@@ -1,0 +1,104 @@
+{
+    "report_type": "diff",
+    "source_left": "C:\\Users\\example\\left.mdd.json",
+    "source_right": "C:\\Users\\example\\right.mdd.json",
+    "report_datetime_utc": "2026-11-14T00:00:00Z",
+    "report_datetime_local": "2026-11-13T16:00:00Z",
+    "source_file_metadata": [
+        {
+            "name": "source_left",
+            "value": "C:\\Users\\example\\left.mdd.json"
+        },
+        {
+            "name": "source_right",
+            "value": "C:\\Users\\example\\right.mdd.json"
+        },
+        {
+            "name": "generated with mdmtoolsap-diff script version",
+            "value": "test",
+            "role": "sronly"
+        }
+    ],
+    "report_scheme": {
+        "columns": [
+            "flagdiff",
+            "name",
+            "attributes_left",
+            "attributes_right"
+        ],
+        "column_headers": {
+            "name": {
+                "role": "context",
+                "text": "Item name"
+            },
+            "flagdiff": "Diff flag",
+            "attributes_left": {
+                "parts": [
+                    {
+                        "role": "context",
+                        "text": "Item Attributes"
+                    },
+                    {
+                        "text": " (Left file)"
+                    }
+                ]
+            },
+            "attributes_right": {
+                "parts": [
+                    {
+                        "role": "context",
+                        "text": "Item Attributes"
+                    },
+                    {
+                        "text": " (Right file)"
+                    }
+                ]
+            }
+        },
+        "flags": [
+            "data-type:diff",
+            "data-type:mdd",
+            "diff_source_left:data-type:mdd",
+            "diff_source_right:data-type:mdd"
+        ]
+    },
+    "sections": [
+        {
+            "name": "fields",
+            "title": "fields",
+            "columns": [
+                "flagdiff",
+                "name",
+                "attributes_left",
+                "attributes_right"
+            ],
+            "content": [
+                {
+                    "name": "Q1",
+                    "flagdiff": {
+                        "role": "context",
+                        "text": "(keep)"
+                    },
+                    "attributes_left": [
+                        {
+                            "name": "type",
+                            "value": {
+                                "role": "context",
+                                "text": "plain/long"
+                            }
+                        }
+                    ],
+                    "attributes_right": [
+                        {
+                            "name": "type",
+                            "value": {
+                                "role": "context",
+                                "text": "plain/double"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

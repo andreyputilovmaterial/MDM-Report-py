@@ -26,6 +26,7 @@ INPUTS = [
     'report.diff.a1_-v1-v2-.mdd.json',
     'report.diff.b1_-today-tomorrow-.mdd.json',
     'report.diff.report.diff.-a1_-b1_---v1-today---v2-tomorrow--.mdd.json',
+    'report.diff.rich_headers_attrs-.mdd.json',
 ]
 
 

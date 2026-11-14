@@ -13,6 +13,9 @@ Inputs:
   diff reports produced by the diff tool.
 - `report.diff.report.diff.-a1_-b1_---v1-today---v2-tomorrow--.mdd.json` — a
   "diff-on-diff" report (diffing the two diff reports above).
+- `report.diff.rich_headers_attrs-.mdd.json` — a diff report whose `column_headers`
+  are rich text (dicts) and whose attribute cells are property lists; guards the
+  `mdd_combine_attributes` plugin against rich-text headers.
 
 The matching `.html` files are the example outputs. `tests/test_fixtures.py`
 re-renders each input with `produce_html` and checks a self-contained page comes out.
